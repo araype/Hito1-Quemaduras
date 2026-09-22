@@ -1,0 +1,118 @@
+{
+  "imagenes": {
+    "1853592": {
+      "autor": "Pexels",
+      "autor_url": "https://pixabay.com/users/Pexels-2286921/",
+      "pagina": "https://pixabay.com/photos/augmented-reality-bicycle-girl-bike-1853592/",
+      "tags": "augmented reality, bicycle, girl, metaverse, bike, child, cyclist, fence, fun, outdoors, person, virtual reality, virtual reality glasses, virtual reality goggles, virtual reality headset, vr headset",
+      "ancho": 5760,
+      "alto": 3840,
+      "tono": [
+        0.259,
+        0.667,
+        0.122
+      ]
+    },
+    "2178442": {
+      "autor": "Pexels",
+      "autor_url": "https://pixabay.com/users/Pexels-2286921/",
+      "pagina": "https://pixabay.com/photos/kettles-boil-burn-tea-pots-cook-2178442/",
+      "tags": "kettles, boil, burn, tea pots, cook, cooking, fire, flame, food, heat, hot, kitchen, gas stove, cooking, cooking, cooking, cooking, fire, food, kitchen, kitchen, kitchen, kitchen, kitchen",
+      "ancho": 5109,
+      "alto": 3406,
+      "tono": [
+        0.529,
+        0.227,
+        -0.039
+      ]
+    },
+    "1845880": {
+      "autor": "Pexels",
+      "autor_url": "https://pixabay.com/users/Pexels-2286921/",
+      "pagina": "https://pixabay.com/photos/playstation-computer-console-1845880/",
+      "tags": "playstation, computer, console, controller, game, gamer, gaming, hand, indoors, playing, sony, television, tv, computer game, game, gaming, gaming, gaming, gaming, gaming",
+      "ancho": 5184,
+      "alto": 3456,
+      "tono": [
+        0.2,
+        0.604,
+        0.102
+      ]
+    },
+    "565585": {
+      "autor": "bohed",
+      "autor_url": "https://pixabay.com/users/bohed-86046/",
+      "pagina": "https://pixabay.com/photos/gamer-hands-game-computer-pc-565585/",
+      "tags": "gamer, hands, game, computer, pc, gaming, player, joystick, button, holding, playing, watch, console, brown computer, gamer, gamer, gamer, gamer, gamer",
+      "ancho": 5184,
+      "alto": 3456,
+      "tono": [
+        0.322,
+        0.392,
+        0.157
+      ]
+    },
+    "4490469": {
+      "autor": "nickross2021",
+      "autor_url": "https://pixabay.com/users/nickross2021-13685201/",
+      "pagina": "https://pixabay.com/photos/virtual-reality-woman-technology-4490469/",
+      "tags": "virtual reality, woman, technology, oculus, female, imagination, metaverse, quest, looking, people, young",
+      "ancho": 9741,
+      "alto": 6000,
+      "tono": [
+        0.365,
+        0.09,
+        -0.012
+      ]
+    },
+    "3460451": {
+      "autor": "JESHOOTS-com",
+      "autor_url": "https://pixabay.com/users/JESHOOTS-com-264599/",
+      "pagina": "https://pixabay.com/photos/virtual-virtual-reality-technology-3460451/",
+      "tags": "virtual, virtual reality, technology, reality, digital, 3d, headset, device, entertainment, modern, goggles, glasses, tech, simulation, game, gadget, metaverse, person, man, vision, futuristic, cyber, simulator, video",
+      "ancho": 6240,
+      "alto": 4160,
+      "tono": [
+        0.059,
+        0.855,
+        -0.024
+      ]
+    },
+    "8733430": {
+      "autor": "haruudu",
+      "autor_url": "https://pixabay.com/users/haruudu-43510912/",
+      "pagina": "https://pixabay.com/photos/virtual-reality-vr-headset-man-8733430/",
+      "tags": "virtual reality, vr headset, man, immersive experience, technology, gaming, entertainment, cyberspace, metaverse, futuristic, digital world, simulation, exploration, controller, avatar, 3d, innovation, meta, computer, communication, virtual, internet, vr, immersive technology, digital",
+      "ancho": 6144,
+      "alto": 6144,
+      "tono": [
+        0.373,
+        0.808,
+        0.298
+      ]
+    }
+  },
+  "slides": {
+    "2": {
+      "archivo": "slide02_kitchen-stove-cooking-pot.jpg",
+      "origen": "pixabay",
+      "id": "2178442",
+      "consulta": "kitchen stove cooking pot",
+      "motivo": "posición 1 de 5 en Pixabay; etiquetas «kettles, boil, burn, tea pots, cook, cooking, fire, flame, food, heat, hot, kitchen, gas stove, cooking, cooking, cooking, cooking, fire, food, kitchen, kitchen, kitchen, kitchen, kitchen» coinciden con 4 keyword(s); conserva 69% de la foto al recortar; tono 0% afín al resto"
+    },
+    "1": {
+      "archivo": "slide01_oculus-quest-headset-vr.jpg",
+      "origen": "pixabay",
+      "id": "4490469",
+      "consulta": "oculus quest headset vr",
+      "motivo": "posición 1 de 5 en Pixabay; etiquetas «virtual reality, woman, technology, oculus, female, imagination, metaverse, quest, looking, people, young» coinciden con 2 keyword(s); conserva 91% de la foto al recortar; tono 50% afín al resto"
+    },
+    "10": {
+      "archivo": "slide10_virtual-reality-headset-gaming.jpg",
+      "origen": "pixabay",
+      "id": "3460451",
+      "consulta": "virtual reality headset gaming",
+      "motivo": "posición 1 de 5 en Pixabay; etiquetas «virtual, virtual reality, technology, reality, digital, 3d, headset, device, entertainment, modern, goggles, glasses, tech, simulation, game, gadget, metaverse, person, man, vision, futuristic, cyber, simulator, video» coinciden con 3 keyword(s); conserva 69% de la foto al recortar; tono 0% afín al resto"
+    }
+  }
+}
