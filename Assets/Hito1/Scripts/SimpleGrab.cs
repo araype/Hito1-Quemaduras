@@ -62,6 +62,8 @@ namespace SojaExiles
             }
 
             Collider[] hits = Physics.OverlapSphere(worldPos, grabRadius);
+            Rigidbody closest = null;
+            float closestSqrDistance = float.MaxValue;
             foreach (Collider col in hits)
             {
                 Rigidbody rb = col.attachedRigidbody;
@@ -70,9 +72,18 @@ namespace SojaExiles
                     continue;
                 }
 
-                hand.held = rb;
-                rb.isKinematic = true;
-                break;
+                float sqrDistance = (rb.worldCenterOfMass - worldPos).sqrMagnitude;
+                if (sqrDistance < closestSqrDistance)
+                {
+                    closest = rb;
+                    closestSqrDistance = sqrDistance;
+                }
+            }
+
+            if (closest != null)
+            {
+                hand.held = closest;
+                closest.isKinematic = true;
             }
         }
     }

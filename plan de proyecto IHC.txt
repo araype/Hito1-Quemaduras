@@ -1,0 +1,58 @@
+plan de proyecto IHC
+
+Fase 1 — Disparar la quemadura
+La forma más simple: cuando la escena carga, esperar un pequeño delay (o detectar que el jugador se acercó) y forzar el estado a Burned automáticamente (sin depender de física de contacto olla-mano, que es compleja de simular en un maniquí sin animación). Esto ya te da el punto de partida narrativo sin necesitar animar nada.
+Versión más fiel más adelante: un Trigger en la olla que detecta cuando "la mano" del personaje entra en contacto (requiere mover la mano por script/animación, que es más trabajo — dejarlo para una iteración posterior).
+
+Fase 2 — Mano quemada como objeto agarrable
+Añadir al hueso de la mano del Familiarartefacto un Collider pequeño + Rigidbody (marcado, ej. tag "ManoQuemada"), y reutilizar/extender SimpleGrab.cs para que el jugador pueda tomarla y arrastrarla (igual que ya hace con la olla). Esto convierte "guiar la mano" en la misma mecánica de agarre que ya funciona, sin escribir un sistema nuevo.
+
+Fase 3 — Detección de agua
+Agregar un Collider tipo Trigger alrededor del chorro de Aguadegrifo (hoy es solo partículas decorativas, sin colisión). Un script simple cuenta cuánto tiempo la ManoQuemada permanece dentro del trigger; al superar un umbral (ej. 3 seg), pasa el estado a Cooled.
+
+Fase 4 — Detección del paño
+El panuelo ya es agarrable (Rigidbody+Collider existentes). Detectar overlap/contacto entre panuelo y ManoQuemada solo si el estado ya es Cooled → pasa a Success.
+
+Fase 5 — Cronómetro y falla
+Un temporizador que arranca en Burned (Fase 1) y si llega a 0 antes de alcanzar Success, fuerza Failed. Mostrar el tiempo restante aunque sea con un Debug.Log o un texto simple en pantalla (world-space canvas) — no hace falta UI elaborada todavía.
+
+Fase 6 — Retroalimentación mínima
+Un indicador visual simple del estado de la quemadura (ej. cambiar el color del material de la mano: rojo=quemada, normal=curada) y un mensaje de éxito/fallo. Esto ya te da una demo jugable de principio a fin.
+
+Fase 7 — Pulido (después de validar que el flujo completo funciona)
+- Reemplazar Ollaprovisional (el bowl placeholder) por un modelo real de olla + estufa con fuego encendido.
+- Animación real de "tocar la olla" y de dolor/reacción.
+- Sonidos, partículas de vapor/quemadura, UI más elaborada.
+
+
+Lista de fases actualizada
+
+┌───────────────────────┬────────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│         Fase          │     Estado     │                                                Qué incluye                                                │
+├───────────────────────┼────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 0 — Máquina de        │ ✅ Hecho       │ BurnSequenceManager.cs: enum de estados, log de transiciones                                              │
+│ estados               │                │                                                                                                           │
+├───────────────────────┼────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 1 — Disparo           │                │                                                                                                           │
+│ automático de         │ ✅ Hecho       │ Se dispara Burned a los 3s de iniciar la escena                                                           │
+│ quemadura             │                │                                                                                                           │
+├───────────────────────┼────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 2 — Mano agarrable    │                │ Paquete Animation Rigging, IK de dos huesos (RightArm→RightForeArm→RightHand), Avatar genérico corregido, │
+│ con brazo real        │ ✅ Hecho       │  BodyReachFollow.cs (el cuerpo se desplaza si el objetivo queda fuera de alcance), marcador visual oculto │
+│                       │                │  hasta Burned, SimpleGrab.cs corregido para agarrar el objeto más cercano en vez del primero encontrado   │
+├───────────────────────┼────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 2.5 — Validación en   │ ⏳ Pendiente — │                                                                                                           │
+│ visor real            │  tu próximo    │ Confirmar en el Quest que el pellizco/gatillo agarra el marcador de la mano igual que la olla y el paño   │
+│                       │ paso           │                                                                                                           │
+├───────────────────────┼────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 3 — Trigger de agua   │ ⏳ Sin empezar │ Collider trigger en Aguadegrifo, detectar que el marcador se quede ahí un tiempo mínimo → estado Cooled   │
+├───────────────────────┼────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 4 — Trigger del paño  │ ⏳ Sin empezar │ Detectar contacto panuelo + marcador cuando el estado ya sea Cooled → estado Success                      │
+├───────────────────────┼────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 5 — Cronómetro y      │ ⏳ Sin empezar │ Límite de tiempo desde Burned; si se acaba antes de Success → Failed                                      │
+│ falla                 │                │                                                                                                           │
+├───────────────────────┼────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 6 — Retroalimentación │ ⏳ Sin empezar │ Indicador visual de quemado/curado, mensaje de éxito/fallo — aquí ya se siente "jugable" de principio a   │
+│  mínima               │                │ fin                                                                                                       │
+├───────────────────────┼────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 7 — Pulido            │ ⏳ Sin empezar │ Modelo real de olla/estufa, animaciones, sonido, UI
