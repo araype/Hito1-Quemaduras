@@ -261,6 +261,7 @@ GameObject:
   - component: {fileID: 22683102}
   - component: {fileID: 22683101}
   - component: {fileID: 22683106}
+  - component: {fileID: 1933707097}
   m_Layer: 0
   m_Name: Gasa_2
   m_TagString: Untagged
@@ -435,6 +436,7 @@ GameObject:
   - component: {fileID: 158152155}
   - component: {fileID: 158152154}
   - component: {fileID: 158152159}
+  - component: {fileID: 1728473408}
   m_Layer: 0
   m_Name: Guantes
   m_TagString: Untagged
@@ -1119,6 +1121,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 3bea450ed3bcbec4096eba7b0ce026aa, type: 3}
       insertIndex: -1
       addedObject: {fileID: 638453378}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 3bea450ed3bcbec4096eba7b0ce026aa, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1119344540}
   m_SourcePrefab: {fileID: 100100000, guid: 3bea450ed3bcbec4096eba7b0ce026aa, type: 3}
 --- !u!4 &638453371 stripped
 Transform:
@@ -1239,6 +1244,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1211544258}
+  - {fileID: 1738896432}
   m_Father: {fileID: 1135537513}
   m_LocalEulerAnglesHint: {x: 0, y: 4.133, z: 0}
 --- !u!199 &644096437
@@ -6527,6 +6533,7 @@ GameObject:
   - component: {fileID: 887653419}
   - component: {fileID: 887653418}
   - component: {fileID: 887653423}
+  - component: {fileID: 1185526783}
   m_Layer: 0
   m_Name: Gasa_1
   m_TagString: Untagged
@@ -12906,6 +12913,7 @@ GameObject:
   - component: {fileID: 1966154345}
   - component: {fileID: 1966154344}
   - component: {fileID: 1966154349}
+  - component: {fileID: 1856873051}
   m_Layer: 0
   m_Name: Antiseptico
   m_TagString: Untagged
@@ -13201,6 +13209,164 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.9
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1185526783
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 887653416}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15cd41298fd14d4ca0a7c6abf8f0e87b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  grip: 0
+  cylinderAxis: 0
+  pinchInset: 0.012
+  allowControllerGrab: 1
+  throwOnRelease: 1
+--- !u!114 &1933707097
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 22683099}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15cd41298fd14d4ca0a7c6abf8f0e87b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  grip: 0
+  cylinderAxis: 0
+  pinchInset: 0.012
+  allowControllerGrab: 1
+  throwOnRelease: 1
+--- !u!114 &1728473408
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 158152152}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15cd41298fd14d4ca0a7c6abf8f0e87b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  grip: 0
+  cylinderAxis: 0
+  pinchInset: 0.012
+  allowControllerGrab: 1
+  throwOnRelease: 1
+--- !u!114 &1856873051
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1966154342}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15cd41298fd14d4ca0a7c6abf8f0e87b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  grip: 1
+  cylinderAxis: 0
+  pinchInset: 0.012
+  allowControllerGrab: 1
+  throwOnRelease: 1
+--- !u!114 &1119344540
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 638453372}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15cd41298fd14d4ca0a7c6abf8f0e87b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  grip: 1
+  cylinderAxis: 1
+  pinchInset: 0.012
+  allowControllerGrab: 1
+  throwOnRelease: 1
+--- !u!1 &1331409268
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1738896432}
+  - component: {fileID: 1845837491}
+  - component: {fileID: 1760043112}
+  m_Layer: 0
+  m_Name: LlaveGrifo
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1738896432
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1331409268}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.1, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 644096436}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!135 &1845837491
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1331409268}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.05
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1760043112
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1331409268}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20dca019b72c41e6a61a6d52170e1561, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  water: {fileID: 644096438}
+  waterTrigger: {fileID: 1211544260}
+  waterSound: {fileID: 0}
+  startOpen: 0
+  indicatorMaterial: {fileID: 2100000, guid: f54536697b604095ba843444851abbd6, type: 2}
+  markerRadius: 0.03
+  toggleCooldown: 0.8
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

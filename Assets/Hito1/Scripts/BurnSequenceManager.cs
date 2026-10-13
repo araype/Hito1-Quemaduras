@@ -3,19 +3,23 @@ using UnityEngine;
 
 namespace SojaExiles
 {
-    // Fase 0: maquina de estados de la secuencia de quemadura/mitigacion.
-    // Fase 1: dispara "Burned" automaticamente tras un retraso, como
-    // sustituto temporal del contacto real mano-olla (fases futuras
-    // reemplazaran TriggerBurn() por un trigger fisico real).
+    // Maquina de estados del caso "quemadura de primer grado" (analoga a
+    // CutSequenceManager). Orden del protocolo de primeros auxilios:
+    //   Burned (la mano se quema; por ahora se dispara tras un retraso, como
+    //   sustituto del contacto real mano-olla) -> Cooling (la mano esta bajo
+    //   el chorro de agua fria) -> Cooled (se mantuvo bajo el agua el tiempo
+    //   necesario) -> Success (se cubrio con un pano limpio).
+    // Los cambios Cooling/Cooled/Success los hacen los BurnContactDetector
+    // del trigger de la quemadura. Si se saca la mano del agua antes de
+    // tiempo, vuelve a Burned y el enfriamiento empieza de cero.
     public class BurnSequenceManager : MonoBehaviour
     {
         public enum BurnState
         {
             Idle,
             Burned,
-            WaitingWater,
+            Cooling,
             Cooled,
-            WaitingCloth,
             Success,
             Failed
         }
