@@ -114,6 +114,13 @@ joystick. Por eso o tenías manos y no podías avanzar, o tenías controles.
 
 ## 4. Pendientes y riesgos (no resueltos)
 
+> **Actualización (rama `hito2-integracion`, ver `HITO2.md`):** el punto 2
+> quedó resuelto (cada objeto lo agarra un solo sistema) y el 3 también (la
+> secuencia agua → paño está implementada). También se corrigieron los
+> colliders que tapaban puertas, la cápsula que podía quedar dentro de una
+> pared y el resto de observaciones de la revisión. Siguen abiertos el 1, el
+> 4, el 5 y el 6.
+
 1. **Probar en el visor** todo lo anterior; en particular que
    `controllerDrivenHandPosesType` dibuje las manos en tu dispositivo
    (depende de la versión del sistema del Quest) y que el apagado de la
