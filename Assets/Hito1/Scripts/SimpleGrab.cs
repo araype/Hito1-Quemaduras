@@ -16,6 +16,11 @@ namespace SojaExiles
     //
     // Que se puede agarrar: cualquier Rigidbody dinamico, cualquier Rigidbody
     // con Grabbable (aunque sea kinematico) y los colliders con GrabRedirect.
+    //
+    // Los objetos con Grabbable de Meta (HandGrabPoseSetup: olla, panuelo,
+    // gasas...) los agarra el Interaction SDK, que pone la mano en su pose;
+    // SimpleGrab los ignora para no pelear por el mismo objeto, salvo que se
+    // active grabInteractionSdkObjects (respaldo si el SDK no respondiera).
     public class SimpleGrab : MonoBehaviour
     {
         public OVRCameraRig cameraRig;
@@ -33,6 +38,9 @@ namespace SojaExiles
         public float breakDistance = 0.35f;
         public float maxLinearSpeed = 8f;
         public float maxAngularSpeed = 30f;
+
+        [Tooltip("Respaldo: agarrar tambien los objetos que maneja el Interaction SDK de Meta.")]
+        public bool grabInteractionSdkObjects;
 
         [Header("Colision de las manos")]
         public bool handCollisions = true;
@@ -87,6 +95,49 @@ namespace SojaExiles
         private readonly List<PendingCollision> pending = new List<PendingCollision>();
         private readonly List<Collider> playerColliders = new List<Collider>();
 
+        private static readonly List<SimpleGrab> Instances = new List<SimpleGrab>();
+
+        // True si la mano indicada sostiene algo con SimpleGrab.
+        public bool IsHolding(bool leftHand)
+        {
+            return (leftHand ? left : right).held != null;
+        }
+
+        // True si el collider es la esfera fisica de alguna mano del jugador
+        // (la usan el grifo y otros objetos que se activan al tocarlos).
+        public static bool IsHandCollider(Collider col)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                SimpleGrab grab = Instances[i];
+                if (col == grab.left.bodyCollider || col == grab.right.bodyCollider)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void OnEnable()
+        {
+            Instances.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            Instances.Remove(this);
+            if (left.held != null)
+            {
+                Release(left);
+            }
+
+            if (right.held != null)
+            {
+                Release(right);
+            }
+        }
+
         private void Awake()
         {
             if (cameraRig == null)
@@ -105,6 +156,26 @@ namespace SojaExiles
 
             CreateHandBody(left, "ManoFisica_L");
             CreateHandBody(right, "ManoFisica_R");
+        }
+
+        private void Start()
+        {
+            if (grabInteractionSdkObjects)
+            {
+                return;
+            }
+
+            // Las esferas de las manos no deben empujar los objetos que agarra
+            // el Interaction SDK: al acercar la mano para pinzar una gasa, la
+            // esfera la alejaria antes de que el SDK la tome.
+            foreach (Oculus.Interaction.Grabbable grabbable in FindObjectsOfType<Oculus.Interaction.Grabbable>())
+            {
+                foreach (Collider col in grabbable.GetComponentsInChildren<Collider>(true))
+                {
+                    Physics.IgnoreCollision(col, left.bodyCollider, true);
+                    Physics.IgnoreCollision(col, right.bodyCollider, true);
+                }
+            }
         }
 
         private void OnDestroy()
@@ -313,6 +384,11 @@ namespace SojaExiles
 
             Rigidbody rb = col.attachedRigidbody;
             if (rb == null || rb == left.body || rb == right.body)
+            {
+                return null;
+            }
+
+            if (!grabInteractionSdkObjects && rb.GetComponent<Oculus.Interaction.Grabbable>() != null)
             {
                 return null;
             }
