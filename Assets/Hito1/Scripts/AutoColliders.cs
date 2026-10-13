@@ -5,23 +5,29 @@ namespace SojaExiles
     // Logica compartida para agregar colliders a mallas que no tienen
     // ninguno. La usan el componente de runtime (AutoColliders) y la
     // herramienta de editor (Hito1 > Agregar colliders faltantes).
+    //
+    // Regla: siempre que se pueda, MeshCollider con la forma real de la
+    // malla, porque una caja tapa los huecos (puertas, ventanas, el espacio
+    // bajo una mesa). En el editor siempre se puede (la malla se cocina en el
+    // build); en runtime solo si la malla tiene Read/Write. Si no se puede, se
+    // usa una caja solo para objetos de tamano de mueble que no parezcan una
+    // puerta o un marco.
     public static class ColliderUtil
     {
         public const float MinSize = 0.03f;
         public const float MinThickness = 0.05f;
-        public const float BigMeshSize = 6f;
+        public const float BoxMaxSize = 2.5f;
+
+        private static readonly string[] OpeningNames = { "door", "puerta", "frame", "marco", "window", "ventana", "arch" };
 
         public enum Result
         {
             Skipped,
             Box,
             Mesh,
-            TooBigNotReadable
+            NotReadable
         }
 
-        // meshColliderAlways: en el editor un MeshCollider se "cocina" en el
-        // build, asi que no hace falta que la malla sea legible. En runtime
-        // solo se puede si la malla tiene Read/Write habilitado.
         public static Result AddIfMissing(MeshRenderer renderer, bool editorTime)
         {
             if (renderer == null || !renderer.enabled)
@@ -36,8 +42,22 @@ namespace SojaExiles
                 return Result.Skipped;
             }
 
-            // Ya tiene collider propio o heredado de un padre compuesto.
-            if (renderer.GetComponentInParent<Collider>() != null)
+            // Indicadores visuales (zonas, marcadores) creados por los scripts.
+            if (renderer.GetComponentInParent<NoAutoCollider>() != null)
+            {
+                return Result.Skipped;
+            }
+
+            // Ya tiene collider propio.
+            if (renderer.GetComponent<Collider>() != null)
+            {
+                return Result.Skipped;
+            }
+
+            // Objetos con fisica (agarrables, el objetivo IK): sus colliders
+            // los configura quien los armo; agregar otros cambiaria su masa
+            // y como se agarran.
+            if (renderer.GetComponentInParent<Rigidbody>() != null)
             {
                 return Result.Skipped;
             }
@@ -61,19 +81,18 @@ namespace SojaExiles
                 return Result.Skipped;
             }
 
-            float biggest = Mathf.Max(worldSize.x, Mathf.Max(worldSize.y, worldSize.z));
-            if (biggest > BigMeshSize)
+            if (editorTime || mesh.isReadable)
             {
-                // Una caja gigante dejaria al jugador encerrado dentro de un
-                // collider solido; hace falta la forma real de la malla.
-                if (editorTime || mesh.isReadable)
-                {
-                    MeshCollider meshCollider = AddComponent<MeshCollider>(renderer.gameObject, editorTime);
-                    meshCollider.sharedMesh = mesh;
-                    return Result.Mesh;
-                }
+                MeshCollider meshCollider = AddComponent<MeshCollider>(renderer.gameObject, editorTime);
+                meshCollider.sharedMesh = mesh;
+                return Result.Mesh;
+            }
 
-                return Result.TooBigNotReadable;
+            float biggest = Mathf.Max(worldSize.x, Mathf.Max(worldSize.y, worldSize.z));
+            if (biggest > BoxMaxSize || LooksLikeOpening(renderer, mesh))
+            {
+                // Una caja aqui encerraria al jugador o taparia una puerta.
+                return Result.NotReadable;
             }
 
             BoxCollider box = AddComponent<BoxCollider>(renderer.gameObject, editorTime);
@@ -83,6 +102,20 @@ namespace SojaExiles
                 MinLocal(bounds.size.y, scale.y),
                 MinLocal(bounds.size.z, scale.z));
             return Result.Box;
+        }
+
+        private static bool LooksLikeOpening(MeshRenderer renderer, Mesh mesh)
+        {
+            string names = (renderer.name + " " + mesh.name).ToLowerInvariant();
+            for (int i = 0; i < OpeningNames.Length; i++)
+            {
+                if (names.Contains(OpeningNames[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // Evita cajas de grosor cero (pisos y paredes modelados como planos).
@@ -116,7 +149,8 @@ namespace SojaExiles
 
             int boxes = 0;
             int meshes = 0;
-            int tooBig = 0;
+            System.Text.StringBuilder missing = new System.Text.StringBuilder();
+            int missingCount = 0;
 
             for (int i = 0; i < renderers.Length; i++)
             {
@@ -128,23 +162,28 @@ namespace SojaExiles
                     case ColliderUtil.Result.Mesh:
                         meshes++;
                         break;
-                    case ColliderUtil.Result.TooBigNotReadable:
-                        tooBig++;
+                    case ColliderUtil.Result.NotReadable:
+                        missingCount++;
+                        if (missingCount <= 15)
+                        {
+                            missing.Append(missingCount > 1 ? ", " : string.Empty).Append(renderers[i].name);
+                        }
                         break;
                 }
             }
 
             Debug.Log(string.Format(
-                "[Hito1] Colliders automaticos: {0} cajas, {1} mallas. Sin collider (malla grande no legible): {2}.",
+                "[Hito1] Colliders automaticos: {0} cajas, {1} mallas. Sin collider (malla no legible grande o con hueco): {2}.",
                 boxes,
                 meshes,
-                tooBig));
+                missingCount));
 
-            if (tooBig > 0)
+            if (missingCount > 0)
             {
                 Debug.LogWarning(
-                    "[Hito1] Hay mallas grandes sin collider porque no tienen Read/Write habilitado. " +
-                    "Ejecuta Hito1 > Agregar colliders faltantes en el editor para hornearlos.");
+                    "[Hito1] Mallas sin collider porque no tienen Read/Write habilitado: " + missing +
+                    (missingCount > 15 ? "..." : string.Empty) +
+                    ". Ejecuta Hito1 > Agregar colliders faltantes en el editor para hornearlos.");
             }
         }
     }

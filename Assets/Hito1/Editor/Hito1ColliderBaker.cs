@@ -6,8 +6,9 @@ namespace SojaExiles
 {
     // Hornea en la escena abierta los colliders que le faltan a las mallas
     // (muebles, paredes, piso). Es la version permanente de lo que
-    // AutoColliders hace en runtime; usa MeshCollider para mallas grandes
-    // aunque no tengan Read/Write, porque el editor las cocina en el build.
+    // AutoColliders hace en runtime; usa siempre MeshCollider con la forma
+    // real, aunque la malla no tenga Read/Write, porque el editor la cocina
+    // en el build (asi no se tapan puertas ni ventanas).
     public static class Hito1ColliderBaker
     {
         [MenuItem("Hito1/Agregar colliders faltantes (escena abierta)")]

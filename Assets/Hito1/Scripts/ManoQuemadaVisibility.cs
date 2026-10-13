@@ -2,8 +2,9 @@ using UnityEngine;
 
 namespace SojaExiles
 {
-    // Oculta el marcador de la mano quemada (y desactiva su collider, para
-    // que no se pueda agarrar) hasta que BurnSequenceManager salga de Idle.
+    // Oculta el marcador de la mano quemada (y desactiva sus colliders,
+    // incluido el trigger de la quemadura, para que no se pueda agarrar ni
+    // enfriar) hasta que BurnSequenceManager salga de Idle.
     // Antes de eso no deberia existir nada que agarrar: la persona todavia no
     // se ha quemado.
     [RequireComponent(typeof(Collider))]
@@ -12,12 +13,12 @@ namespace SojaExiles
         public BurnSequenceManager burnSequence;
 
         private Renderer targetRenderer;
-        private Collider targetCollider;
+        private Collider[] targetColliders;
 
         private void Awake()
         {
             targetRenderer = GetComponent<Renderer>();
-            targetCollider = GetComponent<Collider>();
+            targetColliders = GetComponentsInChildren<Collider>(true);
             SetVisible(false);
         }
 
@@ -48,7 +49,7 @@ namespace SojaExiles
 
         private void HandleStateChanged(BurnSequenceManager.BurnState newState)
         {
-            if (newState == BurnSequenceManager.BurnState.Burned)
+            if (newState != BurnSequenceManager.BurnState.Idle)
             {
                 SetVisible(true);
             }
@@ -61,9 +62,9 @@ namespace SojaExiles
                 targetRenderer.enabled = visible;
             }
 
-            if (targetCollider != null)
+            foreach (Collider col in targetColliders)
             {
-                targetCollider.enabled = visible;
+                col.enabled = visible;
             }
         }
     }

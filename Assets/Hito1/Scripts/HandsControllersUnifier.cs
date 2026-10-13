@@ -15,7 +15,9 @@ namespace SojaExiles
     //     joystick hacia adelante, paso hacia atras, giro) y su
     //     CharacterController duplicado: eran la causa de que el joystick
     //     solo "hiciera algo" hacia atras y de que la capsula se trabara.
-    //     VRLocomotion queda como unico sistema de movimiento.
+    //     VRLocomotion queda como unico sistema de movimiento. Solo se tocan
+    //     componentes dentro del jugador (el objeto con VRLocomotion), nunca
+    //     los de otros personajes de la escena.
     //
     // Se reaplica unos segundos porque el rig se arma en runtime.
     public class HandsControllersUnifier : MonoBehaviour
@@ -100,7 +102,13 @@ namespace SojaExiles
 
         private void DisableMetaLocomotion()
         {
-            MonoBehaviour[] behaviours = FindObjectsOfType<MonoBehaviour>(true);
+            VRLocomotion player = FindObjectOfType<VRLocomotion>();
+            if (player == null)
+            {
+                return;
+            }
+
+            MonoBehaviour[] behaviours = player.GetComponentsInChildren<MonoBehaviour>(true);
             for (int i = 0; i < behaviours.Length; i++)
             {
                 MonoBehaviour behaviour = behaviours[i];
@@ -117,7 +125,7 @@ namespace SojaExiles
                 }
             }
 
-            CharacterController[] controllers = FindObjectsOfType<CharacterController>(true);
+            CharacterController[] controllers = player.GetComponentsInChildren<CharacterController>(true);
             for (int i = 0; i < controllers.Length; i++)
             {
                 CharacterController cc = controllers[i];
