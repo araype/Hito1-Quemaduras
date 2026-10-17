@@ -58,7 +58,38 @@ namespace SojaExiles
         public ChokingState CurrentState { get; private set; } = ChokingState.Idle;
         public int Thrusts { get; private set; }
 
+        // Golpes en la espalda (entre los omoplatos). No son obligatorios
+        // para el exito; se registran para el resumen y el paciente reacciona.
+        public int BackBlows { get; private set; }
+
         public event System.Action<ChokingState> OnStateChanged;
+        public event System.Action<int> OnThrust;
+        public event System.Action<int> OnBackBlow;
+
+        // Si el paciente tiene PatientBody, sus reacciones (inclinarse, toser,
+        // desplomarse) las maneja ChokingPatientInteraction.
+        private PatientBody body;
+
+        public bool IsActive
+        {
+            get
+            {
+                return CurrentState == ChokingState.Choking || CurrentState == ChokingState.RescuerBehind
+                    || CurrentState == ChokingState.HandsPlaced;
+            }
+        }
+
+        public void RegisterBackBlow()
+        {
+            if (!IsActive)
+            {
+                return;
+            }
+
+            BackBlows++;
+            Debug.Log($"[Choking] Golpe en la espalda {BackBlows}");
+            OnBackBlow?.Invoke(BackBlows);
+        }
 
         private OVRCameraRig rig;
         private Transform spine;
@@ -82,6 +113,7 @@ namespace SojaExiles
                 return;
             }
 
+            body = patient.GetComponent<PatientBody>();
             spine = FindBone("Spine");
             spineUpper = FindBone("Spine1");
             head = FindBone("Head");
@@ -117,6 +149,12 @@ namespace SojaExiles
 
         private void Update()
         {
+            // Si el paciente se desploma, la esfera roja lo acompana.
+            if (CurrentState == ChokingState.Failed && zone != null)
+            {
+                zone.transform.position = AbdomenPoint();
+            }
+
             if (CurrentState == ChokingState.Idle || CurrentState == ChokingState.Success
                 || CurrentState == ChokingState.Failed)
             {
@@ -259,7 +297,12 @@ namespace SojaExiles
                 lastThrustTime = Time.time;
                 Thrusts++;
                 Debug.Log($"[Choking] Compresion {Thrusts}/{requiredThrusts}");
-                StartCoroutine(Jolt(thrustDir));
+                if (body == null)
+                {
+                    StartCoroutine(Jolt(thrustDir));
+                }
+
+                OnThrust?.Invoke(Thrusts);
 
                 if (Thrusts >= requiredThrusts)
                 {
@@ -304,9 +347,12 @@ namespace SojaExiles
             if (newState == ChokingState.Success)
             {
                 ExpelObject();
-                patient.inclinacionTorso = 4f;
-                patient.inclinacionCabeza = 0f;
-                patient.Aplicar();
+                if (body == null)
+                {
+                    patient.inclinacionTorso = 4f;
+                    patient.inclinacionCabeza = 0f;
+                    patient.Aplicar();
+                }
             }
 
             OnStateChanged?.Invoke(newState);

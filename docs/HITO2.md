@@ -194,3 +194,63 @@ llave del modelo, y `Pinch Inset` de cada objeto.
 3. Retroalimentación por voz, sonido y háptica, e indicador de tiempo y fuerza:
    es el Hito 3. `WaterTap` ya acepta un `AudioSource` para el sonido del agua.
 4. `BodyReachFollow` sigue sin respetar colisiones (ver `AUDITORIA.md`).
+
+## 8. Paciente: cuerpo interactuable y movimiento natural
+
+El paciente (rig de Mixamo sin animaciones) ahora lo mueve `PatientBody`, que
+calcula la pose cada frame partiendo de la T-pose guardada en la malla. Antes,
+en Quemadura y Corte, el brazo lo movía el IK de Animation Rigging y el cuerpo
+`BodyReachFollow`: el otro brazo quedaba en T-pose, la muñeca fija en el mundo,
+el codo sin dirección y el cuerpo atravesaba el mesón. Esos dos componentes
+siguen en la escena pero **desactivados** (se pueden volver a activar si hace
+falta comparar).
+
+### 8.1 Quemadura y Corte (`PatientReach`)
+
+- El brazo libre cuelga relajado al costado (ya no en T-pose).
+- El codo dobla como bisagra real y la muñeca sigue al antebrazo.
+- La mano agarrable no puede ir más lejos que el largo del brazo, ni detrás de
+  la espalda, ni dentro del torso. Si el jugador tira de más, la mano se le
+  escapa (SimpleGrab la suelta), como con una persona real.
+- Si la mano queda lejos, el paciente gira y camina hacia ella. Sus piernas y
+  cadera usan un `CharacterController` (objeto `Familiarartefacto_CuerpoFisico`,
+  creado en runtime): no atraviesa muebles ni paredes, y el torso se inclina
+  por encima del mesón para llegar al chorro de agua.
+- Al iniciar, la paciente gira hacia su mano (la olla o la tabla de picar).
+
+Verificado en el editor: llevando la mano al grifo, el estado pasa
+`Burned → Cooling → Cooled` sin que el cuerpo entre en el mesón. En Corte la
+mano también llega al agua.
+
+### 8.2 Atragantamiento (`ChokingPatientInteraction`)
+
+- **Cuerpo con colliders** en torso, hombros, cabeza y brazos.
+- **Brazos agarrables:** se pueden tomar y mover con los mismos límites
+  humanos. Al soltarlos, la paciente vuelve a llevarse las manos al cuello.
+- **Hombros agarrables:** tomándola por los hombros o la espalda alta se la
+  inclina hacia adelante (hasta 40° extra) o hacia un costado. Al soltarla,
+  recupera la postura.
+- **Golpes en la espalda** (mano rápida hacia adelante entre los omoplatos):
+  reacciona y se cuentan en `ChokingSequenceManager.BackBlows`. No son
+  obligatorios para el éxito.
+- **Reacciones:** antes de atragantarse está de pie con los brazos relajados;
+  al atragantarse lleva las manos al cuello, se agita y tose; con cada
+  compresión se dobla hacia adelante; al expulsar el objeto se endereza
+  aliviada; si se acaba el tiempo (`Failed`) se desploma de rodillas.
+- Mientras las manos del jugador están en la zona del abdomen no se pueden
+  agarrar brazos ni hombros, para que el agarre de las compresiones no tome un
+  brazo por error.
+
+### 8.3 Qué falta probar en el visor
+
+Se probó en el editor con una mano simulada (moviendo el objeto agarrado como
+lo hace SimpleGrab) y con capturas desde varios ángulos. Falta en el Quest:
+
+1. Agarrar el brazo y los hombros de la paciente con controles y con manos.
+2. Golpes en la espalda con la mano real (umbral `Back Blow Speed` = 0,9 m/s).
+3. Llevar la mano quemada al grifo y verificar que se siente natural.
+
+Parámetros para ajustar si hace falta: en `PatientReach`, `Comfort Inner/Outer`
+(cuándo gira el cuerpo), `Max Lean` y `Body Radius`; en
+`ChokingPatientInteraction`, `Max Pull Lean`, `Back Blow Speed` y las fuerzas
+de reacción.
