@@ -54,6 +54,19 @@ namespace SojaExiles
         public float neckFingersSpread = 0.06f;
         public float neckFingersUp = 0.03f;
 
+        [Header("Respiracion y reflejos")]
+        [Tooltip("Cuanto se expande el pecho al inspirar (grados).")]
+        public float breathChestDegrees = 1.2f;
+        [Tooltip("Cuanto suben los hombros al inspirar (grados).")]
+        public float breathShoulderDegrees = 1.8f;
+
+        // Los anima otro componente (p.ej. BurnPatientReactions):
+        // breath va de 0 (exhalado) a 1 (inhalado, puede pasar de 1 si agita);
+        // *HandShake es un giro de la muneca en grados (sacudir la mano).
+        [HideInInspector] public float breath;
+        [HideInInspector] public float rightHandShake;
+        [HideInInspector] public float leftHandShake;
+
         [Header("Reacciones (resorte)")]
         public float springStiffness = 160f;
         public float springDamping = 15f;
@@ -510,6 +523,9 @@ namespace SojaExiles
             spine.rotation = Quaternion.SlerpUnclamped(Quaternion.identity, q, 0.3f) * spine.rotation;
             spine1.rotation = Quaternion.SlerpUnclamped(Quaternion.identity, q, 0.35f) * spine1.rotation;
             spine2.rotation = Quaternion.SlerpUnclamped(Quaternion.identity, q, 0.35f) * spine2.rotation;
+
+            // Al inspirar el pecho se abre (va un poco hacia atras).
+            spine2.rotation = Quaternion.AngleAxis(-breath * breathChestDegrees, rightAxis) * spine2.rotation;
         }
 
         private void ApplyHead()
@@ -553,7 +569,7 @@ namespace SojaExiles
                 float raise = Mathf.Clamp01((desired.y - s.y) / 0.4f);
                 float forward = Mathf.Clamp01((Vector3.Dot(desired - s, torsoFwd) - 0.2f) / 0.3f);
                 Quaternion q = Quaternion.AngleAxis(-arm.side * 12f * forward, torsoUp)
-                    * Quaternion.AngleAxis(arm.side * 15f * raise, torsoFwd);
+                    * Quaternion.AngleAxis(arm.side * (15f * raise + breathShoulderDegrees * breath), torsoFwd);
                 arm.shoulder.rotation = q * arm.shoulder.rotation;
                 desired = DesiredWrist(arm, arm.currentMode, target, torsoUp, torsoFwd, outward);
             }
@@ -577,6 +593,18 @@ namespace SojaExiles
             if (neckWeight > 0.001f)
             {
                 AimHandAtNeck(arm, torsoUp, torsoFwd, outward, neckWeight);
+            }
+
+            // Sacudir la mano (reflejo al quemarse): flexion de la muneca.
+            float shake = arm.side > 0f ? rightHandShake : leftHandShake;
+            if (Mathf.Abs(shake) > 0.01f)
+            {
+                Vector3 foreDir = arm.hand.position - arm.fore.position;
+                Vector3 flexAxis = Vector3.Cross(foreDir, torsoUp);
+                if (flexAxis.sqrMagnitude > 1e-8f)
+                {
+                    arm.hand.rotation = Quaternion.AngleAxis(shake, flexAxis.normalized) * arm.hand.rotation;
+                }
             }
         }
 

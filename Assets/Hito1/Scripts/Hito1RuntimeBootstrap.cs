@@ -108,6 +108,60 @@ namespace SojaExiles
                 {
                     patient.gameObject.AddComponent<BurnPatientReactions>().burnSequence = burn;
                 }
+
+                if (patient.GetComponent<PatientWetHand>() == null)
+                {
+                    patient.gameObject.AddComponent<PatientWetHand>();
+                }
+            }
+
+            InstallStoveKnob();
+        }
+
+        // Perilla del kit (Knob.00X) mas cercana a la olla: la que apaga su
+        // quemador.
+        private static void InstallStoveKnob()
+        {
+            if (Object.FindObjectOfType<StoveKnob>() != null)
+            {
+                return;
+            }
+
+            PotFX pot = Object.FindObjectOfType<PotFX>();
+            if (pot == null)
+            {
+                return;
+            }
+
+            Renderer best = null;
+            float bestDistance = 0.9f;
+            foreach (Renderer r in Object.FindObjectsOfType<Renderer>())
+            {
+                if (!r.name.StartsWith("Knob"))
+                {
+                    continue;
+                }
+
+                float d = Vector3.Distance(r.bounds.center, pot.transform.position);
+                if (d < bestDistance)
+                {
+                    bestDistance = d;
+                    best = r;
+                }
+            }
+
+            if (best == null)
+            {
+                Debug.LogWarning("[Hito1] No se encontro la perilla de la cocina cerca de la olla.");
+                return;
+            }
+
+            StoveKnob knob = best.gameObject.AddComponent<StoveKnob>();
+            knob.pot = pot;
+            WaterTap tap = Object.FindObjectOfType<WaterTap>();
+            if (tap != null)
+            {
+                knob.indicatorMaterial = tap.indicatorMaterial;
             }
         }
     }

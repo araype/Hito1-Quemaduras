@@ -20,7 +20,12 @@ cambia sus campos en el Inspector; si ya está, no se duplica.
 | Agua | Bolitas blancas | Chorro transparente que se corta en la mano o el lavadero y salpica | `WaterStreamFX` (`Aguadegrifo`) |
 | Paño | Caja rígida | Tela que cuelga de los dedos; si se suelta sobre la mano, queda apoyada y cae por los costados | `TowelCloth` (`panuelo`) |
 | Paciente (reacciones) | Ninguna | Grita y retrocede al quemarse, se queja, tiembla, mira su mano, se alivia con el agua, protesta si se saca antes, agradece al final | `BurnPatientReactions` (paciente) |
-| Ambiente | Silencio; el acero reflejaba el cielo | Sonido de cocina y reflejos reales de la cocina | `KitchenAmbience` (`BurnSequenceManager`) |
+| Ambiente | Silencio; el acero reflejaba el cielo | Sonido de cocina, reflejos reales de la cocina, lámpara cálida sobre el mesón y sol más tibio | `KitchenAmbience` (`BurnSequenceManager`) |
+| Respiración | Quieta como maniquí | Pecho y hombros suben y bajan; con dolor respira rápido y se la oye jadear, y se calma al enfriar | `BurnPatientReactions` + `PatientBody.breath` |
+| Reflejo | — | Al quemarse sacude la mano | `BurnPatientReactions` + `PatientBody.rightHandShake` |
+| Mano mojada | — | Brilla bajo el agua, gotea al sacarla (con sonido) y se seca en ~25 s | `PatientWetHand` (paciente) |
+| Lavadero | — | Se junta un charco donde cae el agua y se va por el desagüe al cerrar, con gorgoteo | `WaterStreamFX` |
+| Cocina | Llama siempre prendida | Perilla del quemador: se toca con la mano (punto dorado) y apaga la llama; el hervor y el vapor bajan de a poco | `StoveKnob` (perilla `Knob.00X` más cercana) + `PotFX` |
 
 ### Sonidos (`Assets/Hito1/Resources/Hito1Audio`)
 
@@ -44,6 +49,36 @@ equipo para las frases `voz_*`.
 
 Las pistas se apagan con `BurnPatientReactions > Voice Hints`, para evaluar sin
 ayudas.
+
+**Parpadeo:** el modelo de la paciente (Mixamo Ch07) no tiene blendshapes ni
+huesos de párpados, así que no puede parpadear. Para eso habría que cambiar el
+personaje por uno con blendshapes (por ejemplo, ARKit o Ready Player Me).
+
+### Grabar la voz real
+
+1. Graba cada frase de la tabla, una por archivo, en un lugar silencioso, con
+   el celular a unos 20 cm de la boca. Actúa el dolor: un “¡Ay!” leído no
+   convence.
+2. Recorta el silencio del principio y del final (Audacity, gratis).
+3. Exporta como **WAV, mono** y guárdalo con el **mismo nombre** en
+   `Assets/Hito1/Resources/Hito1Audio`, reemplazando el anterior
+   (`voz_quemadura_1.wav`, `voz_dolor_1.wav`…). No toques los `.meta`.
+
+| Archivo | Frase |
+|---|---|
+| `voz_quemadura_1` | ¡Ay! ¡Me quemé con la olla! |
+| `voz_quemadura_2` | ¡Ay, ay! ¡Me arde mucho la mano! |
+| `voz_dolor_1` | Me arde… me arde mucho. |
+| `voz_dolor_2` | ¡Ayúdame, por favor! |
+| `voz_pista_agua` | ¿Qué hago? ¿La pongo en agua fría? |
+| `voz_alivio_agua` | Ay… el agua fría me alivia. |
+| `voz_saco_agua` | ¡No, todavía me arde! |
+| `voz_enfriada` | Ya se siente un poco mejor. |
+| `voz_pista_pano` | ¿Me la cubres con algo limpio? |
+| `voz_exito` | Gracias. Ya me siento mucho mejor. |
+
+`respiracion_dolor_loop.wav` también se puede reemplazar por una grabación de
+respiración agitada de unos 5 segundos que empalme bien al repetirse.
 
 ## 2. Cómo probar
 
@@ -76,6 +111,15 @@ ayudas.
 - **Olla:** `PotFX > Water Level`, `Steam`, `Burner Flame`, `Boil Volume`.
 - **Voz:** `BurnPatientReactions > Voice Volume`, `Water Hint Delay`,
   `Cloth Hint Delay`.
+- **Respiración:** `BurnPatientReactions > Calm/Pain Breaths Per Minute`,
+  `Pain Breath Depth`, `Pain Breath Volume`; cuánto se mueve el cuerpo en
+  `PatientBody > Breath Chest/Shoulder Degrees`.
+- **Mano mojada:** `PatientWetHand > Drying Seconds`, `Drip Rate`.
+- **Charco:** `WaterStreamFX > Puddle Max Radius`, `Drain Volume`.
+- **Perilla:** `StoveKnob > Turn Angle`, `Start On`. Si la perilla del kit es
+  estática (Static), la llama se apaga igual pero la perilla no se ve girar.
+- **Luz:** `KitchenAmbience > Lamp Intensity`, `Lamp Height`, `Warm Sunlight`.
+  Si el Quest pierde cuadros, desactiva `Warm Light`.
 - **Volver a ver la esfera del marcador** (para depurar):
   `BurnSkinOverlay > Hide Marker` = falso.
 
@@ -84,4 +128,4 @@ ayudas.
 - Las texturas del paciente bajan a 2048/1024 en Android.
 - La sonda de reflejos se renderiza **una sola vez** al empezar.
 - La tela tiene 13 × 9 partículas y 10 iteraciones a 90 Hz.
-- No se agregaron luces en tiempo real.
+- Una sola luz extra (la lámpara, sin sombras). Se puede apagar.

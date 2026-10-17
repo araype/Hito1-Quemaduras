@@ -5,7 +5,8 @@ namespace SojaExiles
 {
     // Convierte el objeto provisional de la olla (una pila de bowls del kit)
     // en una olla de acero con mangos, agua hirviendo, vapor, la llama del
-    // quemador y el sonido del hervor. Solo cambia lo visual y el sonido: los
+    // quemador y el sonido del hervor. La llama se apaga con la perilla
+    // (StoveKnob): el hervor y el vapor bajan de a poco, como al enfriarse. Solo cambia lo visual y el sonido: los
     // colliders, el Rigidbody y el agarre (con sus poses de mano) quedan
     // como estaban, y la olla se arma con el tamano de esos colliders para
     // que la mano siga cayendo sobre el borde.
@@ -21,6 +22,15 @@ namespace SojaExiles
         public bool steam = true;
         public bool burnerFlame = true;
         public float boilVolume = 0.45f;
+        public float gasVolume = 0.25f;
+        [Tooltip("Segundos que tarda en dejar de hervir con el fuego apagado.")]
+        public float coolDownSeconds = 35f;
+
+        public bool BurnerOn { get; private set; } = true;
+        public Vector3 BurnerPosition
+        {
+            get { return burnerPosition; }
+        }
 
         private const int Segments = 36;
 
@@ -29,6 +39,8 @@ namespace SojaExiles
         private Renderer flameRenderer;
         private MaterialPropertyBlock flameBlock;
         private AudioSource boil;
+        private AudioSource gas;
+        private float heat = 1f;
         private Vector3 burnerPosition;
         private float radius, height;
 
@@ -67,7 +79,7 @@ namespace SojaExiles
             AddPart("Mangos", BuildHandles(radius, height * 0.82f, handleReach, handlesOnZ), "Mango");
             AddPart("Agua", BuildDisc(radius - wallThickness - 0.001f, height * waterLevel), "Agua_Superficie");
 
-            burnerPosition = visual.position + Vector3.down * 0.004f;
+            burnerPosition = FindBurner(visual.position);
             if (burnerFlame)
             {
                 BuildFlame(radius);
@@ -87,6 +99,47 @@ namespace SojaExiles
                 boil.time = Random.Range(0f, boil.clip.length * 0.9f);
                 boil.Play();
             }
+
+            GameObject gasAudio = new GameObject("SonidoGas");
+            gasAudio.transform.position = burnerPosition;
+            gas = Hito1FX.CreateSource(gasAudio, "gas_llama_loop", 0f, true, 0.2f, 3f);
+        }
+
+        // Prende o apaga el quemador (lo llama la perilla).
+        public void SetBurner(bool on)
+        {
+            BurnerOn = on;
+            if (flameRenderer != null)
+            {
+                flameRenderer.enabled = on;
+            }
+
+            Debug.Log("[PotFX] Quemador " + (on ? "encendido" : "apagado"));
+        }
+
+        // Quemador del kit (Burner_0X) que queda debajo de la olla; si no hay,
+        // justo debajo de ella.
+        private static Vector3 FindBurner(Vector3 potBottom)
+        {
+            Vector3 best = potBottom + Vector3.down * 0.004f;
+            float bestDistance = 0.25f;
+            foreach (Renderer r in FindObjectsOfType<Renderer>())
+            {
+                if (!r.name.StartsWith("Burner"))
+                {
+                    continue;
+                }
+
+                Vector3 c = r.bounds.center;
+                float d = new Vector2(c.x - potBottom.x, c.z - potBottom.z).magnitude;
+                if (d < bestDistance && Mathf.Abs(c.y - potBottom.y) < 0.2f)
+                {
+                    bestDistance = d;
+                    best = new Vector3(c.x, r.bounds.max.y + 0.004f, c.z);
+                }
+            }
+
+            return best;
         }
 
         private void Update()
@@ -97,19 +150,26 @@ namespace SojaExiles
                 ? 1f - Mathf.Clamp01((Vector3.Distance(visual.position, burnerPosition) - 0.05f) / 0.3f)
                 : 0f;
 
+            // Con fuego y sobre el quemador se calienta rapido; si no, se
+            // enfria despacio.
+            bool heating = BurnerOn && onBurner > 0.5f;
+            heat = Mathf.MoveTowards(heat, heating ? 1f : 0f,
+                Time.deltaTime / (heating ? 6f : Mathf.Max(1f, coolDownSeconds)));
+
             if (boil != null)
             {
-                boil.volume = Mathf.MoveTowards(boil.volume, boilVolume * Mathf.Lerp(0.25f, 1f, onBurner),
-                    Time.deltaTime);
+                boil.volume = Mathf.MoveTowards(boil.volume, boilVolume * heat, Time.deltaTime);
             }
+
+            Hito1FX.FadeLoop(gas, BurnerOn ? gasVolume : 0f, 2f);
 
             if (steamSystem != null)
             {
                 ParticleSystem.EmissionModule emission = steamSystem.emission;
-                emission.rateOverTime = Mathf.Lerp(1.5f, 7f, onBurner);
+                emission.rateOverTime = 7f * heat;
             }
 
-            if (flameRenderer != null)
+            if (flameRenderer != null && BurnerOn)
             {
                 // Parpadeo suave de la llama.
                 float flicker = 0.85f + 0.15f * Mathf.PerlinNoise(Time.time * 9f, 0.3f);
@@ -411,6 +471,7 @@ namespace SojaExiles
             }
 
             flameRenderer = renderer;
+            flameRenderer.enabled = BurnerOn;
             flameBlock = new MaterialPropertyBlock();
         }
 

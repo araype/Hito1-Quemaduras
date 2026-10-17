@@ -7,13 +7,24 @@ namespace SojaExiles
     //   - sonido de fondo (zumbido del refrigerador y aire de la habitacion);
     //   - una sonda de reflejos en tiempo real que se renderiza una vez al
     //     empezar, para que el acero de la olla, el agua y el grifo reflejen la
-    //     cocina en vez del cielo por defecto.
+    //     cocina en vez del cielo por defecto;
+    //   - luz calida de cocina: una lampara sobre el meson (sin sombras, para
+    //     cuidar el rendimiento en el Quest) y el sol algo mas tibio.
     // Se centra entre los objetos de la escena (olla, grifo, paciente) si no
     // se indica otro punto.
     public class KitchenAmbience : MonoBehaviour
     {
         public Transform center;
         public float ambienceVolume = 0.22f;
+
+        [Header("Luz calida")]
+        public bool warmLight = true;
+        public Color lampColor = new Color(1f, 0.83f, 0.62f);
+        public float lampIntensity = 0.9f;
+        public float lampRange = 4.5f;
+        [Tooltip("Altura de la lampara sobre el centro de la cocina (m).")]
+        public float lampHeight = 1.3f;
+        [Range(0f, 1f)] public float warmSunlight = 0.35f;
 
         [Header("Reflejos")]
         public bool reflectionProbe = true;
@@ -34,6 +45,11 @@ namespace SojaExiles
             if (source.clip != null)
             {
                 source.Play();
+            }
+
+            if (warmLight)
+            {
+                AddWarmLight(point);
             }
 
             if (!reflectionProbe)
@@ -57,6 +73,28 @@ namespace SojaExiles
             // colliders) antes de fotografiarla.
             yield return new WaitForSeconds(0.5f);
             probe.RenderProbe();
+        }
+
+        private void AddWarmLight(Vector3 point)
+        {
+            GameObject go = new GameObject("LamparaCocina");
+            go.transform.position = point + Vector3.up * lampHeight;
+            Light lamp = go.AddComponent<Light>();
+            lamp.type = LightType.Point;
+            lamp.color = lampColor;
+            lamp.intensity = lampIntensity;
+            lamp.range = lampRange;
+            lamp.shadows = LightShadows.None;
+            lamp.renderMode = LightRenderMode.ForcePixel;
+
+            // El sol (luz direccional) se entibia un poco.
+            foreach (Light l in FindObjectsOfType<Light>())
+            {
+                if (l.type == LightType.Directional)
+                {
+                    l.color = Color.Lerp(l.color, new Color(1f, 0.86f, 0.7f), warmSunlight);
+                }
+            }
         }
 
         private Vector3 GuessCenter()

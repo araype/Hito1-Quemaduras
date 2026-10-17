@@ -13,7 +13,9 @@ namespace SojaExiles
     //   - al abrir, el agua tarda en llegar abajo; al cerrar, el ultimo tramo
     //     cae y se corta;
     //   - sonido del chorro en el punto de impacto, mas fuerte y brillante
-    //     cuando cae sobre una mano, y el clic de la llave al abrir o cerrar.
+    //     cuando cae sobre una mano, y el clic de la llave al abrir o cerrar;
+    //   - en el lavadero se junta un charco que crece mientras corre el agua
+    //     y se va por el desague (con su gorgoteo) al cerrar.
     // Va en el objeto del agua del grifo (Aguadegrifo); busca su WaterTap en
     // los hijos.
     [DefaultExecutionOrder(150)]
@@ -34,6 +36,13 @@ namespace SojaExiles
         [Tooltip("Partes del cuerpo que cortan el chorro aunque no tengan collider (se agregan solas las manos del paciente).")]
         public List<Transform> extraTargets = new List<Transform>();
         public float extraTargetRadius = 0.045f;
+
+        [Header("Lavadero")]
+        public bool sinkPuddle = true;
+        public float puddleMaxRadius = 0.11f;
+        public float puddleFillSeconds = 6f;
+        public float puddleDrainSeconds = 9f;
+        public float drainVolume = 0.4f;
 
         [Header("Sonido")]
         public float streamVolume = 0.55f;
@@ -61,11 +70,30 @@ namespace SojaExiles
         private float hitDistance;
         private Vector3 hitNormal = Vector3.up;
         private bool hitOnSkin;
+        private Transform hitTarget;
+        private Transform puddle;
+        private Vector3 puddlePoint;
+        private Vector3 puddleNormal = Vector3.up;
+        private bool hasPuddlePoint;
+        private float puddleAmount;
+        private AudioSource drainSource;
         private readonly RaycastHit[] hits = new RaycastHit[8];
         private readonly Dictionary<Transform, Transform> palmKnuckles = new Dictionary<Transform, Transform>();
 
         public bool IsFlowing { get; private set; }
         public Vector3 ImpactPoint { get; private set; }
+
+        // El chorro cae sobre piel (mano del paciente o del jugador) y que
+        // cosa toca (el hueso de la mano o el collider).
+        public bool HitOnSkin
+        {
+            get { return hitOnSkin; }
+        }
+
+        public Transform HitTarget
+        {
+            get { return hitTarget; }
+        }
 
         private Vector3 Nozzle
         {
@@ -87,6 +115,10 @@ namespace SojaExiles
 
             BuildStream();
             BuildSplash();
+            if (sinkPuddle)
+            {
+                BuildPuddle();
+            }
 
             GameObject audio = new GameObject("SonidoChorro");
             audio.transform.SetParent(transform, false);
@@ -185,6 +217,7 @@ namespace SojaExiles
 
             UpdateMesh(visible);
             UpdateSplash();
+            UpdatePuddle(dt);
             UpdateSound();
         }
 
@@ -194,6 +227,7 @@ namespace SojaExiles
             float best = maxLength;
             Vector3 normal = Vector3.up;
             bool skin = false;
+            Transform target = null;
 
             int count = Physics.SphereCastNonAlloc(origin, topRadius, Vector3.down, hits, maxLength,
                 Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
@@ -208,19 +242,20 @@ namespace SojaExiles
                 best = hit.distance;
                 normal = hit.normal;
                 skin = IsSkin(hit.collider);
+                target = hit.collider.transform;
             }
 
             // Manos sin collider (los huesos del paciente): se tratan como
             // esferas. La punta de los dedos queda dentro del radio.
             for (int i = 0; i < extraTargets.Count; i++)
             {
-                Transform target = extraTargets[i];
-                if (target == null)
+                Transform extra = extraTargets[i];
+                if (extra == null)
                 {
                     continue;
                 }
 
-                Vector3 center = PalmCenter(target);
+                Vector3 center = PalmCenter(extra);
                 Vector3 rel = center - origin;
                 float along = -rel.y;
                 if (along <= 0f || along >= best + extraTargetRadius)
@@ -241,12 +276,14 @@ namespace SojaExiles
                     best = top;
                     normal = (origin + Vector3.down * top - center).normalized;
                     skin = true;
+                    target = extra;
                 }
             }
 
             hitDistance = best;
             hitNormal = normal;
             hitOnSkin = skin && best < maxLength;
+            hitTarget = best < maxLength ? target : null;
         }
 
         // Centro de la palma: entre la muneca y el nudillo del dedo medio.
@@ -450,6 +487,98 @@ namespace SojaExiles
             emission.rateOverTime = landing ? (hitOnSkin ? 260f : 150f) : 0f;
         }
 
+        // ---------------- charco del lavadero ----------------
+
+        private void BuildPuddle()
+        {
+            GameObject go = new GameObject("CharcoLavadero");
+            go.AddComponent<NoAutoCollider>();
+            puddle = go.transform;
+
+            const int segments = 28;
+            Vector3[] v = new Vector3[segments + 2];
+            Vector3[] n = new Vector3[segments + 2];
+            int[] tris = new int[segments * 3];
+            n[0] = Vector3.up;
+            for (int s = 0; s <= segments; s++)
+            {
+                float a = s / (float)segments * Mathf.PI * 2f;
+                // Borde algo irregular, como el agua que se junta.
+                float r = 1f + 0.08f * Mathf.Sin(a * 3f) + 0.05f * Mathf.Sin(a * 7f + 1f);
+                v[s + 1] = new Vector3(Mathf.Cos(a) * r, 0f, Mathf.Sin(a) * r);
+                n[s + 1] = Vector3.up;
+                if (s < segments)
+                {
+                    tris[s * 3] = 0;
+                    tris[s * 3 + 1] = s + 2;
+                    tris[s * 3 + 2] = s + 1;
+                }
+            }
+
+            Mesh mesh = new Mesh { name = "Charco" };
+            mesh.vertices = v;
+            mesh.normals = n;
+            mesh.triangles = tris;
+            mesh.RecalculateBounds();
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            MeshRenderer renderer = go.AddComponent<MeshRenderer>();
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            Material material = Hito1FX.Mat("Agua_Superficie");
+            if (material != null)
+            {
+                renderer.sharedMaterial = material;
+            }
+
+            go.SetActive(false);
+            // Objeto propio: la fuente se mueve al desague.
+            GameObject drain = new GameObject("SonidoDesague");
+            drain.transform.SetParent(transform, false);
+            drainSource = Hito1FX.CreateSource(drain, "desague_loop", 0f, true, 0.3f, 5f);
+        }
+
+        private void UpdatePuddle(float dt)
+        {
+            if (puddle == null)
+            {
+                return;
+            }
+
+            // Solo se junta agua sobre una superficie horizontal (el fondo
+            // del lavadero), no sobre una mano.
+            bool filling = IsFlowing && hitDistance < maxLength && !hitOnSkin && hitNormal.y > 0.7f;
+            if (filling)
+            {
+                if (!hasPuddlePoint || Vector3.Distance(ImpactPoint, puddlePoint) > 0.15f)
+                {
+                    puddlePoint = ImpactPoint;
+                    puddleNormal = hitNormal;
+                    hasPuddlePoint = true;
+                }
+
+                puddleAmount = Mathf.MoveTowards(puddleAmount, 1f, dt / Mathf.Max(0.5f, puddleFillSeconds));
+            }
+            else
+            {
+                puddleAmount = Mathf.MoveTowards(puddleAmount, 0f, dt / Mathf.Max(0.5f, puddleDrainSeconds));
+            }
+
+            bool visible = hasPuddlePoint && puddleAmount > 0.01f;
+            puddle.gameObject.SetActive(visible);
+            if (visible)
+            {
+                float radius = Mathf.Lerp(0.025f, puddleMaxRadius, Mathf.Sqrt(puddleAmount));
+                radius *= 1f + 0.03f * Mathf.Sin(Time.time * 9f);
+                puddle.position = puddlePoint + puddleNormal * 0.0015f;
+                puddle.rotation = Quaternion.FromToRotation(Vector3.up, puddleNormal);
+                puddle.localScale = new Vector3(radius, 1f, radius);
+            }
+
+            if (drainSource != null)
+            {
+                drainSource.transform.position = hasPuddlePoint ? puddlePoint : transform.position;
+            }
+        }
+
         private void UpdateSound()
         {
             Transform audio = streamSource != null ? streamSource.transform : null;
@@ -463,6 +592,7 @@ namespace SojaExiles
             float stream = landing ? (1f - onSkin * 0.6f) : (IsFlowing ? 0.4f : 0f);
             Hito1FX.FadeLoop(streamSource, stream * streamVolume, 3f);
             Hito1FX.FadeLoop(splashSource, onSkin * splashVolume, 3f);
+            Hito1FX.FadeLoop(drainSource, puddleAmount * drainVolume, 1f);
         }
     }
 }

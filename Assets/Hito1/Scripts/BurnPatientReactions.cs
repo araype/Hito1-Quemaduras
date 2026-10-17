@@ -8,7 +8,10 @@ namespace SojaExiles
     //     atras; mientras le arde, se queja cada tanto y tiembla un poco;
     //   - mira su mano mientras le duele y mira al jugador cuando le habla;
     //   - bajo el agua se alivia; si se saca la mano antes de tiempo, protesta;
-    //   - enfriada y cubierta: lo agradece.
+    //   - enfriada y cubierta: lo agradece;
+    //   - respira siempre (el pecho y los hombros suben y bajan); con dolor
+    //     respira rapido y se la oye jadear, y se calma al enfriar la mano;
+    //   - al quemarse sacude la mano por reflejo.
     // Las pistas de voz (pedir agua o algo para cubrirse) se pueden apagar
     // para una evaluacion sin ayudas.
     // Corre despues de PatientReach (que fija la inclinacion de la cabeza) y
@@ -27,11 +30,20 @@ namespace SojaExiles
         public float clothHintDelay = 12f;
         public Vector2 painLineInterval = new Vector2(7f, 12f);
 
+        [Header("Respiracion")]
+        public float calmBreathsPerMinute = 15f;
+        public float painBreathsPerMinute = 36f;
+        public float painBreathDepth = 1.6f;
+        public float painBreathVolume = 0.35f;
+
         [Header("Cuerpo")]
         public float flinchImpulse = -110f;
         public float trembleImpulse = 14f;
         public float maxHeadYaw = 65f;
         public float headTurnSpeed = 3f;
+        [Tooltip("Sacudida de la mano al quemarse: amplitud (grados) y duracion (s).")]
+        public float handShakeDegrees = 32f;
+        public float handShakeSeconds = 1.6f;
 
         private static readonly string[] PainLines = { "voz_dolor_1", "voz_dolor_2", "voz_quemadura_2" };
 
@@ -47,6 +59,10 @@ namespace SojaExiles
         private bool waterHinted, clothHinted, relieved;
         private string pendingLine;
         private float pendingTime;
+        private AudioSource breathing;
+        private float breathPhase;
+        private float pain;
+        private float shakeUntil = float.NegativeInfinity;
 
         private void Awake()
         {
@@ -65,6 +81,7 @@ namespace SojaExiles
             go.transform.SetParent(head, false);
             voice = Hito1FX.CreateSource(go, null, voiceVolume, false, 0.6f, 9f);
             voice.spread = 60f;
+            breathing = Hito1FX.CreateSource(go, "respiracion_dolor_loop", 0f, true, 0.4f, 5f);
 
             OVRCameraRig rig = FindObjectOfType<OVRCameraRig>();
             viewer = rig != null && rig.centerEyeAnchor != null
@@ -103,6 +120,7 @@ namespace SojaExiles
                         Hito1FX.PlayAt("olla_golpe", pot != null ? pot.transform.position : hand, 0.8f);
                         Say("voz_quemadura_1", true);
                         body.Impulse(flinchImpulse, 0.12f);
+                        shakeUntil = Time.time + handShakeSeconds;
                         nextPainLine = Time.time + Random.Range(painLineInterval.x, painLineInterval.y) + 2f;
                     }
                     else if (previous == BurnSequenceManager.BurnState.Cooling && Time.time >= nextProtest)
@@ -184,6 +202,54 @@ namespace SojaExiles
             }
 
             UpdateHead(state, dt);
+            UpdateBreathing(state, dt);
+            UpdateHandShake();
+        }
+
+        // Dolor (0 a 1) segun la etapa; se suaviza para que la respiracion
+        // se calme de a poco.
+        private void UpdateBreathing(BurnSequenceManager.BurnState state, float dt)
+        {
+            float wanted;
+            switch (state)
+            {
+                case BurnSequenceManager.BurnState.Burned:
+                    wanted = 1f;
+                    break;
+                case BurnSequenceManager.BurnState.Cooling:
+                    wanted = 0.55f;
+                    break;
+                case BurnSequenceManager.BurnState.Cooled:
+                    wanted = 0.2f;
+                    break;
+                default:
+                    wanted = 0f;
+                    break;
+            }
+
+            pain = Mathf.MoveTowards(pain, wanted, dt / (wanted > pain ? 0.5f : 6f));
+
+            float perMinute = Mathf.Lerp(calmBreathsPerMinute, painBreathsPerMinute, pain);
+            breathPhase = Mathf.Repeat(breathPhase + dt * perMinute / 60f * Mathf.PI * 2f, Mathf.PI * 2f);
+            float depth = Mathf.Lerp(1f, painBreathDepth, pain);
+            body.breath = depth * (1f - Mathf.Cos(breathPhase)) * 0.5f;
+
+            // Mientras habla no se oye el jadeo.
+            float volume = IsSpeaking ? 0f : painBreathVolume * Mathf.Clamp01((pain - 0.15f) / 0.85f);
+            Hito1FX.FadeLoop(breathing, volume, 1f);
+        }
+
+        private void UpdateHandShake()
+        {
+            float left = shakeUntil - Time.time;
+            if (left <= 0f)
+            {
+                body.rightHandShake = 0f;
+                return;
+            }
+
+            float k = Mathf.Clamp01(left / Mathf.Max(0.1f, handShakeSeconds));
+            body.rightHandShake = handShakeDegrees * k * Mathf.Sin(Time.time * Mathf.PI * 2f * 7f);
         }
 
         private bool IsSpeaking
