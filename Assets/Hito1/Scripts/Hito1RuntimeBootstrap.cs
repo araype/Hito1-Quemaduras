@@ -50,6 +50,65 @@ namespace SojaExiles
                 go = go != null ? go : new GameObject("Hito1Runtime");
                 go.AddComponent<SceneCycler>();
             }
+
+            InstallBurnScene();
+        }
+
+        // Escena de quemadura: aspecto, fisica de la tela, agua, reacciones
+        // de la paciente y sonido. Cada componente se puede poner a mano en la
+        // escena para ajustar sus valores; si ya esta, no se duplica.
+        private static void InstallBurnScene()
+        {
+            BurnSequenceManager burn = Object.FindObjectOfType<BurnSequenceManager>();
+            if (burn == null)
+            {
+                return;
+            }
+
+            if (Object.FindObjectOfType<KitchenAmbience>() == null)
+            {
+                burn.gameObject.AddComponent<KitchenAmbience>();
+            }
+
+            foreach (WaterTap tap in Object.FindObjectsOfType<WaterTap>())
+            {
+                Transform parent = tap.transform.parent;
+                GameObject water = tap.water != null ? tap.water.gameObject : (parent != null ? parent.gameObject : null);
+                if (water != null && water.GetComponent<WaterStreamFX>() == null)
+                {
+                    water.AddComponent<WaterStreamFX>().tap = tap;
+                }
+            }
+
+            foreach (FirstAidItem item in Object.FindObjectsOfType<FirstAidItem>())
+            {
+                if (item.type == FirstAidItem.ItemType.Panuelo && item.GetComponent<Rigidbody>() != null
+                    && item.GetComponent<BoxCollider>() != null && item.GetComponent<TowelCloth>() == null)
+                {
+                    item.gameObject.AddComponent<TowelCloth>();
+                }
+            }
+
+            foreach (Rigidbody rb in Object.FindObjectsOfType<Rigidbody>())
+            {
+                if (rb.name.Contains("Olla") && rb.GetComponent<PotFX>() == null)
+                {
+                    rb.gameObject.AddComponent<PotFX>();
+                }
+            }
+
+            foreach (PatientBody patient in Object.FindObjectsOfType<PatientBody>())
+            {
+                if (patient.GetComponent<BurnSkinOverlay>() == null)
+                {
+                    patient.gameObject.AddComponent<BurnSkinOverlay>().burnSequence = burn;
+                }
+
+                if (patient.GetComponent<BurnPatientReactions>() == null)
+                {
+                    patient.gameObject.AddComponent<BurnPatientReactions>().burnSequence = burn;
+                }
+            }
         }
     }
 }

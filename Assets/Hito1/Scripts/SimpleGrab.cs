@@ -103,6 +103,23 @@ namespace SojaExiles
             return (leftHand ? left : right).held != null;
         }
 
+        // True si alguna mano del jugador sostiene ese Rigidbody con
+        // SimpleGrab (lo usa la tela del pano para saber si cuelga de la mano).
+        public static bool IsHeldObject(Rigidbody rb)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                SimpleGrab grab = Instances[i];
+                if ((grab.left.held != null && grab.left.held.rb == rb)
+                    || (grab.right.held != null && grab.right.held.rb == rb))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         // True si el collider es la esfera fisica de alguna mano del jugador
         // (la usan el grifo y otros objetos que se activan al tocarlos).
         public static bool IsHandCollider(Collider col)

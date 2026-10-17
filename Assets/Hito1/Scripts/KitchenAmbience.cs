@@ -1,0 +1,87 @@
+using System.Collections;
+using UnityEngine;
+
+namespace SojaExiles
+{
+    // Ambiente de la cocina:
+    //   - sonido de fondo (zumbido del refrigerador y aire de la habitacion);
+    //   - una sonda de reflejos en tiempo real que se renderiza una vez al
+    //     empezar, para que el acero de la olla, el agua y el grifo reflejen la
+    //     cocina en vez del cielo por defecto.
+    // Se centra entre los objetos de la escena (olla, grifo, paciente) si no
+    // se indica otro punto.
+    public class KitchenAmbience : MonoBehaviour
+    {
+        public Transform center;
+        public float ambienceVolume = 0.22f;
+
+        [Header("Reflejos")]
+        public bool reflectionProbe = true;
+        public Vector3 probeSize = new Vector3(6f, 3.2f, 6f);
+        public int probeResolution = 128;
+
+        private ReflectionProbe probe;
+
+        private IEnumerator Start()
+        {
+            Vector3 point = center != null ? center.position : GuessCenter();
+
+            GameObject audio = new GameObject("AmbienteCocina");
+            audio.transform.position = point;
+            AudioSource source = Hito1FX.CreateSource(audio, "cocina_ambiente_loop", ambienceVolume, true, 2f, 20f);
+            source.spatialBlend = 0.4f;
+            source.priority = 200;
+            if (source.clip != null)
+            {
+                source.Play();
+            }
+
+            if (!reflectionProbe)
+            {
+                yield break;
+            }
+
+            GameObject go = new GameObject("ReflejosCocina");
+            go.transform.position = point + Vector3.up * 0.4f;
+            probe = go.AddComponent<ReflectionProbe>();
+            probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Realtime;
+            probe.refreshMode = UnityEngine.Rendering.ReflectionProbeRefreshMode.ViaScripting;
+            probe.timeSlicingMode = UnityEngine.Rendering.ReflectionProbeTimeSlicingMode.IndividualFaces;
+            probe.size = probeSize;
+            probe.resolution = probeResolution;
+            probe.hdr = false;
+            probe.boxProjection = true;
+            probe.importance = 2;
+
+            // Se espera a que la escena termine de armarse (olla, paciente,
+            // colliders) antes de fotografiarla.
+            yield return new WaitForSeconds(0.5f);
+            probe.RenderProbe();
+        }
+
+        private Vector3 GuessCenter()
+        {
+            Vector3 sum = Vector3.zero;
+            int n = 0;
+            foreach (PotFX pot in FindObjectsOfType<PotFX>())
+            {
+                sum += pot.transform.position;
+                n++;
+            }
+
+            foreach (WaterTap tap in FindObjectsOfType<WaterTap>())
+            {
+                sum += tap.transform.position;
+                n++;
+            }
+
+            foreach (PatientBody patient in FindObjectsOfType<PatientBody>())
+            {
+                sum += patient.transform.position + Vector3.up;
+                n++;
+            }
+
+            return n > 0 ? sum / n : transform.position;
+        }
+    }
+}

@@ -12,6 +12,13 @@ namespace SojaExiles
     {
         public BurnSequenceManager burnSequence;
 
+        // Si es false, la esfera del marcador no se dibuja aunque la mano ya
+        // este quemada (sus colliders si se activan). BurnSkinOverlay la
+        // apaga porque muestra la quemadura sobre la piel del paciente.
+        public bool showMarker = true;
+
+        private bool visible;
+
         private Renderer targetRenderer;
         private Collider[] targetColliders;
 
@@ -55,11 +62,18 @@ namespace SojaExiles
             }
         }
 
-        private void SetVisible(bool visible)
+        public void SetMarkerShown(bool shown)
         {
+            showMarker = shown;
+            SetVisible(visible);
+        }
+
+        private void SetVisible(bool value)
+        {
+            visible = value;
             if (targetRenderer != null)
             {
-                targetRenderer.enabled = visible;
+                targetRenderer.enabled = visible && showMarker;
             }
 
             foreach (Collider col in targetColliders)
