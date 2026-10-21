@@ -129,3 +129,55 @@ respiración agitada de unos 5 segundos que empalme bien al repetirse.
 - La sonda de reflejos se renderiza **una sola vez** al empezar.
 - La tela tiene 13 × 9 partículas y 10 iteraciones a 90 Hz.
 - Una sola luz extra (la lámpara, sin sombras). Se puede apagar.
+
+## 5. Experiencia principal (rama `experiencia-quemadura`)
+
+Igual que lo anterior: **no se tocó la escena**, todo se instala al dar Play.
+Compila contra Unity 2022.3.62 y el Meta XR SDK 201. **Todavía no se ha visto
+en el editor ni en el Quest.**
+
+| Qué | Cómo se ve / se usa | Componente |
+|---|---|---|
+| Accidente | A los 6 s la olla se vuelca hacia la paciente: el agua cae en la mano, se forma un charco humeante en el mesón y otro en el suelo, y sale una nube de vapor. Ahí se quema la mano (ya no a los 3 s fijos). | `PotAccident` (olla) |
+| Hinchazón | La mano se engrosa de a poco: rápido sin agua, casi nada bajo el chorro. | `BurnInjury` (paciente) |
+| Ampollas | En segundo grado aparecen a los 6 s y crecen mientras no se enfría. Enfriar a tiempo las deja chicas. | `BurnInjury` |
+| Llaves | La llave que ya estaba es la **fría** (punto azul). Al lado hay una **caliente** (punto rojo). Con solo la caliente abierta sale vapor del chorro, no enfría, vuelve a enrojecer la mano, la paciente grita y cuenta como error. | `WaterTap.hot/pair` |
+| Anillo | Anillo dorado en el anular. Se saca dejando la mano libre sobre él 1,2 s (punto dorado). Si la mano ya se hinchó, se traba y cuenta como error. | `PatientRing` (paciente) |
+| Chompa | Doblada en la silla más cercana. Se suelta sobre la espalda o los hombros y queda puesta. | `SweaterItem` |
+| Cubrir | Film y gasa junto al lavadero. Se sueltan sobre la mano **ya enfriada**: la cubren y el caso termina (Success). Si se intenta antes, es un error. El paño de cocina ya no cierra el caso: sobre la quemadura cuenta como error. | `CoverItem`, `TowelMisuse` |
+| Remedios caseros | Mantequilla, pasta dental, aceite y algodón en el mesón; hielo cerca del refrigerador. Al acercarlos, la paciente aparta la mano y protesta (error). Si se aplican, queda una capa sobre la piel y grita (error crítico; el algodón es error común). El agua quita la grasa y la pasta. | `HomeRemedy` |
+| Vibración | Suave mientras sostienes la mano de la paciente bajo el agua (más fuerte si está caliente), pulsos al acercar la mano al fuego, un golpe por error (dos si es crítico) y un toque leve en cada acierto. | `BurnHaptics` |
+
+Todo lo que hace el jugador sale por `BurnSequenceManager.OnEvent`, con su
+gravedad (`Errors` y `CriticalErrors` llevan la cuenta). Esto queda listo para
+conectar después el resumen y el puntaje. En la consola cada evento aparece
+como `[BurnSequence] Evento ...`.
+
+### Probar
+
+1. Dar Play y esperar el accidente. En la consola deben salir `[BurnInjury] N
+   ampollas preparadas`, `[BurnSceneProps] ... en (x, y, z)` por cada objeto y
+   `Evento PotSpilled`.
+2. Revisar que los objetos quedaron **sobre** el mesón (y no dentro de algo).
+   Si alguno sale mal ubicado, la consola avisa con `No hay lugar libre`.
+3. Probar cada fila de la tabla y mirar los eventos en la consola.
+
+### Valores para ajustar
+
+- **Accidente:** `PotAccident > Accident Delay`, `Tip Angle`, radios de los
+  charcos y `Steam Seconds`.
+- **Quemadura:** `BurnInjury > Degree` (o `Random Degree`), `Max Swelling`,
+  `Swell Seconds Untreated`, `Blister Count`, `Blister Diameter`.
+- **Anillo:** `PatientRing > Inner Radius` (si queda flojo o se hunde en el
+  dedo), `Along Finger`, `Hold Seconds`, `Stuck Swelling`.
+- **Llave caliente:** se crea a 9 cm de la fría. Muévela en Play
+  (`LlaveGrifoCaliente`, hija de `Aguadegrifo`) si queda fuera del grifo.
+- **Remedios:** `HomeRemedy > Near Distance` y `Apply Distance`.
+- **Vibración:** `BurnHaptics > Intensity` y `Burner Warn Distance`.
+- **Qué objetos aparecen:** `BurnSceneProps > Cover Items / Sweater / Remedies`.
+
+Los sonidos nuevos (`agua_derrame`, `anillo_sale`, `film_estirar`,
+`hielo_choque`) están sintetizados. Las 8 frases nuevas (`voz_agua_caliente`,
+`voz_hielo_no`, `voz_remedio_no`, `voz_hielo_duele`, `voz_remedio_arde`,
+`voz_anillo_sale`, `voz_anillo_atorado`, `voz_abrigo`) son TTS y se reemplazan
+igual que las demás (sección 1).

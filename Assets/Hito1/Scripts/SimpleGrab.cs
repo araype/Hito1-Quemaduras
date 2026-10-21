@@ -120,6 +120,44 @@ namespace SojaExiles
             return false;
         }
 
+        // True si esa mano del jugador (izquierda o derecha) sostiene ese
+        // Rigidbody (la usa la vibracion de los controles).
+        public static bool IsHeldBy(Rigidbody rb, bool leftHand)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                Hand hand = leftHand ? Instances[i].left : Instances[i].right;
+                if (hand.held != null && hand.held.rb == rb)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // True si es la esfera de una mano del jugador que no sostiene nada
+        // (para sacar el anillo sin confundirse con la mano que sujeta la de
+        // la paciente).
+        public static bool IsFreeHandCollider(Collider col)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                SimpleGrab grab = Instances[i];
+                if (col == grab.left.bodyCollider)
+                {
+                    return grab.left.held == null;
+                }
+
+                if (col == grab.right.bodyCollider)
+                {
+                    return grab.right.held == null;
+                }
+            }
+
+            return false;
+        }
+
         // True si el collider es la esfera fisica de alguna mano del jugador
         // (la usan el grifo y otros objetos que se activan al tocarlos).
         public static bool IsHandCollider(Collider col)

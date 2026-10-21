@@ -143,6 +143,12 @@ namespace SojaExiles
 
             UpdateMarker();
             Debug.Log("[Hito1] Cocina " + (on ? "encendida" : "apagada"));
+
+            BurnSequenceManager burn = FindObjectOfType<BurnSequenceManager>();
+            if (burn != null)
+            {
+                burn.Report(on ? BurnSequenceManager.BurnEvent.BurnerOn : BurnSequenceManager.BurnEvent.BurnerOff);
+            }
         }
 
         // El punto dorado solo se ve mientras hay fuego (invita a apagarlo).

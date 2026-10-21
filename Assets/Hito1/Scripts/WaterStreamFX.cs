@@ -59,6 +59,7 @@ namespace SojaExiles
         private Vector2[] uvs;
         private Material streamMaterial;
         private ParticleSystem splash;
+        private ParticleSystem hotSteam;
         private AudioSource streamSource;
         private AudioSource splashSource;
 
@@ -146,7 +147,7 @@ namespace SojaExiles
                 }
             }
 
-            wasOpen = tap != null && tap.IsOpen;
+            wasOpen = tap != null && tap.Flowing;
             if (wasOpen)
             {
                 front = maxLength;
@@ -172,7 +173,7 @@ namespace SojaExiles
 
         private void Update()
         {
-            bool open = tap != null && tap.IsOpen;
+            bool open = tap != null && tap.Flowing;
             if (open != wasOpen)
             {
                 wasOpen = open;
@@ -219,6 +220,7 @@ namespace SojaExiles
             UpdateSplash();
             UpdatePuddle(dt);
             UpdateSound();
+            UpdateHotSteam();
         }
 
         private void UpdateHit()
@@ -495,32 +497,8 @@ namespace SojaExiles
             go.AddComponent<NoAutoCollider>();
             puddle = go.transform;
 
-            const int segments = 28;
-            Vector3[] v = new Vector3[segments + 2];
-            Vector3[] n = new Vector3[segments + 2];
-            int[] tris = new int[segments * 3];
-            n[0] = Vector3.up;
-            for (int s = 0; s <= segments; s++)
-            {
-                float a = s / (float)segments * Mathf.PI * 2f;
-                // Borde algo irregular, como el agua que se junta.
-                float r = 1f + 0.08f * Mathf.Sin(a * 3f) + 0.05f * Mathf.Sin(a * 7f + 1f);
-                v[s + 1] = new Vector3(Mathf.Cos(a) * r, 0f, Mathf.Sin(a) * r);
-                n[s + 1] = Vector3.up;
-                if (s < segments)
-                {
-                    tris[s * 3] = 0;
-                    tris[s * 3 + 1] = s + 2;
-                    tris[s * 3 + 2] = s + 1;
-                }
-            }
-
-            Mesh mesh = new Mesh { name = "Charco" };
-            mesh.vertices = v;
-            mesh.normals = n;
-            mesh.triangles = tris;
-            mesh.RecalculateBounds();
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            // Borde algo irregular, como el agua que se junta.
+            go.AddComponent<MeshFilter>().sharedMesh = Hito1FX.PuddleMesh();
             MeshRenderer renderer = go.AddComponent<MeshRenderer>();
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             Material material = Hito1FX.Mat("Agua_Superficie");
@@ -577,6 +555,27 @@ namespace SojaExiles
             {
                 drainSource.transform.position = hasPuddlePoint ? puddlePoint : transform.position;
             }
+        }
+
+        // Con agua caliente sale vapor donde cae el chorro (aviso visual de
+        // que esa llave no es la correcta).
+        private void UpdateHotSteam()
+        {
+            float heat = tap != null ? tap.Heat : 0f;
+            if (hotSteam == null)
+            {
+                if (heat < 0.5f)
+                {
+                    return;
+                }
+
+                hotSteam = Hito1FX.CreateSteam("VaporAguaCaliente", null, ImpactPoint, 0.03f, 0f, 50);
+            }
+
+            hotSteam.transform.position = ImpactPoint;
+            ParticleSystem.EmissionModule emission = hotSteam.emission;
+            bool landing = IsFlowing && hitDistance < maxLength;
+            emission.rateOverTime = landing ? (heat > 0.9f ? 14f : 0f) : 0f;
         }
 
         private void UpdateSound()

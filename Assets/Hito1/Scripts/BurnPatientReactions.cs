@@ -11,7 +11,10 @@ namespace SojaExiles
     //   - enfriada y cubierta: lo agradece;
     //   - respira siempre (el pecho y los hombros suben y bajan); con dolor
     //     respira rapido y se la oye jadear, y se calma al enfriar la mano;
-    //   - al quemarse sacude la mano por reflejo.
+    //   - al quemarse sacude la mano por reflejo;
+    //   - reacciona a lo que hace el jugador (BurnSequenceManager.OnEvent):
+    //     grita con el agua caliente, aparta la mano del hielo o la
+    //     mantequilla, agradece el anillo y la chompa.
     // Las pistas de voz (pedir agua o algo para cubrirse) se pueden apagar
     // para una evaluacion sin ayudas.
     // Corre despues de PatientReach (que fija la inclinacion de la cabeza) y
@@ -63,6 +66,9 @@ namespace SojaExiles
         private float breathPhase;
         private float pain;
         private float shakeUntil = float.NegativeInfinity;
+        private float painBoostUntil = float.NegativeInfinity;
+        private PatientReach reach;
+        private Coroutine recoil;
 
         private void Awake()
         {
@@ -91,8 +97,11 @@ namespace SojaExiles
             if (burnSequence != null)
             {
                 burnSequence.OnStateChanged += HandleState;
+                burnSequence.OnEvent += HandleEvent;
                 lastState = burnSequence.CurrentState;
             }
+
+            reach = GetComponent<PatientReach>();
         }
 
         private void OnDestroy()
@@ -100,7 +109,108 @@ namespace SojaExiles
             if (burnSequence != null)
             {
                 burnSequence.OnStateChanged -= HandleState;
+                burnSequence.OnEvent -= HandleEvent;
             }
+        }
+
+        private void HandleEvent(BurnSequenceManager.BurnEvent e, string detail, BurnSequenceManager.Severity severity)
+        {
+            Vector3 hand = HandPosition();
+            switch (e)
+            {
+                case BurnSequenceManager.BurnEvent.HotWaterOnBurn:
+                    Say("voz_agua_caliente", true);
+                    Hurt(1f);
+                    break;
+
+                case BurnSequenceManager.BurnEvent.RemedyNear:
+                    // El algodon no le parece mal (el error es que suelta
+                    // pelusa); de lo demas aparta la mano.
+                    if (detail == HomeRemedy.Remedy.Algodon.ToString())
+                    {
+                        break;
+                    }
+
+                    Say(detail == HomeRemedy.Remedy.Hielo.ToString() ? "voz_hielo_no" : "voz_remedio_no", true);
+                    PullHandAway(HomeRemedy.LastNear != null ? HomeRemedy.LastNear.transform.position : hand);
+                    break;
+
+                case BurnSequenceManager.BurnEvent.RemedyApplied:
+                    if (severity != BurnSequenceManager.Severity.Critical)
+                    {
+                        break;
+                    }
+
+                    Say(detail == HomeRemedy.Remedy.Hielo.ToString() ? "voz_hielo_duele" : "voz_remedio_arde", true);
+                    Hurt(1f);
+                    break;
+
+                case BurnSequenceManager.BurnEvent.CoveredTooEarly:
+                    Say("voz_saco_agua", true);
+                    break;
+
+                case BurnSequenceManager.BurnEvent.RingRemoved:
+                    SayLater("voz_anillo_sale", 0.6f);
+                    break;
+
+                case BurnSequenceManager.BurnEvent.RingStuck:
+                    Say("voz_anillo_atorado", true);
+                    Hurt(0.4f);
+                    break;
+
+                case BurnSequenceManager.BurnEvent.SweaterOn:
+                    SayLater("voz_abrigo", 0.6f);
+                    break;
+            }
+        }
+
+        // Le dolio algo: respingo, sacude la mano y respira agitada un rato.
+        private void Hurt(float strength)
+        {
+            body.Impulse(flinchImpulse * strength, 0.08f * strength);
+            shakeUntil = Time.time + handShakeSeconds * Mathf.Max(0.5f, strength);
+            painBoostUntil = Time.time + 6f * strength;
+        }
+
+        // Aparta la mano de algo que le acercan (si el jugador no la tiene
+        // agarrada; si la tiene, solo se sobresalta).
+        private void PullHandAway(Vector3 from)
+        {
+            Rigidbody target = reach != null ? reach.target : null;
+            if (target == null || SimpleGrab.IsHeldObject(target))
+            {
+                body.Impulse(flinchImpulse * 0.5f, 0.04f);
+                shakeUntil = Time.time + 0.6f;
+                return;
+            }
+
+            if (recoil != null)
+            {
+                StopCoroutine(recoil);
+            }
+
+            recoil = StartCoroutine(MoveHand(target, from));
+        }
+
+        private System.Collections.IEnumerator MoveHand(Rigidbody target, Vector3 from)
+        {
+            Vector3 away = Vector3.ProjectOnPlane(target.position - from, Vector3.up);
+            if (away.sqrMagnitude < 1e-4f)
+            {
+                away = -body.TorsoForward;
+            }
+
+            Vector3 start = target.position;
+            Vector3 end = start + away.normalized * 0.14f + Vector3.up * 0.03f;
+            float t = 0f;
+            while (t < 0.3f && target != null && !SimpleGrab.IsHeldObject(target))
+            {
+                t += Time.deltaTime;
+                target.MovePosition(Vector3.Lerp(start, end, Mathf.SmoothStep(0f, 1f, t / 0.3f)));
+                yield return null;
+            }
+
+            recoil = null;
         }
 
         private void HandleState(BurnSequenceManager.BurnState state)
@@ -225,6 +335,11 @@ namespace SojaExiles
                 default:
                     wanted = 0f;
                     break;
+            }
+
+            if (Time.time < painBoostUntil)
+            {
+                wanted = 1f;
             }
 
             pain = Mathf.MoveTowards(pain, wanted, dt / (wanted > pain ? 0.5f : 6f));

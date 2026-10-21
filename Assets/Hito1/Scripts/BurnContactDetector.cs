@@ -9,6 +9,8 @@ namespace SojaExiles
     // (ensena a no sacar la mano del agua antes de tiempo). Se usan dos
     // instancias: Agua (Burned -> Cooling -> Cooled) y Panuelo
     // (Cooled -> Success).
+    // El agua caliente (solo la llave caliente abierta) no enfria: vuelve a
+    // quemar, se avisa como error y la paciente reacciona.
     [RequireComponent(typeof(Collider))]
     public class BurnContactDetector : MonoBehaviour
     {
@@ -26,8 +28,13 @@ namespace SojaExiles
         // Margen para no reiniciar por un frame sin OnTriggerStay.
         public float contactGraceSeconds = 0.25f;
 
+        [Tooltip("Segundos entre avisos de agua caliente sobre la quemadura.")]
+        public float hotWaterReportInterval = 5f;
+
         private float accumulated;
         private float lastContactTime = float.NegativeInfinity;
+        private float lastHotTouch = float.NegativeInfinity;
+        private float lastHotReport = float.NegativeInfinity;
 
         // Progreso del contacto actual entre 0 y 1 (para indicadores).
         public float Progress
@@ -37,7 +44,7 @@ namespace SojaExiles
 
         private void OnTriggerStay(Collider other)
         {
-            if (burnSequence == null || !IsExpectedState())
+            if (burnSequence == null)
             {
                 return;
             }
@@ -49,8 +56,24 @@ namespace SojaExiles
             }
 
             // El chorro solo cuenta si el agua esta corriendo.
-            WaterTap tap = other.GetComponentInParent<WaterTap>();
-            if (tap != null && !tap.IsOpen)
+            WaterTap tap = WaterTap.ForTrigger(other);
+            if (tap == null)
+            {
+                tap = other.GetComponentInParent<WaterTap>();
+            }
+
+            if (tap != null && !tap.Flowing)
+            {
+                return;
+            }
+
+            if (tap != null && tap.Heat > 0.9f)
+            {
+                HotWater();
+                return;
+            }
+
+            if (!IsExpectedState())
             {
                 return;
             }
@@ -92,6 +115,31 @@ namespace SojaExiles
             {
                 accumulated = 0f;
                 burnSequence.ChangeState(stateOnComplete);
+            }
+        }
+
+        private void HotWater()
+        {
+            BurnSequenceManager.BurnState s = burnSequence.CurrentState;
+            if (s == BurnSequenceManager.BurnState.Idle || s == BurnSequenceManager.BurnState.Success)
+            {
+                return;
+            }
+
+            if (BurnInjury.Instance != null)
+            {
+                BurnInjury.Instance.OnHotWater();
+            }
+
+            // Un aviso por cada vez que se pone la mano bajo el agua caliente
+            // (y otro si se la deja ahi).
+            bool newTouch = Time.time - lastHotTouch > 1f;
+            lastHotTouch = Time.time;
+            if (newTouch || Time.time - lastHotReport > hotWaterReportInterval)
+            {
+                lastHotReport = Time.time;
+                burnSequence.Report(BurnSequenceManager.BurnEvent.HotWaterOnBurn, null,
+                    BurnSequenceManager.Severity.Error);
             }
         }
 

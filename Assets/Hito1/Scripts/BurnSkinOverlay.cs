@@ -30,6 +30,7 @@ namespace SojaExiles
         public float coolingSeconds = 10f;
 
         private SkinnedMeshRenderer overlay;
+        private BurnInjury injury;
         private MaterialPropertyBlock block;
         private Color current = new Color(1f, 0.55f, 0.5f, 0f);
         private Color target;
@@ -50,10 +51,17 @@ namespace SojaExiles
                 }
             }
 
+            injury = GetComponent<BurnInjury>();
             overlay = BuildOverlay();
             block = new MaterialPropertyBlock();
             target = current;
             Apply();
+        }
+
+        // Capa de la quemadura (BurnInjury pone las ampollas sobre ella).
+        public SkinnedMeshRenderer Overlay
+        {
+            get { return overlay; }
         }
 
         private void OnDestroy()
@@ -99,6 +107,13 @@ namespace SojaExiles
                 default:
                     target = burnedColor;
                     break;
+            }
+
+            // El agua caliente la vuelve a enrojecer enseguida.
+            if (injury != null && injury.HotWaterNow)
+            {
+                cooledAmount = Mathf.MoveTowards(cooledAmount, 0f, Time.deltaTime / 1.5f);
+                target = burnedColor;
             }
 
             // La quemadura aparece en un segundo, no de golpe.

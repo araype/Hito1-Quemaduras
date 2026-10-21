@@ -32,9 +32,28 @@ namespace SojaExiles
             get { return burnerPosition; }
         }
 
+        // La olla ya se volco (PotAccident): no le queda agua.
+        public bool Spilled { get; private set; }
+        public float Radius
+        {
+            get { return radius; }
+        }
+
+        public float Height
+        {
+            get { return height; }
+        }
+
+        // Base de la olla (centro del fondo), en el mundo.
+        public Vector3 BottomCenter
+        {
+            get { return visual != null ? visual.position : transform.position; }
+        }
+
         private const int Segments = 36;
 
         private Transform visual;
+        private Renderer waterRenderer;
         private ParticleSystem steamSystem;
         private Renderer flameRenderer;
         private MaterialPropertyBlock flameBlock;
@@ -77,7 +96,7 @@ namespace SojaExiles
 
             AddPart("Cuerpo", BuildBody(radius, height, wallThickness), "Acero");
             AddPart("Mangos", BuildHandles(radius, height * 0.82f, handleReach, handlesOnZ), "Mango");
-            AddPart("Agua", BuildDisc(radius - wallThickness - 0.001f, height * waterLevel), "Agua_Superficie");
+            waterRenderer = AddPart("Agua", BuildDisc(radius - wallThickness - 0.001f, height * waterLevel), "Agua_Superficie");
 
             burnerPosition = FindBurner(visual.position);
             if (burnerFlame)
@@ -117,6 +136,17 @@ namespace SojaExiles
             Debug.Log("[PotFX] Quemador " + (on ? "encendido" : "apagado"));
         }
 
+        // Se derramo el agua: la olla queda vacia (sin hervor ni vapor
+        // propio; el vapor sale del agua derramada).
+        public void Spill()
+        {
+            Spilled = true;
+            if (waterRenderer != null)
+            {
+                waterRenderer.enabled = false;
+            }
+        }
+
         // Quemador del kit (Burner_0X) que queda debajo de la olla; si no hay,
         // justo debajo de ella.
         private static Vector3 FindBurner(Vector3 potBottom)
@@ -152,13 +182,13 @@ namespace SojaExiles
 
             // Con fuego y sobre el quemador se calienta rapido; si no, se
             // enfria despacio.
-            bool heating = BurnerOn && onBurner > 0.5f;
+            bool heating = BurnerOn && onBurner > 0.5f && !Spilled;
             heat = Mathf.MoveTowards(heat, heating ? 1f : 0f,
                 Time.deltaTime / (heating ? 6f : Mathf.Max(1f, coolDownSeconds)));
 
             if (boil != null)
             {
-                boil.volume = Mathf.MoveTowards(boil.volume, boilVolume * heat, Time.deltaTime);
+                boil.volume = Mathf.MoveTowards(boil.volume, Spilled ? 0f : boilVolume * heat, Time.deltaTime);
             }
 
             Hito1FX.FadeLoop(gas, BurnerOn ? gasVolume : 0f, 2f);
@@ -166,7 +196,7 @@ namespace SojaExiles
             if (steamSystem != null)
             {
                 ParticleSystem.EmissionModule emission = steamSystem.emission;
-                emission.rateOverTime = 7f * heat;
+                emission.rateOverTime = Spilled ? 0f : 7f * heat;
             }
 
             if (flameRenderer != null && BurnerOn)
@@ -217,7 +247,7 @@ namespace SojaExiles
             return any;
         }
 
-        private void AddPart(string partName, Mesh mesh, string materialName)
+        private Renderer AddPart(string partName, Mesh mesh, string materialName)
         {
             GameObject go = new GameObject(partName);
             go.AddComponent<NoAutoCollider>();
@@ -234,6 +264,8 @@ namespace SojaExiles
             {
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
+
+            return renderer;
         }
 
         // ---------------- mallas ----------------
@@ -475,71 +507,11 @@ namespace SojaExiles
             flameBlock = new MaterialPropertyBlock();
         }
 
+        // Cono casi vertical: el vapor sale de toda la superficie del agua.
         private void BuildSteam()
         {
-            GameObject go = new GameObject("Vapor");
-            go.AddComponent<NoAutoCollider>();
-            go.transform.SetParent(visual, false);
-            go.transform.localPosition = Vector3.up * (height * waterLevel + 0.01f);
-            go.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
-
-            steamSystem = go.AddComponent<ParticleSystem>();
-            steamSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-
-            ParticleSystem.MainModule main = steamSystem.main;
-            main.playOnAwake = false;
-            main.loop = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(2.2f, 3.4f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.06f, 0.14f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.06f, 0.11f);
-            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
-            main.gravityModifier = -0.006f;
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 60;
-
-            ParticleSystem.EmissionModule emission = steamSystem.emission;
-            emission.rateOverTime = 7f;
-
-            ParticleSystem.ShapeModule shape = steamSystem.shape;
-            // Cono casi vertical (el objeto esta girado para que su eje Z
-            // apunte hacia arriba): el vapor sale de toda la superficie.
-            shape.shapeType = ParticleSystemShapeType.Cone;
-            shape.angle = 8f;
-            shape.radius = radius * 0.75f;
-
-            ParticleSystem.SizeOverLifetimeModule size = steamSystem.sizeOverLifetime;
-            size.enabled = true;
-            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.7f, 1f, 2.6f));
-
-            ParticleSystem.RotationOverLifetimeModule rotation = steamSystem.rotationOverLifetime;
-            rotation.enabled = true;
-            rotation.z = new ParticleSystem.MinMaxCurve(-0.4f, 0.4f);
-
-            ParticleSystem.ColorOverLifetimeModule color = steamSystem.colorOverLifetime;
-            color.enabled = true;
-            Gradient fade = new Gradient();
-            fade.SetKeys(
-                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.9f, 0.2f), new GradientAlphaKey(0f, 1f) });
-            color.color = fade;
-
-            ParticleSystem.NoiseModule noise = steamSystem.noise;
-            noise.enabled = true;
-            noise.strength = 0.04f;
-            noise.frequency = 0.6f;
-            noise.scrollSpeed = 0.3f;
-
-            ParticleSystemRenderer renderer = go.GetComponent<ParticleSystemRenderer>();
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-            renderer.sortingFudge = 10f;
-            Material material = Hito1FX.Mat("Vapor");
-            if (material != null)
-            {
-                renderer.sharedMaterial = material;
-            }
-
-            steamSystem.Play();
+            steamSystem = Hito1FX.CreateSteam("Vapor", visual,
+                visual.TransformPoint(Vector3.up * (height * waterLevel + 0.01f)), radius * 0.75f, 7f);
         }
     }
 }

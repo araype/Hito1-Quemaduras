@@ -6,6 +6,9 @@ namespace SojaExiles
     // fisica de SimpleGrab, que sigue al control o a la mano trackeada). Un
     // punto dorado marca donde tocar, como en el prototipo. Con la llave
     // cerrada no sale agua y el chorro no cuenta para enfriar o lavar.
+    // Un grifo puede tener dos llaves (fria y caliente, 'pair') que comparten
+    // el mismo chorro: sale agua si cualquiera esta abierta, y Heat dice si
+    // sale fria, tibia o caliente.
     [RequireComponent(typeof(Collider))]
     public class WaterTap : MonoBehaviour
     {
@@ -13,6 +16,10 @@ namespace SojaExiles
         public Collider waterTrigger;
         public AudioSource waterSound;
         public bool startOpen;
+        [Tooltip("Llave del agua caliente.")]
+        public bool hot;
+        [Tooltip("La otra llave del mismo grifo (comparten el chorro).")]
+        public WaterTap pair;
 
         [Header("Indicador")]
         public Material indicatorMaterial;
@@ -28,9 +35,59 @@ namespace SojaExiles
 
         public bool IsOpen { get; private set; }
 
+        // Sale agua por cualquiera de las dos llaves.
+        public bool Flowing
+        {
+            get { return IsOpen || (pair != null && pair.IsOpen); }
+        }
+
+        // 0 = fria, 0,5 = tibia (las dos abiertas), 1 = solo caliente.
+        public float Heat
+        {
+            get
+            {
+                if (!Flowing)
+                {
+                    return 0f;
+                }
+
+                bool hotOpen = (hot && IsOpen) || (pair != null && pair.hot && pair.IsOpen);
+                bool coldOpen = (!hot && IsOpen) || (pair != null && !pair.hot && pair.IsOpen);
+                return hotOpen ? (coldOpen ? 0.5f : 1f) : 0f;
+            }
+        }
+
+        private static readonly System.Collections.Generic.List<WaterTap> All =
+            new System.Collections.Generic.List<WaterTap>();
+
+        // Llave cuyo chorro tiene ese collider (para saber si el agua que
+        // toca algo es fria o caliente).
+        public static WaterTap ForTrigger(Collider trigger)
+        {
+            foreach (WaterTap tap in All)
+            {
+                if (tap != null && tap.waterTrigger == trigger)
+                {
+                    return tap;
+                }
+            }
+
+            return null;
+        }
+
         private Renderer marker;
         private float nextToggleTime;
         private float lastHandInsideTime = float.NegativeInfinity;
+
+        private void OnEnable()
+        {
+            All.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            All.Remove(this);
+        }
 
         private void Awake()
         {
@@ -86,11 +143,20 @@ namespace SojaExiles
 
         public void SetOpen(bool open)
         {
+            bool wasOpen = IsOpen;
             IsOpen = open;
+            bool flowing = Flowing;
+
+            // Con la otra llave abierta el chorro no cambia; el chirrido de la
+            // llave lo pone esta (si no, lo pone WaterStreamFX).
+            if (pair != null && pair.IsOpen && wasOpen != open && Time.timeSinceLevelLoad > 0.5f)
+            {
+                Hito1FX.PlayAt(open ? "grifo_abrir" : "grifo_cerrar", transform.position, 0.8f);
+            }
 
             if (water != null)
             {
-                if (open)
+                if (flowing)
                 {
                     water.Play();
                 }
@@ -102,12 +168,12 @@ namespace SojaExiles
 
             if (waterTrigger != null)
             {
-                waterTrigger.enabled = open;
+                waterTrigger.enabled = flowing;
             }
 
             if (waterSound != null)
             {
-                if (open)
+                if (flowing)
                 {
                     waterSound.Play();
                 }
@@ -118,7 +184,16 @@ namespace SojaExiles
             }
 
             IndicatorUtil.SetColor(marker, open ? openColor : closedColor);
-            Debug.Log("[Hito1] Grifo " + (open ? "abierto" : "cerrado"));
+            Debug.Log("[Hito1] Llave " + (hot ? "caliente " : "fria ") + (open ? "abierta" : "cerrada"));
+
+            if (open && !wasOpen && Time.timeSinceLevelLoad > 0.5f)
+            {
+                BurnSequenceManager burn = FindObjectOfType<BurnSequenceManager>();
+                if (burn != null)
+                {
+                    burn.Report(hot ? BurnSequenceManager.BurnEvent.HotWaterOn : BurnSequenceManager.BurnEvent.ColdWaterOn);
+                }
+            }
         }
     }
 }
