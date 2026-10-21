@@ -9,7 +9,7 @@ namespace SojaExiles
     // de piel enrojecida. Como la copia usa los mismos huesos, se deforma
     // junto con la mano.
     //   Burned: roja e intensa.   Cooling (bajo el agua): se va calmando.
-    //   Cooled: rosada.           Success (cubierta): queda tenue.
+    //   Cooled: rosada.           Covered/Success (cubierta): queda tenue.
     // Va en el paciente (el objeto con PatientBody).
     public class BurnSkinOverlay : MonoBehaviour
     {
@@ -101,6 +101,7 @@ namespace SojaExiles
                     cooledAmount = 1f;
                     target = cooledColor;
                     break;
+                case BurnSequenceManager.BurnState.Covered:
                 case BurnSequenceManager.BurnState.Success:
                     target = successColor;
                     break;

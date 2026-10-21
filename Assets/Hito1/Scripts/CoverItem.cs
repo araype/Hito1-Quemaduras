@@ -5,8 +5,9 @@ namespace SojaExiles
     // Material para cubrir la quemadura despues de enfriarla: film
     // transparente de cocina o una gasa esteril. Se suelta sobre la mano
     // quemada y la cubre sin apretar (una capa sobre la piel que sigue a la
-    // mano). Si se intenta antes de terminar de enfriar, no se pone: es un
-    // error y la paciente se queja.
+    // mano) y pasa a Covered (falta decidir si va al centro de salud). Si se
+    // intenta antes de terminar de enfriar, no se pone: es un error y la
+    // paciente se queja.
     // El rollo de film queda (se corta un pedazo); la gasa se usa.
     [RequireComponent(typeof(Rigidbody))]
     public class CoverItem : MonoBehaviour
@@ -80,7 +81,7 @@ namespace SojaExiles
 
             Hito1FX.PlayAt(kind == Kind.Film ? "film_estirar" : "tela_roce_2", hand.position, 0.7f);
             burnSequence.Report(BurnSequenceManager.BurnEvent.Covered, kind.ToString());
-            burnSequence.ChangeState(BurnSequenceManager.BurnState.Success);
+            burnSequence.ChangeState(BurnSequenceManager.BurnState.Covered);
 
             if (kind == Kind.Gasa)
             {

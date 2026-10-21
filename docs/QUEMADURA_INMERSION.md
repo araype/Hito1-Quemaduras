@@ -181,3 +181,51 @@ Los sonidos nuevos (`agua_derrame`, `anillo_sale`, `film_estirar`,
 `voz_hielo_no`, `voz_remedio_no`, `voz_hielo_duele`, `voz_remedio_arde`,
 `voz_anillo_sale`, `voz_anillo_atorado`, `voz_abrigo`) son TTS y se reemplazan
 igual que las demás (sección 1).
+
+## 6. Secuencia, reloj y resumen (rama `secuencia-quemadura`)
+
+Sigue sin tocarse la escena. Compila; **no se ha visto en Unity ni en el
+Quest**.
+
+### Flujo completo
+
+1. **Accidente** (a los 6 s): la mano se quema y empieza a correr el tiempo.
+2. **Asegurar la escena:** apagar la perilla de la cocina.
+3. **Agua fría:** abrir la llave azul y poner la mano bajo el chorro.
+4. **Enfriar 20 minutos:** el **reloj de pared** junto al grifo los muestra en
+   90 s reales. El minutero avanza, el segundero gira rápido y se encienden 20
+   marcas verdes. Si la mano sale del agua, el reloj **se pausa** (no vuelve a
+   cero), la paciente se queja y cuenta como error.
+5. **Mientras tanto:** sacar el anillo y abrigarla con la chompa.
+6. **Cubrir** con film o gasa. La paciente agradece y pregunta si tiene que ir
+   al médico.
+7. **Decisión médica:** a los 5 s aparece frente al jugador un panel con dos
+   botones (se tocan con la mano). Segundo grado (ampollas en la mano) → centro
+   de salud. Primer grado → casa.
+8. **Resumen:** puntaje sobre 100, los 7 pasos (hechos o faltantes), errores y
+   errores críticos, tiempo de primera acción, minutos de enfriamiento, la
+   decisión y hasta 4 consejos de "qué mejorar". El botón **Repetir práctica**
+   recarga la escena.
+
+Al terminar, también cuentan como error los pasos que nunca se hicieron:
+apagar el fuego, sacar el anillo (si no se trabó antes) y abrigar.
+
+**Puntaje:** 100 − 10 por error − 25 por error crítico (mínimo 0).
+
+**Registro:** cada sesión se guarda en un JSON en
+`Application.persistentDataPath/sesiones_quemadura/` (en el Quest:
+`Android/data/<paquete>/files/sesiones_quemadura/`). Sirve para las pruebas con
+usuarios y la métrica HEART.
+
+### Valores para ajustar
+
+- **Duración del enfriamiento:** `BurnProtocol > Cooling Seconds` (90 por
+  defecto; para probar rápido, pon 15).
+- **Pregunta médica:** `BurnProtocol > Decision Delay`.
+- **Puntaje:** `Error Penalty`, `Critical Penalty`.
+- **Reloj:** `CoolingClock > Diameter`, `Height Above Tap`, `Show Label`. Si
+  no encuentra una pared cerca del grifo, queda flotando sobre él (lo avisa la
+  consola).
+
+Frases nuevas (TTS): `voz_pregunta_medico`, `voz_decision_ir` y
+`voz_decision_casa`.

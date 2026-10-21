@@ -8,7 +8,8 @@ namespace SojaExiles
     // quemadura; si el contacto se interrumpe, el contador se reinicia
     // (ensena a no sacar la mano del agua antes de tiempo). Se usan dos
     // instancias: Agua (Burned -> Cooling -> Cooled) y Panuelo
-    // (Cooled -> Success).
+    // (Cooled -> Success; ahora la cubren CoverItem y esta instancia queda
+    // apagada).
     // El agua caliente (solo la llave caliente abierta) no enfria: vuelve a
     // quemar, se avisa como error y la paciente reacciona.
     [RequireComponent(typeof(Collider))]
@@ -25,6 +26,9 @@ namespace SojaExiles
         public BurnSequenceManager.BurnState stateOnComplete;
         public float requiredSeconds = 10f;
 
+        [Tooltip("Si se interrumpe el contacto, el contador vuelve a cero. Si no, se pausa (reloj de enfriamiento).")]
+        public bool resetOnInterrupt = true;
+
         // Margen para no reiniciar por un frame sin OnTriggerStay.
         public float contactGraceSeconds = 0.25f;
 
@@ -35,6 +39,12 @@ namespace SojaExiles
         private float lastContactTime = float.NegativeInfinity;
         private float lastHotTouch = float.NegativeInfinity;
         private float lastHotReport = float.NegativeInfinity;
+
+        // Segundos de contacto acumulados.
+        public float Accumulated
+        {
+            get { return accumulated; }
+        }
 
         // Progreso del contacto actual entre 0 y 1 (para indicadores).
         public float Progress
@@ -90,22 +100,29 @@ namespace SojaExiles
         {
             if (burnSequence == null || !IsExpectedState())
             {
-                accumulated = 0f;
+                if (resetOnInterrupt || (burnSequence != null && burnSequence.CurrentState != requiredState))
+                {
+                    accumulated = 0f;
+                }
+
                 return;
             }
 
             bool inContact = Time.time - lastContactTime <= contactGraceSeconds;
             if (!inContact)
             {
-                if (accumulated > 0f)
+                bool wasCooling = setStateOnContact && burnSequence.CurrentState == stateOnContact;
+                if (accumulated > 0f && resetOnInterrupt)
                 {
                     Debug.Log($"[BurnSequence] Contacto con {requiredItem} interrumpido, contador reiniciado");
+                    accumulated = 0f;
                 }
 
-                accumulated = 0f;
-                if (setStateOnContact && burnSequence.CurrentState == stateOnContact)
+                if (wasCooling)
                 {
                     burnSequence.ChangeState(requiredState);
+                    burnSequence.Report(BurnSequenceManager.BurnEvent.CoolingInterrupted, null,
+                        BurnSequenceManager.Severity.Error);
                 }
                 return;
             }
@@ -121,7 +138,8 @@ namespace SojaExiles
         private void HotWater()
         {
             BurnSequenceManager.BurnState s = burnSequence.CurrentState;
-            if (s == BurnSequenceManager.BurnState.Idle || s == BurnSequenceManager.BurnState.Success)
+            if (s == BurnSequenceManager.BurnState.Idle || s == BurnSequenceManager.BurnState.Covered
+                || s == BurnSequenceManager.BurnState.Success)
             {
                 return;
             }

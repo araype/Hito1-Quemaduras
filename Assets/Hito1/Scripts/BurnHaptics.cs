@@ -123,7 +123,8 @@ namespace SojaExiles
 
         private void HandleState(BurnSequenceManager.BurnState state)
         {
-            if (state == BurnSequenceManager.BurnState.Cooled || state == BurnSequenceManager.BurnState.Success)
+            if (state == BurnSequenceManager.BurnState.Cooled || state == BurnSequenceManager.BurnState.Covered
+                || state == BurnSequenceManager.BurnState.Success)
             {
                 Buzz(-1, 0.4f, 0.08f);
                 Buzz(-1, 0.4f, 0.08f, 0.16f);

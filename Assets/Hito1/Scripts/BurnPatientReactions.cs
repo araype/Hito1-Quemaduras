@@ -60,8 +60,12 @@ namespace SojaExiles
         private float nextTremble;
         private float nextProtest;
         private bool waterHinted, clothHinted, relieved;
-        private string pendingLine;
-        private float pendingTime;
+        // Frases en cola: cada una espera a que termine la anterior.
+        private readonly System.Collections.Generic.List<string> queuedLines =
+            new System.Collections.Generic.List<string>();
+        private readonly System.Collections.Generic.List<float> queuedGaps =
+            new System.Collections.Generic.List<float>();
+        private float nextQueuedTime;
         private AudioSource breathing;
         private float breathPhase;
         private float pain;
@@ -161,6 +165,10 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnEvent.SweaterOn:
                     SayLater("voz_abrigo", 0.6f);
                     break;
+
+                case BurnSequenceManager.BurnEvent.MedicalDecision:
+                    SayLater(detail == "CentroDeSalud" ? "voz_decision_ir" : "voz_decision_casa", 0.4f);
+                    break;
             }
         }
 
@@ -257,9 +265,14 @@ namespace SojaExiles
                     SayLater("voz_enfriada", 0.7f);
                     break;
 
+                case BurnSequenceManager.BurnState.Covered:
+                    Hito1FX.PlayAt("logro_paso", hand, 0.6f, 0f);
+                    SayLater("voz_exito", 0.9f);
+                    SayLater("voz_pregunta_medico", 0.6f);
+                    break;
+
                 case BurnSequenceManager.BurnState.Success:
                     Hito1FX.PlayAt("logro_final", hand, 0.7f, 0f);
-                    SayLater("voz_exito", 0.9f);
                     break;
             }
         }
@@ -275,10 +288,16 @@ namespace SojaExiles
             stateTime += dt;
             BurnSequenceManager.BurnState state = burnSequence.CurrentState;
 
-            if (pendingLine != null && Time.time >= pendingTime)
+            if (queuedLines.Count > 0 && Time.time >= nextQueuedTime && !IsSpeaking)
             {
-                Say(pendingLine, true);
-                pendingLine = null;
+                Say(queuedLines[0], true);
+                queuedLines.RemoveAt(0);
+                queuedGaps.RemoveAt(0);
+                if (queuedLines.Count > 0)
+                {
+                    float length = voice != null && voice.clip != null ? voice.clip.length : 0f;
+                    nextQueuedTime = Time.time + length + queuedGaps[0];
+                }
             }
 
             if (state == BurnSequenceManager.BurnState.Burned)
@@ -392,10 +411,17 @@ namespace SojaExiles
             voice.Play();
         }
 
+        // Dice la frase despues de 'delay' segundos (o despues de las que ya
+        // estan en cola).
         private void SayLater(string line, float delay)
         {
-            pendingLine = line;
-            pendingTime = Time.time + delay;
+            if (queuedLines.Count == 0)
+            {
+                nextQueuedTime = Time.time + delay;
+            }
+
+            queuedLines.Add(line);
+            queuedGaps.Add(delay);
         }
 
         // Mientras le duele mira su mano; cuando habla, o cuando ya paso todo,

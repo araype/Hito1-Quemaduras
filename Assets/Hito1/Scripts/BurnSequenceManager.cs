@@ -8,7 +8,8 @@ namespace SojaExiles
     //   Burned (la mano se quema: la olla se vuelca, PotAccident; sin el
     //   accidente se dispara tras un retraso) -> Cooling (la mano esta bajo
     //   el chorro de agua fria) -> Cooled (se mantuvo bajo el agua el tiempo
-    //   necesario) -> Success (se cubrio con film o gasa, CoverItem).
+    //   necesario) -> Covered (se cubrio con film o gasa, CoverItem) ->
+    //   Success (se decidio si va al centro de salud, MedicalDecisionPanel).
     // Los cambios Cooling/Cooled los hacen los BurnContactDetector del
     // trigger de la quemadura. Si se saca la mano del agua antes de tiempo,
     // vuelve a Burned y el enfriamiento empieza de cero.
@@ -25,7 +26,8 @@ namespace SojaExiles
             Cooling,
             Cooled,
             Success,
-            Failed
+            Failed,
+            Covered
         }
 
         // Los valores nuevos se agregan al final.
@@ -44,7 +46,10 @@ namespace SojaExiles
             CoveredTooEarly,    // se quiso cubrir antes de enfriar
             ClothOnBurn,        // se cubrio con el pano de cocina (suelta pelusa)
             RemedyNear,         // se acerco un remedio casero a la quemadura
-            RemedyApplied       // se aplico un remedio casero sobre la quemadura
+            RemedyApplied,      // se aplico un remedio casero sobre la quemadura
+            CoolingInterrupted, // se saco la mano del agua antes de terminar de enfriar
+            MedicalDecision,    // se decidio si va al centro de salud (detalle: CentroDeSalud o Casa)
+            StepMissed          // al terminar, falto un paso del protocolo (detalle: el paso)
         }
 
         public enum Severity

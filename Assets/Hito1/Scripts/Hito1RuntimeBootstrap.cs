@@ -83,6 +83,17 @@ namespace SojaExiles
                 burn.gameObject.AddComponent<BurnSceneProps>();
             }
 
+            // Capa de secuencia: protocolo y puntaje, y el reloj de 20 min.
+            if (Object.FindObjectOfType<BurnProtocol>() == null)
+            {
+                burn.gameObject.AddComponent<BurnProtocol>().burnSequence = burn;
+            }
+
+            if (Object.FindObjectOfType<CoolingClock>() == null)
+            {
+                burn.gameObject.AddComponent<CoolingClock>();
+            }
+
             InstallHotTap();
 
             foreach (WaterTap tap in Object.FindObjectsOfType<WaterTap>())
