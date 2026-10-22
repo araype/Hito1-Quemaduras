@@ -1,0 +1,170 @@
+using UnityEngine;
+
+namespace SojaExiles
+{
+    // Va sobre el collider trigger de la quemadura (hijo del marcador de la
+    // mano quemada). Analogo a WoundContactDetector: cuenta cuanto tiempo un
+    // FirstAidItem del tipo indicado esta en contacto continuo con la
+    // quemadura; si el contacto se interrumpe, el contador se reinicia
+    // (ensena a no sacar la mano del agua antes de tiempo). Se usan dos
+    // instancias: Agua (Burned -> Cooling -> Cooled) y Panuelo
+    // (Cooled -> Success; ahora la cubren CoverItem y esta instancia queda
+    // apagada).
+    // El agua caliente (solo la llave caliente abierta) no enfria: vuelve a
+    // quemar, se avisa como error y la paciente reacciona.
+    [RequireComponent(typeof(Collider))]
+    public class BurnContactDetector : MonoBehaviour
+    {
+        public BurnSequenceManager burnSequence;
+        public FirstAidItem.ItemType requiredItem;
+        public BurnSequenceManager.BurnState requiredState;
+
+        // Estado al que se pasa apenas empieza el contacto (opcional).
+        public bool setStateOnContact;
+        public BurnSequenceManager.BurnState stateOnContact;
+
+        public BurnSequenceManager.BurnState stateOnComplete;
+        public float requiredSeconds = 10f;
+
+        [Tooltip("Si se interrumpe el contacto, el contador vuelve a cero. Si no, se pausa (reloj de enfriamiento).")]
+        public bool resetOnInterrupt = true;
+
+        // Margen para no reiniciar por un frame sin OnTriggerStay.
+        public float contactGraceSeconds = 0.25f;
+
+        [Tooltip("Segundos entre avisos de agua caliente sobre la quemadura.")]
+        public float hotWaterReportInterval = 5f;
+
+        private float accumulated;
+        private float lastContactTime = float.NegativeInfinity;
+        private float lastHotTouch = float.NegativeInfinity;
+        private float lastHotReport = float.NegativeInfinity;
+
+        // Segundos de contacto acumulados.
+        public float Accumulated
+        {
+            get { return accumulated; }
+        }
+
+        // Progreso del contacto actual entre 0 y 1 (para indicadores).
+        public float Progress
+        {
+            get { return requiredSeconds > 0f ? Mathf.Clamp01(accumulated / requiredSeconds) : 0f; }
+        }
+
+        private void OnTriggerStay(Collider other)
+        {
+            if (burnSequence == null)
+            {
+                return;
+            }
+
+            FirstAidItem item = other.GetComponentInParent<FirstAidItem>();
+            if (item == null || item.type != requiredItem)
+            {
+                return;
+            }
+
+            // El chorro solo cuenta si el agua esta corriendo.
+            WaterTap tap = WaterTap.ForTrigger(other);
+            if (tap == null)
+            {
+                tap = other.GetComponentInParent<WaterTap>();
+            }
+
+            if (tap != null && !tap.Flowing)
+            {
+                return;
+            }
+
+            if (tap != null && tap.Heat > 0.9f)
+            {
+                HotWater();
+                return;
+            }
+
+            if (!IsExpectedState())
+            {
+                return;
+            }
+
+            if (setStateOnContact && burnSequence.CurrentState == requiredState)
+            {
+                burnSequence.ChangeState(stateOnContact);
+            }
+
+            lastContactTime = Time.time;
+        }
+
+        private void Update()
+        {
+            if (burnSequence == null || !IsExpectedState())
+            {
+                if (resetOnInterrupt || (burnSequence != null && burnSequence.CurrentState != requiredState))
+                {
+                    accumulated = 0f;
+                }
+
+                return;
+            }
+
+            bool inContact = Time.time - lastContactTime <= contactGraceSeconds;
+            if (!inContact)
+            {
+                bool wasCooling = setStateOnContact && burnSequence.CurrentState == stateOnContact;
+                if (accumulated > 0f && resetOnInterrupt)
+                {
+                    Debug.Log($"[BurnSequence] Contacto con {requiredItem} interrumpido, contador reiniciado");
+                    accumulated = 0f;
+                }
+
+                if (wasCooling)
+                {
+                    burnSequence.ChangeState(requiredState);
+                    burnSequence.Report(BurnSequenceManager.BurnEvent.CoolingInterrupted, null,
+                        BurnSequenceManager.Severity.Error);
+                }
+                return;
+            }
+
+            accumulated += Time.deltaTime;
+            if (accumulated >= requiredSeconds)
+            {
+                accumulated = 0f;
+                burnSequence.ChangeState(stateOnComplete);
+            }
+        }
+
+        private void HotWater()
+        {
+            BurnSequenceManager.BurnState s = burnSequence.CurrentState;
+            if (s == BurnSequenceManager.BurnState.Idle || s == BurnSequenceManager.BurnState.Covered
+                || s == BurnSequenceManager.BurnState.Success)
+            {
+                return;
+            }
+
+            if (BurnInjury.Instance != null)
+            {
+                BurnInjury.Instance.OnHotWater();
+            }
+
+            // Un aviso por cada vez que se pone la mano bajo el agua caliente
+            // (y otro si se la deja ahi).
+            bool newTouch = Time.time - lastHotTouch > 1f;
+            lastHotTouch = Time.time;
+            if (newTouch || Time.time - lastHotReport > hotWaterReportInterval)
+            {
+                lastHotReport = Time.time;
+                burnSequence.Report(BurnSequenceManager.BurnEvent.HotWaterOnBurn, null,
+                    BurnSequenceManager.Severity.Error);
+            }
+        }
+
+        private bool IsExpectedState()
+        {
+            BurnSequenceManager.BurnState s = burnSequence.CurrentState;
+            return s == requiredState || (setStateOnContact && s == stateOnContact);
+        }
+    }
+}
