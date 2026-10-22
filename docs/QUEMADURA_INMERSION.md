@@ -1,6 +1,6 @@
 # Quemadura: aspecto, física y sonido
 
-Rama: `quemaduras`. Cambios para que la escena de la cocina (`Escenario_Hito1`)
+Rama: `quemaduras`. Cambios para que la escena de la cocina (`Escenario_Quemadura`)
 se vea y suene real. **No se tocó ninguna escena**: todo se instala solo al dar
 Play (`Hito1RuntimeBootstrap`, solo si la escena tiene `BurnSequenceManager`).
 Para ajustar un valor, agrega el componente a mano en el objeto indicado y
@@ -84,7 +84,7 @@ respiración agitada de unos 5 segundos que empalme bien al repetirse.
 
 1. Abrir el proyecto y esperar la importación. Las texturas nuevas y el `.fbx`
    del paciente se reimportan, así que tarda un poco.
-2. Abrir `Escenario_Hito1` y dar Play con Quest Link.
+2. Abrir `Escenario_Quemadura` y dar Play con Quest Link.
 3. En la consola deben aparecer `[BurnSkinOverlay] Quemadura sobre N
    triangulos de la mano`, y al soltar el paño sobre la mano,
    `[TowelCloth] Pano apoyado sobre la mano del paciente`.

@@ -3,8 +3,8 @@ using UnityEngine;
 
 namespace SojaExiles
 {
-    // Maquina de estados del caso "quemadura de primer grado" (analoga a
-    // CutSequenceManager). Orden del protocolo de primeros auxilios:
+    // Maquina de estados del caso "quemadura de primer grado".
+    // Orden del protocolo de primeros auxilios:
     //   Burned (la mano se quema: la olla se vuelca, PotAccident; sin el
     //   accidente se dispara tras un retraso) -> Cooling (la mano esta bajo
     //   el chorro de agua fria) -> Cooled (se mantuvo bajo el agua el tiempo
