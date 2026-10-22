@@ -24,7 +24,7 @@ Ya hecho (ver `docs/QUEMADURA_INMERSION.md`):
 
 - [ ] **Nada de lo anterior se ha visto todavía en Unity ni en el Quest.**
   Todo se verificó solo compilando fuera del editor. Probar con Quest Link en
-  `Escenario_Hito1` siguiendo las secciones "Probar" del doc.
+  `Escenario_Quemadura` siguiendo las secciones "Probar" del doc.
 - [ ] Revisar primero: ubicación de los objetos sobre el mesón
   (`BurnSceneProps`), dirección del vuelco de la olla (`PotAccident`),
   posición de la llave caliente (`LlaveGrifoCaliente`), tamaño del anillo
@@ -55,11 +55,16 @@ Ya hecho (ver `docs/QUEMADURA_INMERSION.md`):
 
 ## 2. Limpieza del proyecto
 
-- [ ] Sacar del build `Escenario_Atragantamiento` y `Escenario_Cortes`
-  (`ProjectSettings/EditorBuildSettings.asset`) y quitar `SceneCycler`, que
-  permite saltar a esas escenas. Evaluar si se borran sus scripts (`Choking*`,
-  `Cut*`, `BleedingEffect`, `PoseAtragantamiento`, `WoundContactDetector`,
-  `ManoHeridaVisibility`).
+- [x] Borrar las escenas de atragantamiento y cortes, `Hito1_Quemaduras` y
+  `SampleScene`, sus scripts (`Choking*`, `Cut*`, `BleedingEffect`,
+  `PoseAtragantamiento`, `WoundContactDetector`, `ManoHeridaVisibility`,
+  `SceneCycler`), los modelos de `Modelos/Cortes` y los materiales de comida
+  que solo usaban esas escenas. La escena principal pasó a llamarse
+  `Escenario_Quemadura` (mismo GUID) y es la única del build, ahora activada
+  (antes estaba desactivada y la activa era la de atragantamiento)
+  (`secuencia-quemadura`).
+- [ ] Abrir el proyecto en Unity y confirmar que la consola no muestra
+  errores ni scripts faltantes en `Escenario_Quemadura`.
 
 ## 3. Contenido
 

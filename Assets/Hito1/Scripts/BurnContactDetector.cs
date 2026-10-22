@@ -3,7 +3,7 @@ using UnityEngine;
 namespace SojaExiles
 {
     // Va sobre el collider trigger de la quemadura (hijo del marcador de la
-    // mano quemada). Analogo a WoundContactDetector: cuenta cuanto tiempo un
+    // mano quemada). Cuenta cuanto tiempo un
     // FirstAidItem del tipo indicado esta en contacto continuo con la
     // quemadura; si el contacto se interrumpe, el contador se reinicia
     // (ensena a no sacar la mano del agua antes de tiempo). Se usan dos

@@ -11,7 +11,7 @@ namespace SojaExiles
         public Rigidbody target;
 
         // Solo se puede agarrar si el objetivo tiene algun collider activo
-        // (ManoHeridaVisibility los apaga hasta que ocurre el corte).
+        // (por ejemplo, si la mano esta oculta).
         public bool CanGrab
         {
             get

@@ -2,8 +2,9 @@
 
 Curso CS2H01 Interacción Humano-Computador (UTEC). Unity 2022.3.62f3, Meta XR
 SDK 201 (rig `OVRCameraRigInteraction`), visor Meta Quest con Quest Link.
-El proyecto se centra **solo en la quemadura**; las escenas de
-atragantamiento y cortes son de una etapa anterior.
+El proyecto se centra **solo en la quemadura**. Las escenas de
+atragantamiento y cortes de la etapa anterior se borraron (siguen en el
+historial de git).
 
 ## Antes de empezar
 
@@ -14,12 +15,13 @@ atragantamiento y cortes son de una etapa anterior.
 
 ## Ramas
 
-`quemaduras` → `experiencia-quemadura` → `secuencia-quemadura`. Cada una sale
-de la anterior; trabaja sobre la última.
+Todo el trabajo de quemadura ya está unido en `main`. Trabaja en
+`secuencia-quemadura` (o en una rama nueva salida de `main`) y une a `main`
+con un pull request.
 
 ## Cómo está armado
 
-- Escena principal: `Assets/Hito1/Escenas/Escenario_Hito1.unity`.
+- Escena principal: `Assets/Hito1/Escenas/Escenario_Quemadura.unity`.
 - **No se editan las escenas a mano.** Todo lo nuevo se instala al dar Play
   desde `Hito1RuntimeBootstrap` (solo si la escena tiene
   `BurnSequenceManager`) y no se duplica si ya está en la escena.

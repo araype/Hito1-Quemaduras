@@ -6,8 +6,8 @@ namespace SojaExiles
     // Instala en runtime las correcciones de manos/controles/colliders sin
     // tener que editar la escena a mano. Solo actua si la escena trae el
     // jugador con VRLocomotion (o sea, el escenario VR), y no duplica nada si
-    // los componentes ya estan puestos en la escena. Se repite en cada escena
-    // que se carga (SceneCycler pasa de un escenario a otro).
+    // los componentes ya estan puestos en la escena. Se repite cada vez que
+    // la escena se carga (por ejemplo, al reiniciar).
     public static class Hito1RuntimeBootstrap
     {
         private static bool subscribed;
@@ -43,12 +43,6 @@ namespace SojaExiles
             {
                 go = go != null ? go : new GameObject("Hito1Runtime");
                 go.AddComponent<AutoColliders>();
-            }
-
-            if (Object.FindObjectOfType<SceneCycler>() == null)
-            {
-                go = go != null ? go : new GameObject("Hito1Runtime");
-                go.AddComponent<SceneCycler>();
             }
 
             InstallBurnScene();
