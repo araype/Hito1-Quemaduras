@@ -62,6 +62,10 @@ namespace SojaExiles
                 return;
             }
 
+            // Primero la escala de la cocina y la ubicacion de la paciente y
+            // del jugador: lo que se instala despues ya queda a escala.
+            BurnStaging.Apply();
+
             if (Object.FindObjectOfType<KitchenAmbience>() == null)
             {
                 burn.gameObject.AddComponent<KitchenAmbience>();
@@ -81,6 +85,12 @@ namespace SojaExiles
             if (Object.FindObjectOfType<BurnProtocol>() == null)
             {
                 burn.gameObject.AddComponent<BurnProtocol>().burnSequence = burn;
+            }
+
+            // Guia: tutorial, narrador y pasos (modo guiado o evaluacion).
+            if (Object.FindObjectOfType<BurnGuide>() == null)
+            {
+                burn.gameObject.AddComponent<BurnGuide>().burnSequence = burn;
             }
 
             if (Object.FindObjectOfType<CoolingClock>() == null)
@@ -166,6 +176,18 @@ namespace SojaExiles
                 if (patient.GetComponent<PatientWetHand>() == null)
                 {
                     patient.gameObject.AddComponent<PatientWetHand>();
+                }
+
+                // Cuerpo fisico (colliders, brazo agarrable) y que hace con la
+                // mano quemada cuando nadie se la sostiene.
+                if (patient.GetComponent<PatientPhysics>() == null)
+                {
+                    patient.gameObject.AddComponent<PatientPhysics>().burnSequence = burn;
+                }
+
+                if (patient.GetComponent<PatientReach>() != null && patient.GetComponent<PatientBurnArm>() == null)
+                {
+                    patient.gameObject.AddComponent<PatientBurnArm>().burnSequence = burn;
                 }
             }
 

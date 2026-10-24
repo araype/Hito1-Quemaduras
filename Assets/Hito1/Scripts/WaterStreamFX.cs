@@ -101,6 +101,18 @@ namespace SojaExiles
             get { return transform.TransformPoint(nozzleOffset); }
         }
 
+        // Boca del grifo, de donde sale el chorro (cae recto hacia abajo).
+        public Vector3 NozzlePosition
+        {
+            get { return Nozzle; }
+        }
+
+        // Centro de la palma de una mano (para ubicarla bajo el chorro).
+        public Vector3 PalmOf(Transform hand)
+        {
+            return PalmCenter(hand);
+        }
+
         private void Awake()
         {
             if (tap == null)

@@ -425,6 +425,8 @@ namespace SojaExiles
                     return "Primero hay que terminar de enfriar la quemadura; después se cubre.";
                 case BurnSequenceManager.BurnEvent.ClothOnBurn:
                     return "Un paño de cocina suelta pelusa que se pega a la herida: cubre con film o gasa.";
+                case BurnSequenceManager.BurnEvent.BurnedHandGrabbed:
+                    return "Sujeta a la persona del antebrazo: agarrar la mano quemada le duele y daña la piel.";
                 case BurnSequenceManager.BurnEvent.RemedyNear:
                 case BurnSequenceManager.BurnEvent.RemedyApplied:
                     return ExplainRemedy(detail);
@@ -473,6 +475,7 @@ namespace SojaExiles
         private class SessionLog
         {
             public string fecha;
+            public string modo;
             public string grado;
             public int puntaje;
             public int errores;
@@ -492,6 +495,7 @@ namespace SojaExiles
             SessionLog log = new SessionLog
             {
                 fecha = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                modo = BurnGuide.Instance != null ? (BurnGuide.Instance.Guided ? "Guiado" : "Evaluacion") : "SinGuia",
                 grado = Degree.ToString(),
                 puntaje = Score,
                 errores = burnSequence.Errors,

@@ -34,6 +34,9 @@ namespace SojaExiles
         [Tooltip("Fraccion del largo del brazo a partir de la cual el cuerpo se acerca.")]
         public float startFollowFraction = 0.85f;
         public float stepSpeed = 0.6f;
+        [Tooltip("Mientras el jugador la lleva del brazo: empieza a caminar antes y puede ir mas rapido.")]
+        public float ledFollowFraction = 0.55f;
+        public float ledMaxSpeed = 1.5f;
         public float turnSpeed = 80f;
         [Tooltip("Rango comodo del angulo de la mano respecto del frente (grados). Fuera de el, el cuerpo gira.")]
         public float comfortInner = 20f;
@@ -54,6 +57,21 @@ namespace SojaExiles
         private Vector3 desiredHand;
         private bool hasDesired;
         private CharacterController mover;
+        private Vector3 lastRootPosition;
+        private float smoothedSpeed;
+
+        // Capsula de piernas y cadera con que se desplaza (la usa
+        // PatientPhysics para que sus propios colliders no la frenen).
+        public CharacterController Mover
+        {
+            get { return mover; }
+        }
+
+        // True si el jugador la lleva del brazo.
+        public bool IsLed
+        {
+            get { return target != null && SimpleGrab.IsHeldObject(target); }
+        }
 
         private void Awake()
         {
@@ -89,9 +107,24 @@ namespace SojaExiles
 
         private void Start()
         {
+            lastRootPosition = transform.position;
             if (followBody)
             {
                 CreateMover();
+            }
+        }
+
+        // Ubica a la paciente en otro lugar (al armar la escena): mueve
+        // tambien la capsula con que camina.
+        public void Teleport(Vector3 position, Quaternion rotation)
+        {
+            transform.SetPositionAndRotation(position, rotation);
+            lastRootPosition = position;
+            if (mover != null)
+            {
+                mover.enabled = false;
+                mover.transform.position = position;
+                mover.enabled = true;
             }
         }
 
@@ -148,14 +181,25 @@ namespace SojaExiles
             {
                 TurnTowardHand(toHand, dt);
 
+                // Si la llevan del brazo camina antes y, cuanto mas tiran,
+                // mas rapido (hasta ledMaxSpeed): asi no se suelta.
+                bool led = IsLed;
                 Vector3 fromShoulder = PatientBody.Flat(desiredHand - shoulder);
-                float excess = fromShoulder.magnitude - armLength * startFollowFraction;
+                float excess = fromShoulder.magnitude - armLength * (led ? ledFollowFraction : startFollowFraction);
                 if (excess > 0.005f)
                 {
-                    Vector3 move = fromShoulder.normalized * Mathf.Min(excess, stepSpeed * dt);
+                    float speed = led ? Mathf.Clamp(excess * 5f, stepSpeed, ledMaxSpeed) : stepSpeed;
+                    Vector3 move = fromShoulder.normalized * Mathf.Min(excess, speed * dt);
                     MoveBody(move);
                 }
             }
+
+            // Velocidad real del cuerpo, para que las piernas den pasos.
+            Vector3 moved = PatientBody.Flat(transform.position - lastRootPosition);
+            lastRootPosition = transform.position;
+            float instant = dt > 0f ? moved.magnitude / dt : 0f;
+            smoothedSpeed = Mathf.Lerp(smoothedSpeed, Mathf.Min(instant, 3f), 1f - Mathf.Exp(-8f * dt));
+            body.walkSpeed = smoothedSpeed;
 
             UpdatePosture(shoulder, toHand, armLength, dt);
         }

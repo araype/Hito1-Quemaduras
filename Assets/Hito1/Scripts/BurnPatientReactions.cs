@@ -153,6 +153,11 @@ namespace SojaExiles
                     Say("voz_saco_agua", true);
                     break;
 
+                case BurnSequenceManager.BurnEvent.BurnedHandGrabbed:
+                    Say("voz_mano_no", true);
+                    Hurt(0.6f);
+                    break;
+
                 case BurnSequenceManager.BurnEvent.RingRemoved:
                     SayLater("voz_anillo_sale", 0.6f);
                     break;
@@ -184,6 +189,19 @@ namespace SojaExiles
         // agarrada; si la tiene, solo se sobresalta).
         private void PullHandAway(Vector3 from)
         {
+            // Con PatientBurnArm la mano la maneja ese componente.
+            PatientBurnArm arm = GetComponent<PatientBurnArm>();
+            if (arm != null && arm.enabled)
+            {
+                if (!arm.Avoid(from))
+                {
+                    body.Impulse(flinchImpulse * 0.5f, 0.04f);
+                    shakeUntil = Time.time + 0.6f;
+                }
+
+                return;
+            }
+
             Rigidbody target = reach != null ? reach.target : null;
             if (target == null || SimpleGrab.IsHeldObject(target))
             {
@@ -386,14 +404,20 @@ namespace SojaExiles
             body.rightHandShake = handShakeDegrees * k * Mathf.Sin(Time.time * Mathf.PI * 2f * 7f);
         }
 
-        private bool IsSpeaking
+        public bool IsSpeaking
         {
             get { return voice != null && voice.isPlaying; }
         }
 
-        private void Say(string line, bool interrupt)
+        public void Say(string line, bool interrupt)
         {
             if (voice == null || (IsSpeaking && !interrupt))
+            {
+                return;
+            }
+
+            // Las quejas y pistas no tapan al narrador; los gritos si.
+            if (!interrupt && BurnGuide.Instance != null && BurnGuide.Instance.Speaking)
             {
                 return;
             }

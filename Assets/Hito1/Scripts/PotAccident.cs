@@ -15,6 +15,8 @@ namespace SojaExiles
         public BurnSequenceManager burnSequence;
         [Tooltip("Segundos de cocina tranquila antes del accidente.")]
         public float accidentDelay = 6f;
+        [Tooltip("Si es falso, el accidente espera a que alguien llame a Trigger (la guia, al terminar el tutorial).")]
+        public bool autoStart = true;
         public float tipAngle = 90f;
         public float tipSeconds = 0.55f;
 
@@ -50,12 +52,29 @@ namespace SojaExiles
                 burnSequence = FindObjectOfType<BurnSequenceManager>();
             }
 
-            StartCoroutine(Accident());
+            // Con la guia (menu y tutorial), el accidente lo dispara ella.
+            bool guideControls = BurnGuide.Instance != null && BurnGuide.Instance.ControlsAccident;
+            if (autoStart && !guideControls)
+            {
+                StartCoroutine(Accident(accidentDelay));
+            }
         }
 
-        private IEnumerator Accident()
+        private bool started;
+
+        // Vuelca la olla ahora (o tras 'delay' segundos).
+        public void Trigger(float delay = 0f)
         {
-            yield return new WaitForSeconds(accidentDelay);
+            if (!started)
+            {
+                StartCoroutine(Accident(delay));
+            }
+        }
+
+        private IEnumerator Accident(float delay)
+        {
+            started = true;
+            yield return new WaitForSeconds(delay);
 
             // Si el jugador ya tiene la olla en la mano, no se vuelca: la
             // paciente se quema igual al tocarla.
@@ -213,23 +232,34 @@ namespace SojaExiles
             StartCoroutine(FadeSteam(cloud, 2.5f, 0f));
 
             Puddle counter = null, floor = null;
-            if (GroundHit(pivot + dir * 0.12f + Vector3.up * 0.2f, 0.5f, out RaycastHit top))
+            float counterHeight = pivot.y;
+            if (GroundHit(pivot + Vector3.up * 0.2f, 0.5f, out RaycastHit under))
             {
-                counter = new Puddle(top.point, top.normal, counterPuddleRadius, 1);
+                counterHeight = under.point.y;
             }
 
             // Borde del meson: el primer punto en esa direccion donde la
             // superficie baja mucho (el suelo).
-            float counterHeight = counter != null ? counter.Point.y : pivot.y;
-            for (float d = 0.15f; d < 1f; d += 0.05f)
+            float edge = 1f;
+            for (float d = 0.02f; d < 1f; d += 0.02f)
             {
                 Vector3 probe = pivot + dir * d + Vector3.up * 0.1f;
                 if (GroundHit(probe, 2.5f, out RaycastHit hit) && counterHeight - hit.point.y > 0.4f
                     && hit.normal.y > 0.8f)
                 {
+                    edge = d;
                     floor = new Puddle(hit.point + dir * 0.1f, hit.normal, floorPuddleRadius, 2);
                     break;
                 }
+            }
+
+            // El charco del meson no pasa del borde (si no, quedaria
+            // flotando en el aire, delante de la paciente).
+            float radius = Mathf.Clamp(edge * 0.5f + 0.02f, 0.06f, counterPuddleRadius);
+            Vector3 center = pivot + dir * (edge + 0.02f - radius);
+            if (GroundHit(center + Vector3.up * 0.2f, 0.5f, out RaycastHit top))
+            {
+                counter = new Puddle(top.point, top.normal, radius, 1);
             }
 
             float elapsed = 0f;
