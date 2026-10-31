@@ -15,3 +15,7 @@
 *.tmp
 *.pdb
 *.mdb
+*.apk
+*.aab
+*.exe
+*.app

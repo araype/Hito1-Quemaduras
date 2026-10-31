@@ -39,6 +39,18 @@ Ya hecho (ver `docs/QUEMADURA_INMERSION.md`):
 - [ ] Medir que se mantenga en **72 fps** con agua, vapor, tela y ampollas
   activos (RNF-01).
 
+### Defectos vistos al recorrer la escena en el editor (2026-10-30, MCP de Unity)
+
+Flujo completo en Play con Quest Link, acciones simuladas por código: 7/7
+pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
+
+- [ ] La taza del tutorial (`BurnGuide.BuildMug`, sale en (-0.96, 1.02, 7.30))
+  cae al suelo: ese tramo del mesón no tiene collider.
+- [ ] Panel de decisión médica: la tarjeta del narrador ("Paso 8 de 8") se
+  superpone dentro del panel, y "Ir al centro de salud" no cabe en el botón.
+- [ ] La quemadura se ve roja saturada y uniforme (`BurnSkinOverlay`), y la
+  chompa puesta parece un cilindro rígido (`SweaterItem.BuildDrape`).
+
 ## 1. Flujo de la aplicación (siguiente bloque de código)
 
 - [x] **Menú de inicio** con **modo guiado** y **modo evaluación**; el modo
@@ -87,7 +99,12 @@ Ya hecho (ver `docs/QUEMADURA_INMERSION.md`):
 - [ ] **Pruebas con usuarios**, comparando el modo guiado con el modo
   evaluación. Los JSON quedan en
   `Application.persistentDataPath/sesiones_quemadura/`.
-- [ ] **Actualizar el informe** (`Informe/`):
+- [x] **Actualizar el informe**: hecho en
+  `Informe_Hito_1__Entrenamiento_de_Primeros_Auxilios_ante_Emergencias_Médicas_Domésticas/main.tex`
+  (formato IEEE, `guia-y-paciente-fisica`). Rajan et al. no existe y se
+  reemplazó por Abbas et al. (2023); se quitó el dato del 80 %. Falta: el
+  código de Sebastián (8 dígitos) y capturas nuevas de la escena actual.
+  Puntos originales (para `Informe/`, la versión anterior):
   - sección 4.3: describir lo implementado y agregar capturas nuevas;
   - secciones 4.3 a 4.5 y RNF-02: el proyecto usa el **Meta XR Interaction
     SDK** y `SimpleGrab`, no XR Interaction Toolkit (`XR Grab Interactable`,
