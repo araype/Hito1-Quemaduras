@@ -48,6 +48,8 @@ namespace SojaExiles
 
         [Header("Postura")]
         public float maxLean = 35f;
+        [Tooltip("Inclinacion extra si aun asi el brazo no llega (p.ej. al chorro del grifo, al fondo del meson).")]
+        public float reachLeanExtra = 15f;
         public float maxTwist = 25f;
         public float postureSpeed = 4f;
 
@@ -246,7 +248,10 @@ namespace SojaExiles
 
             float leanDown = Mathf.Clamp01((below - 0.3f) / 0.45f) * maxLean;
             float leanFar = Mathf.Clamp01((fromHips - armLength * 0.7f) / 0.35f) * maxLean;
-            float wantedLean = Mathf.Max(leanDown, leanFar);
+            // Si el brazo no llega a donde quiere ir la mano, se inclina mas.
+            float deficit = Vector3.Distance(shoulder, hand) - armLength * reachFraction;
+            float leanReach = Mathf.Clamp01((deficit + 0.04f) / 0.14f) * (maxLean + reachLeanExtra);
+            float wantedLean = Mathf.Max(Mathf.Max(leanDown, leanFar), leanReach);
 
             float angle = toHand.magnitude > 0.1f
                 ? Vector3.SignedAngle(PatientBody.Flat(transform.forward), toHand, Vector3.up)

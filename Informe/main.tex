@@ -179,7 +179,7 @@ El marco de diseño se apoya en los principios de IHC vistos en clase \cite{norm
 \begin{itemize}
     \item \textbf{Affordances y mappings naturales:} los objetos se usan como en la vida real: la perilla se toca para apagar la llama, la llave se abre con la mano, la víctima se toma del antebrazo y el film se suelta sobre la piel.
     \item \textbf{Signifiers:} puntos de color sobre los objetos interactivos (azul para el agua fría, rojo para la caliente, dorado para el anillo y la perilla) y un brillo sobre el objeto del paso actual en modo guiado.
-    \item \textbf{Carga cognitiva:} UI diegética (el reloj de pared, la piel que cambia de color) y una sola indicación a la vez, en una tarjeta que acompaña la mirada.
+    \item \textbf{Carga cognitiva:} UI diegética (el reloj de pared, la piel que cambia de color) y una sola indicación a la vez, en una tarjeta que acompaña la mirada sin tapar la zona de trabajo.
     \item \textbf{Retroalimentación:} cada acción tiene respuesta visual, sonora y háptica; los errores además tienen una corrección explícita.
     \item \textbf{Presencia y fidelidad:} una escena coherente (agua, vapor, sonido, víctima que reacciona) refuerza la sensación de estar en una emergencia real y favorece la transferencia del aprendizaje \cite{slater1997}.
 \end{itemize}
@@ -320,13 +320,14 @@ El núcleo es una máquina de estados de la quemadura (\texttt{BurnSequenceManag
 \end{itemize}
 
 \subsubsection{Guía y modos}
-El panel de inicio (Fig.~\ref{fig:flujo_vr}) ofrece el modo guiado y el modo evaluación; los botones se presionan tocándolos con la mano. En modo guiado, un narrador con otra voz que la víctima indica cada uno de los 8 pasos con una tarjeta que acompaña la mirada y un brillo azul sobre el objeto a usar; si el usuario no avanza en 30~s, repite la indicación, y ante un error muestra ``¡Cuidado!'' con la corrección. En modo evaluación el tutorial es el mismo, pero después del accidente no hay tarjeta, voz de guía ni texto en el reloj.
+El panel de inicio (Fig.~\ref{fig:flujo_vr}) ofrece el modo guiado y el modo evaluación, con botones del mismo tamaño y el mismo brillo para no sugerir uno sobre otro. Todos los botones de la experiencia se presionan igual: se deja la mano sobre el botón hasta que se llena una barra (0,6~s); un roce al pasar no elige nada. En modo guiado, un narrador con otra voz que la víctima indica cada uno de los 8 pasos con una tarjeta que acompaña la mirada y un brillo azul sobre el objeto a usar. La tarjeta se ubica a la altura de los ojos y a 90~cm, por encima de la zona de trabajo (mesón, lavadero y manos), para no tapar los objetos. Se muestra completa mientras habla el narrador, ante un aviso o si el usuario la mira; luego se reduce a una franja translúcida con el paso actual, porque la voz ya entregó el detalle; si el usuario no avanza en 30~s, repite la indicación, y ante un error muestra ``¡Cuidado!'' con la corrección. En modo evaluación el tutorial es el mismo, pero después del accidente no hay tarjeta, voz de guía ni texto en el reloj.
 
 \subsubsection{Interacción y locomoción}
 \begin{itemize}
     \item \textbf{Manos y mandos unificados:} se usan las poses de mano conducidas por el mando del SDK de Meta, de modo que se ven manos mientras se sostienen los mandos y los joysticks siguen funcionando; sin mandos funciona el seguimiento de manos.
     \item \textbf{Agarre:} un sistema propio (\texttt{SimpleGrab}) agarra con el botón lateral, el gatillo o el pellizco pulgar-índice. El objeto sostenido sigue siendo físico: choca con el mesón y las paredes en vez de atravesarlos. Cada mano tiene además una esfera física que empuja objetos y presiona botones.
-    \item \textbf{Guiar a la víctima:} su brazo se puede tomar del brazo, el antebrazo, la muñeca o la mano; al acercar la mano aparece un brillo verde (antebrazo) o naranja (mano quemada). Mientras se la lleva, ella camina hacia el usuario, y si se suelta su mano a menos de 32~cm del chorro con agua fría, la pone bajo el agua y la mantiene ahí.
+    \item \textbf{Guiar a la víctima:} su brazo se puede tomar del brazo, el antebrazo, la muñeca o la mano; al acercar la mano aparece un brillo verde (antebrazo) o naranja (mano quemada). Mientras se la lleva, ella camina hacia el usuario, y si se suelta su mano a menos de 32~cm del chorro con agua fría, la pone bajo el agua y la mantiene ahí: se inclina sobre el lavadero y deja la mano plana con el dorso (donde está la quemadura) bajo el chorro, también al volver a ponerla después de sacarla.
+    \item \textbf{Retirar el anillo:} como al agarrar, se acerca la mano libre al punto dorado y se mantiene apretado el botón lateral o la pinza pulgar-índice durante 1,5~s. Mientras tanto el anillo avanza por el dedo y el mando vibra; si se suelta antes, el anillo vuelve a su lugar. Apretar junto al anillo no toma la mano de la víctima.
     \item \textbf{Locomoción:} caminar físicamente dentro del área de juego, o joystick izquierdo para avanzar en la dirección de la mirada y derecho para girar a saltos. Sin mandos, pellizcos del dedo medio y anular. Todo pasa por un único \textit{CharacterController} que sigue a la cabeza, por lo que el jugador no atraviesa paredes ni a la víctima. Se reemplazó la locomoción de teletransporte que traía el rig de Meta, que generaba conflictos de movimiento.
 \end{itemize}
 
@@ -355,12 +356,15 @@ Al cubrir la quemadura aparece la pregunta médica y luego el resumen (Fig.~\ref
 \subsection{Avance de la versión al 50\,\%}
 El Cuadro~\ref{tab:estado} resume qué está implementado. Esta versión ya contiene el ciclo completo de la experiencia, de principio a fin: menú, tutorial, accidente, los 8 pasos del protocolo con sus errores, la decisión médica, el resumen y el registro. Quedan para la versión final la validación con las manos en el visor, las pruebas con usuarios y las mejoras de la sección~\ref{sec:futuro}.
 
-El recorrido de la Fig.~\ref{fig:flujo_vr} se ejecutó en el editor de Unity en modo Play, con el visor conectado por Quest Link, completando por código las acciones del jugador (agarrar, girar la perilla, llevar la mano, soltar objetos). El resultado fue el esperado: 7 de 7 pasos, 0 errores y 100 puntos. La prueba reveló además estos defectos:
+El recorrido de la Fig.~\ref{fig:flujo_vr} se ejecutó en el editor de Unity en modo Play, con el visor conectado por Quest Link, completando por código las acciones del jugador (agarrar, girar la perilla, llevar la mano, soltar objetos). El resultado fue el esperado: 7 de 7 pasos, 0 errores y 100 puntos. Esa prueba y el uso del equipo en el visor revelaron problemas de interacción que ya se corrigieron:
 \begin{itemize}
-    \item La taza del tutorial aparece en un tramo del mesón sin colisión y cae al suelo.
-    \item En el panel de decisión médica se superpone la tarjeta del narrador, y el texto ``Ir al centro de salud'' no cabe en su botón.
-    \item La quemadura se ve como un rojo saturado y uniforme, y la chompa como un cilindro rígido: ambos restan realismo.
+    \item La taza del tutorial aparecía en el borde del mesón y caía al suelo; ahora solo se ubica donde hay superficie alrededor.
+    \item La tarjeta del narrador tapaba el panel de decisión médica y ``Ir al centro de salud'' no cabía en su botón; ahora la tarjeta se oculta mientras el panel está abierto y las etiquetas se ajustan al botón.
+    \item El anillo salía con solo dejar la mano cerca, a diferencia del resto de acciones, que piden mantener un botón; ahora se saca manteniendo el agarre.
+    \item Al volver a poner su mano en el lavadero, la mano quedaba vertical junto a la boca del grifo y no se veía bajo el agua; ahora queda plana bajo el chorro.
+    \item En el menú, un botón resultaba más fácil de presionar que el otro; ahora los dos tienen el mismo tamaño, el mismo brillo y la misma forma de presionarse.
 \end{itemize}
+Sigue pendiente el aspecto de la quemadura (un rojo saturado y uniforme) y de la chompa puesta (un cilindro rígido).
 
 \begin{table}[htbp]
 \centering
@@ -399,7 +403,7 @@ RNF-04 & \ok & Experiencia de un solo jugador. \\
 Para la entrega final quedan:
 \begin{itemize}
     \item \textbf{Prueba en el visor:} jugar el flujo completo con las manos, revisar la ubicación de los objetos y medir los 72 fps con agua, vapor, tela y ampollas activos (RNF-01).
-    \item \textbf{Corregir los defectos detectados} en la prueba del editor: la taza, la superposición de paneles y el aspecto de la quemadura y de la chompa.
+    \item \textbf{Corregir los defectos detectados} en la prueba del editor que siguen abiertos: el aspecto de la quemadura y de la chompa.
     \item \textbf{Barra de cuatro actos} con el contador de aciertos y errores, como en la WebApp; el sistema ya calcula el acto actual.
     \item \textbf{Pausa y reinicio} en cualquier momento (RNF-03).
     \item \textbf{Variación del caso} (RF-11): activar el grado al azar y variar la extensión.

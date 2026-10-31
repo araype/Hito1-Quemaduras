@@ -40,10 +40,19 @@ namespace SojaExiles
         public float reminderSeconds = 30f;
 
         [Header("Tarjeta")]
-        public float cardDistance = 0.7f;
-        public float cardDrop = 0.3f;
+        [Tooltip("Mas lejos y a la altura de los ojos: la tarea (meson, lavadero, manos) queda debajo y no se tapa.")]
+        public float cardDistance = 0.9f;
+        [Tooltip("Cuanto mas abajo de los ojos va la tarjeta (negativo: mas arriba).")]
+        public float cardDrop = -0.04f;
+        [Tooltip("Escala de la tarjeta (al estar mas lejos se agranda para leerse igual).")]
+        public float cardScale = 1.25f;
         [Tooltip("Angulo de la mirada a partir del cual la tarjeta se reacomoda.")]
         public float cardFollowAngle = 28f;
+        [Tooltip("Segundos despues de que calla el narrador hasta que la tarjeta se achica a solo el paso.")]
+        public float cardCompactDelay = 3f;
+        [Tooltip("Opacidad del fondo: completa y compacta.")]
+        public float cardAlphaFull = 0.92f;
+        public float cardAlphaCompact = 0.5f;
 
         [Header("Tutorial")]
         public float grabTimeout = 45f;
@@ -102,7 +111,8 @@ namespace SojaExiles
                 hint = "Tómala del antebrazo, no de la mano quemada. Suéltala cerca del chorro y ella la pondrá bajo el agua.",
                 clip = "guia_llevar" },
             new StepInfo { id = StepId.Anillo, title = "Quítale el anillo",
-                hint = "Antes de que la mano se hinche. Deja tu mano libre sobre el anillo un momento.", clip = "guia_anillo" },
+                hint = "Antes de que se hinche. Acerca tu mano libre al punto dorado y mantén apretado el botón lateral (o junta pulgar e índice) hasta que salga.",
+                clip = "guia_anillo" },
             new StepInfo { id = StepId.Abrigar, title = "Abrígala con la chompa",
                 hint = "El agua fría también le enfría el cuerpo. Suelta la chompa sobre sus hombros.", clip = "guia_abrigo" },
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
@@ -133,6 +143,10 @@ namespace SojaExiles
         private Vector3 cardVelocity;
         private bool cardMoving;
         private float warningUntil;
+        private Renderer cardBackground, cardAccent;
+        private float cardExpandUntil;
+        private float cardGazeTime;
+        private float cardOpen = 1f;     // 0 compacta, 1 completa (animado)
 
         private readonly List<Renderer> highlights = new List<Renderer>();
         private Material highlightMaterial;
@@ -259,18 +273,20 @@ namespace SojaExiles
             VRPanelKit.Text(root, VRPanelKit.Wrap("Aviso: esta práctica incluye gritos de dolor y una quemadura visible. " +
                     "Puedes quitarte el visor cuando quieras.", 52), new Vector2(0f, 0.125f), 0.019f,
                 new Color(1f, 0.82f, 0.55f), TextAnchor.UpperCenter, TextAlignment.Center);
-            VRPanelKit.Text(root, "Toca un botón con el dedo para elegir:", new Vector2(0f, 0.045f), 0.02f,
+            VRPanelKit.Text(root, "Deja la mano sobre un botón hasta que se llene:", new Vector2(0f, 0.045f), 0.02f,
                 new Color(0.8f, 0.85f, 0.92f), TextAnchor.UpperCenter, TextAlignment.Center);
-            VRPanelKit.Button(root, "Modo guiado", new Vector2(-0.145f, -0.06f), new Vector2(0.26f, 0.1f),
+            VRPanelKit.Button(root, "Modo guiado", new Vector2(-0.152f, -0.06f), new Vector2(0.285f, 0.1f),
                 new Color(0.16f, 0.42f, 0.78f), () => { guided = true; chosen = true; });
-            VRPanelKit.Button(root, "Modo evaluación", new Vector2(0.145f, -0.06f), new Vector2(0.26f, 0.1f),
+            VRPanelKit.Button(root, "Modo evaluación", new Vector2(0.152f, -0.06f), new Vector2(0.285f, 0.1f),
                 new Color(0.45f, 0.3f, 0.62f), () => { guided = false; chosen = true; });
             VRPanelKit.Text(root, VRPanelKit.Wrap("Guiado: te indica cada paso. Evaluación: lo haces solo y se mide.", 56),
                 new Vector2(0f, -0.13f), 0.017f, new Color(0.7f, 0.75f, 0.82f), TextAnchor.UpperCenter,
                 TextAlignment.Center);
 
             Say("guia_bienvenida");
-            Highlight(root.TransformPoint(new Vector3(-0.145f, -0.06f, -0.01f)), 0f);
+            // El mismo brillo en las dos opciones: ninguna se sugiere sobre la otra.
+            Highlight(root.TransformPoint(new Vector3(-0.152f, -0.06f, -0.01f)), 0f);
+            Highlight(root.TransformPoint(new Vector3(0.152f, -0.06f, -0.01f)), 0f);
 
             while (!chosen)
             {
@@ -736,6 +752,7 @@ namespace SojaExiles
                 cardWarning.text = VRPanelKit.Wrap("¡Cuidado! " + text, 44);
                 LayoutCard();
                 warningUntil = Time.time + 6f;
+                ExpandCard(6f);
                 if (card != null && !card.gameObject.activeSelf)
                 {
                     card.gameObject.SetActive(true);
@@ -828,10 +845,11 @@ namespace SojaExiles
             GameObject go = new GameObject("TarjetaGuia");
             go.AddComponent<NoAutoCollider>();
             card = go.transform;
-            VRPanelKit.Background(card, new Vector2(0f, 0f), new Vector2(0.44f, CardHeight), "Panel_Fondo",
-                new Color(0.07f, 0.1f, 0.16f), 0.001f);
-            VRPanelKit.Background(card, new Vector2(-0.214f, 0f), new Vector2(0.012f, CardHeight), "Panel_Boton",
-                new Color(0.25f, 0.6f, 1f), 0f);
+            go.transform.localScale = Vector3.one * cardScale;
+            cardBackground = VRPanelKit.Background(card, new Vector2(0f, 0f), new Vector2(0.44f, CardHeight),
+                "Panel_Fondo_Translucido", new Color(0.07f, 0.1f, 0.16f), 0.001f);
+            cardAccent = VRPanelKit.Background(card, new Vector2(-0.214f, 0f), new Vector2(0.012f, CardHeight),
+                "Panel_Boton", new Color(0.25f, 0.6f, 1f), 0f);
             float top = CardHeight * 0.5f - 0.016f;
             cardTitle = VRPanelKit.Text(card, "", new Vector2(-0.195f, top), 0.016f, new Color(0.55f, 0.78f, 1f));
             cardText = VRPanelKit.Text(card, "", new Vector2(-0.195f, top - 0.026f), TextLine, Color.white);
@@ -882,9 +900,18 @@ namespace SojaExiles
             cardText.text = VRPanelKit.Wrap(text ?? "", 30);
             cardHint.text = VRPanelKit.Wrap(hint ?? "", 44);
             LayoutCard();
+            if (MedicalDecisionPanel.IsOpen)
+            {
+                // El panel de decision ya trae la pregunta: la tarjeta lo tapaba.
+                card.gameObject.SetActive(false);
+                return;
+            }
+
             card.gameObject.SetActive(true);
+            ExpandCard(4f);
             if (wasHidden)
             {
+                cardOpen = 1f;
                 PlaceCard(true);
             }
 
@@ -908,12 +935,96 @@ namespace SojaExiles
                 return;
             }
 
+            if (MedicalDecisionPanel.IsOpen)
+            {
+                card.gameObject.SetActive(false);
+                return;
+            }
+
             if (cardWarning != null && cardWarning.text.Length > 0 && Time.time > warningUntil)
             {
                 cardWarning.text = "";
+                LayoutCard();
             }
 
             PlaceCard(false);
+            UpdateCardSize();
+        }
+
+        // Mantiene la tarjeta completa al menos 'seconds' desde ahora.
+        private void ExpandCard(float seconds)
+        {
+            cardExpandUntil = Mathf.Max(cardExpandUntil, Time.time + seconds);
+        }
+
+        // La tarjeta completa (titulo, paso, pista y aviso) solo se muestra
+        // mientras hace falta: al aparecer un paso, mientras habla el
+        // narrador, con un aviso, o si el jugador la mira. Si no, se achica al
+        // paso actual y el fondo se vuelve translucido: tapa menos la cocina.
+        private void UpdateCardSize()
+        {
+            if (head != null)
+            {
+                Vector3 toCard = card.position - head.position;
+                bool looking = Vector3.Angle(head.forward, toCard) < 14f;
+                cardGazeTime = looking ? cardGazeTime + Time.deltaTime : 0f;
+                if (cardGazeTime > 0.35f)
+                {
+                    ExpandCard(1.5f);
+                }
+            }
+
+            if (Speaking || Time.time < warningUntil)
+            {
+                ExpandCard(cardCompactDelay);
+            }
+
+            float wanted = Time.time < cardExpandUntil ? 1f : 0f;
+            cardOpen = Mathf.MoveTowards(cardOpen, wanted, Time.deltaTime / 0.3f);
+            float k = Mathf.SmoothStep(0f, 1f, cardOpen);
+
+            float top = CardHeight * 0.5f;
+            float compact = 0.016f + 0.026f + Lines(cardText.text) * TextLine * 1.2f + 0.006f;
+            float full = Mathf.Max(CardHeight, top - CardBottom() + 0.012f);
+            float height = Mathf.Lerp(compact, full, k);
+            foreach (Renderer r in new[] { cardBackground, cardAccent })
+            {
+                if (r == null)
+                {
+                    continue;
+                }
+
+                Transform t = r.transform;
+                t.localScale = new Vector3(t.localScale.x, height, t.localScale.z);
+                t.localPosition = new Vector3(t.localPosition.x, top - height * 0.5f, t.localPosition.z);
+            }
+
+            Color bg = new Color(0.07f, 0.1f, 0.16f, Mathf.Lerp(cardAlphaCompact, cardAlphaFull, k));
+            IndicatorUtil.SetColor(cardBackground, bg);
+            SetAlpha(cardHint, k);
+            SetAlpha(cardWarning, k);
+        }
+
+        // Borde inferior del texto (coordenadas de la tarjeta).
+        private float CardBottom()
+        {
+            float y = cardWarning.text.Length > 0 ? cardWarning.transform.localPosition.y
+                - Lines(cardWarning.text) * HintLine * 1.2f
+                : cardHint.transform.localPosition.y - Lines(cardHint.text) * HintLine * 1.2f;
+            return y;
+        }
+
+        private static void SetAlpha(TextMesh text, float alpha)
+        {
+            if (text == null)
+            {
+                return;
+            }
+
+            Color c = text.color;
+            c.a = alpha;
+            text.color = c;
+            text.GetComponent<Renderer>().enabled = alpha > 0.02f;
         }
 
         private void PlaceCard(bool snap)

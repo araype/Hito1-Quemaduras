@@ -139,6 +139,60 @@ namespace SojaExiles
             return false;
         }
 
+        // Posicion del punto de agarre, si esa mano aprieta el boton (o hace
+        // la pinza) y si sostiene algo. Lo usan las acciones que se hacen
+        // apretando sin tomar un objeto (sacar el anillo).
+        public static bool TryGetHandInput(bool leftHand, out Vector3 position, out bool pressed, out bool holding)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                Hand hand = leftHand ? Instances[i].left : Instances[i].right;
+                if (hand.poseValid)
+                {
+                    position = hand.position;
+                    pressed = hand.pressed;
+                    holding = hand.held != null;
+                    return true;
+                }
+            }
+
+            position = Vector3.zero;
+            pressed = false;
+            holding = false;
+            return false;
+        }
+
+        // Zonas donde apretar no agarra nada (la accion la maneja otro
+        // script). Cada funcion recibe el punto de agarre y devuelve true si
+        // lo reclama.
+        private static readonly List<System.Func<Vector3, bool>> GrabBlockers = new List<System.Func<Vector3, bool>>();
+
+        public static void AddGrabBlocker(System.Func<Vector3, bool> blocker)
+        {
+            if (blocker != null && !GrabBlockers.Contains(blocker))
+            {
+                GrabBlockers.Add(blocker);
+            }
+        }
+
+        public static void RemoveGrabBlocker(System.Func<Vector3, bool> blocker)
+        {
+            GrabBlockers.Remove(blocker);
+        }
+
+        private static bool Blocked(Vector3 point)
+        {
+            for (int i = 0; i < GrabBlockers.Count; i++)
+            {
+                if (GrabBlockers[i](point))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         // True si la mano indicada sostiene algo con SimpleGrab.
         public bool IsHolding(bool leftHand)
         {
@@ -194,6 +248,20 @@ namespace SojaExiles
                 if (col == grab.right.bodyCollider)
                 {
                     return grab.right.held == null;
+                }
+            }
+
+            return false;
+        }
+
+        // True si el collider es la esfera fisica de la mano izquierda.
+        public static bool IsLeftHandCollider(Collider col)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                if (col == Instances[i].left.bodyCollider)
+                {
+                    return true;
                 }
             }
 
@@ -328,7 +396,7 @@ namespace SojaExiles
             bool wasPressed = hand.pressed;
             hand.pressed = hand.poseValid && ReadPressed(hand);
 
-            if (hand.pressed && !wasPressed && hand.held == null)
+            if (hand.pressed && !wasPressed && hand.held == null && !Blocked(hand.position))
             {
                 TryGrab(hand, otherHand);
             }

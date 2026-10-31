@@ -44,10 +44,33 @@ Ya hecho (ver `docs/QUEMADURA_INMERSION.md`):
 Flujo completo en Play con Quest Link, acciones simuladas por código: 7/7
 pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
 
-- [ ] La taza del tutorial (`BurnGuide.BuildMug`, sale en (-0.96, 1.02, 7.30))
-  cae al suelo: ese tramo del mesón no tiene collider.
-- [ ] Panel de decisión médica: la tarjeta del narrador ("Paso 8 de 8") se
-  superpone dentro del panel, y "Ir al centro de salud" no cabe en el botón.
+- [x] La taza del tutorial salía en el borde del mesón (a 1 cm) y se volcaba
+  al suelo. `PropKit.FindSurfaceSpot` ahora exige mesón alrededor del punto
+  (`guia-y-paciente-fisica`, 2026-10-31).
+- [x] Panel de decisión médica: la tarjeta del narrador se oculta mientras el
+  panel está abierto (`MedicalDecisionPanel.IsOpen`) y las etiquetas largas
+  se parten en dos líneas (`VRPanelKit.FitLabel`) (2026-10-31).
+- [x] Mejoras de interacción pedidas tras jugarlo en el visor (2026-10-31,
+  probado en el editor con Quest Link y manos simuladas por código; **falta
+  probarlo con las manos**):
+  - anillo: se saca acercando la mano libre y manteniendo apretado el botón
+    lateral o la pinza 1,5 s (antes bastaba dejar la mano cerca); el anillo
+    avanza por el dedo, vibra, y vuelve si se suelta. Apretar ahí no agarra la
+    mano (`SimpleGrab.AddGrabBlocker`). Nueva voz `guia_anillo`;
+  - lavadero: bajo el chorro la mano queda plana, dorso arriba
+    (`PatientBody.LayHandFlat`), y la paciente se inclina más si no llega
+    (`PatientReach.reachLeanExtra`). Antes quedaba vertical junto a la boca
+    del grifo y el agua no la tocaba;
+  - botones: todos se presionan dejando la mano 0,6 s hasta llenar una barra
+    (`TouchButton`); en el menú los dos tienen el mismo tamaño y brillo. Nueva
+    voz `guia_bienvenida`.
+- [x] La tarjeta del narrador tapaba el mesón y el lavadero (anillo, papel).
+  Ahora va a la altura de los ojos y a 90 cm (`BurnGuide.cardDistance`,
+  `cardDrop`, `cardScale`) y, cuando calla el narrador, se reduce a una
+  franja translúcida con el paso (`cardCompactDelay`, material
+  `Panel_Fondo_Translucido`); se abre al mirarla o con un aviso
+  (2026-10-31, probado en el editor con Quest Link). Si aún estorba:
+  correrla cuando tape el objeto del paso, o dejar moverla con la mano.
 - [ ] La quemadura se ve roja saturada y uniforme (`BurnSkinOverlay`), y la
   chompa puesta parece un cilindro rígido (`SweaterItem.BuildDrape`).
 

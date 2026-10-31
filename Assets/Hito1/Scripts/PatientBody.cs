@@ -67,6 +67,13 @@ namespace SojaExiles
         [HideInInspector] public float rightHandShake;
         [HideInInspector] public float leftHandShake;
 
+        // Mano plana con el dorso hacia arriba (0 a 1), p.ej. bajo el chorro
+        // del grifo: los dedos siguen la direccion del antebrazo en
+        // horizontal, algo inclinados hacia abajo.
+        [HideInInspector] public float rightPalmDown;
+        [HideInInspector] public float leftPalmDown;
+        [HideInInspector] public float palmDownTiltDegrees = 15f;
+
         [Header("Caminar")]
         [Tooltip("Largo de un paso (m). Un ciclo completo son dos pasos.")]
         public float stepLength = 0.5f;
@@ -109,6 +116,7 @@ namespace SojaExiles
             public float upperLength, foreLength;
             public Vector3 upperAxisLocal, upperHingeLocal;
             public Vector3 foreAxisLocal, foreHingeLocal;
+            public Vector3 fingersLocal, dorsumLocal;   // mano, medidos en la T-pose
 
             public ArmMode currentMode;
             public ArmMode previousMode;
@@ -472,6 +480,12 @@ namespace SojaExiles
             arm.upperHingeLocal = Orthogonal(Quaternion.Inverse(arm.upper.rotation) * hinge, arm.upperAxisLocal);
             arm.foreAxisLocal = Quaternion.Inverse(arm.fore.rotation) * foreDir;
             arm.foreHingeLocal = Orthogonal(Quaternion.Inverse(arm.fore.rotation) * hinge, arm.foreAxisLocal);
+
+            // Mano: en la T-pose las palmas miran hacia abajo, asi que el
+            // dorso mira hacia arriba.
+            Vector3 fingers = arm.middle1 != null ? (arm.middle1.position - arm.hand.position).normalized : foreDir;
+            arm.fingersLocal = Quaternion.Inverse(arm.hand.rotation) * fingers;
+            arm.dorsumLocal = Orthogonal(Quaternion.Inverse(arm.hand.rotation) * transform.up, arm.fingersLocal);
         }
 
         private void ComputeKneelDrop()
@@ -648,6 +662,12 @@ namespace SojaExiles
                 AimHandAtNeck(arm, torsoUp, torsoFwd, outward, neckWeight);
             }
 
+            float palmDown = arm.side > 0f ? rightPalmDown : leftPalmDown;
+            if (palmDown > 0.001f && arm.currentMode == ArmMode.Reach)
+            {
+                LayHandFlat(arm, Mathf.Clamp01(palmDown));
+            }
+
             // Sacudir la mano (reflejo al quemarse): flexion de la muneca.
             float shake = arm.side > 0f ? rightHandShake : leftHandShake;
             if (Mathf.Abs(shake) > 0.01f)
@@ -737,6 +757,25 @@ namespace SojaExiles
                 * Quaternion.Inverse(Quaternion.LookRotation(arm.foreAxisLocal, arm.foreHingeLocal));
 
             return wrist;
+        }
+
+        // Mano plana, dorso arriba, dedos hacia donde apunta el antebrazo
+        // (en horizontal) y un poco hacia abajo.
+        private void LayHandFlat(Arm arm, float weight)
+        {
+            Vector3 along = Flat(arm.hand.position - arm.fore.position);
+            if (along.sqrMagnitude < 1e-6f)
+            {
+                along = Flat(TorsoForward);
+            }
+
+            along.Normalize();
+            Vector3 side = Vector3.Cross(Vector3.up, along);
+            Vector3 fingers = Quaternion.AngleAxis(palmDownTiltDegrees, side) * along;
+            Vector3 dorsum = Vector3.ProjectOnPlane(Vector3.up, fingers).normalized;
+            Quaternion wanted = Quaternion.LookRotation(fingers, dorsum)
+                * Quaternion.Inverse(Quaternion.LookRotation(arm.fingersLocal, arm.dorsumLocal));
+            arm.hand.rotation = Quaternion.Slerp(arm.hand.rotation, wanted, weight);
         }
 
         private void AimHandAtNeck(Arm arm, Vector3 torsoUp, Vector3 torsoFwd, Vector3 outward, float weight)
