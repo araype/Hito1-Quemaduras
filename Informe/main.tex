@@ -179,7 +179,7 @@ El marco de diseño se apoya en los principios de IHC vistos en clase \cite{norm
 \begin{itemize}
     \item \textbf{Affordances y mappings naturales:} los objetos se usan como en la vida real: la perilla se toca para apagar la llama, la llave se abre con la mano, la víctima se toma del antebrazo y el film se suelta sobre la piel.
     \item \textbf{Signifiers:} puntos de color sobre los objetos interactivos (azul para el agua fría, rojo para la caliente, dorado para el anillo y la perilla) y un brillo sobre el objeto del paso actual en modo guiado.
-    \item \textbf{Carga cognitiva:} UI diegética (el reloj de pared, la piel que cambia de color) y una sola indicación a la vez, en una tarjeta que acompaña la mirada.
+    \item \textbf{Carga cognitiva:} UI diegética (el reloj de pared, la piel que cambia de color) y una sola indicación a la vez, en una tarjeta que acompaña la mirada sin tapar la zona de trabajo.
     \item \textbf{Retroalimentación:} cada acción tiene respuesta visual, sonora y háptica; los errores además tienen una corrección explícita.
     \item \textbf{Presencia y fidelidad:} una escena coherente (agua, vapor, sonido, víctima que reacciona) refuerza la sensación de estar en una emergencia real y favorece la transferencia del aprendizaje \cite{slater1997}.
 \end{itemize}
@@ -320,7 +320,7 @@ El núcleo es una máquina de estados de la quemadura (\texttt{BurnSequenceManag
 \end{itemize}
 
 \subsubsection{Guía y modos}
-El panel de inicio (Fig.~\ref{fig:flujo_vr}) ofrece el modo guiado y el modo evaluación, con botones del mismo tamaño y el mismo brillo para no sugerir uno sobre otro. Todos los botones de la experiencia se presionan igual: se deja la mano sobre el botón hasta que se llena una barra (0,6~s); un roce al pasar no elige nada. En modo guiado, un narrador con otra voz que la víctima indica cada uno de los 8 pasos con una tarjeta que acompaña la mirada y un brillo azul sobre el objeto a usar; si el usuario no avanza en 30~s, repite la indicación, y ante un error muestra ``¡Cuidado!'' con la corrección. En modo evaluación el tutorial es el mismo, pero después del accidente no hay tarjeta, voz de guía ni texto en el reloj.
+El panel de inicio (Fig.~\ref{fig:flujo_vr}) ofrece el modo guiado y el modo evaluación, con botones del mismo tamaño y el mismo brillo para no sugerir uno sobre otro. Todos los botones de la experiencia se presionan igual: se deja la mano sobre el botón hasta que se llena una barra (0,6~s); un roce al pasar no elige nada. En modo guiado, un narrador con otra voz que la víctima indica cada uno de los 8 pasos con una tarjeta que acompaña la mirada y un brillo azul sobre el objeto a usar. La tarjeta se ubica a la altura de los ojos y a 90~cm, por encima de la zona de trabajo (mesón, lavadero y manos), para no tapar los objetos. Se muestra completa mientras habla el narrador, ante un aviso o si el usuario la mira; luego se reduce a una franja translúcida con el paso actual, porque la voz ya entregó el detalle; si el usuario no avanza en 30~s, repite la indicación, y ante un error muestra ``¡Cuidado!'' con la corrección. En modo evaluación el tutorial es el mismo, pero después del accidente no hay tarjeta, voz de guía ni texto en el reloj.
 
 \subsubsection{Interacción y locomoción}
 \begin{itemize}

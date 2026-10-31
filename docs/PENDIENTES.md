@@ -64,6 +64,13 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   - botones: todos se presionan dejando la mano 0,6 s hasta llenar una barra
     (`TouchButton`); en el menú los dos tienen el mismo tamaño y brillo. Nueva
     voz `guia_bienvenida`.
+- [x] La tarjeta del narrador tapaba el mesón y el lavadero (anillo, papel).
+  Ahora va a la altura de los ojos y a 90 cm (`BurnGuide.cardDistance`,
+  `cardDrop`, `cardScale`) y, cuando calla el narrador, se reduce a una
+  franja translúcida con el paso (`cardCompactDelay`, material
+  `Panel_Fondo_Translucido`); se abre al mirarla o con un aviso
+  (2026-10-31, probado en el editor con Quest Link). Si aún estorba:
+  correrla cuando tape el objeto del paso, o dejar moverla con la mano.
 - [ ] La quemadura se ve roja saturada y uniforme (`BurnSkinOverlay`), y la
   chompa puesta parece un cilindro rígido (`SweaterItem.BuildDrape`).
 
