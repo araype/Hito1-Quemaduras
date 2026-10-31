@@ -24,13 +24,19 @@ namespace SojaExiles
     [RequireComponent(typeof(CharacterController))]
     public class VRLocomotion : MonoBehaviour
     {
-        public float moveSpeed = 1.8f;
+        // walkSpeed y snapAngle tienen nombre nuevo a proposito: la escena
+        // guarda moveSpeed 1.8 y snapTurnAngle 45, que pisarian estos valores.
+        [Tooltip("Velocidad al caminar con el joystick a fondo (m/s).")]
+        public float walkSpeed = 1.3f;
+        [Tooltip("Segundos para pasar de quieto a walkSpeed, o de walkSpeed a quieto.")]
+        public float moveRampSeconds = 0.12f;
         public float gravity = -9.81f;
 
         [Header("Entrada")]
         public float deadZone = 0.15f;
         public bool enableSnapTurn = true;
-        public float snapTurnAngle = 45f;
+        [Tooltip("Grados de cada salto de giro.")]
+        public float snapAngle = 30f;
         public float snapTurnThreshold = 0.7f;
         public bool enableHandPinchLocomotion = true;
         public float pinchStrengthThreshold = 0.8f;
@@ -45,6 +51,7 @@ namespace SojaExiles
         private OVRHand leftHand;
         private OVRHand rightHand;
         private float verticalVelocity;
+        private Vector3 horizontalVelocity;
         private bool snapTurnReady = true;
         private float nextLookup;
         private HandGrabInteractor[] handGrabInteractors = new HandGrabInteractor[0];
@@ -109,7 +116,12 @@ namespace SojaExiles
                 verticalVelocity += gravity * Time.deltaTime;
             }
 
-            Vector3 velocity = move * moveSpeed;
+            // Rampa corta: sin ella la velocidad cambia de golpe al arrancar y
+            // al frenar. Larga marea; por eso son solo unas decimas.
+            float acceleration = walkSpeed / Mathf.Max(0.001f, moveRampSeconds);
+            horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, move * walkSpeed, acceleration * Time.deltaTime);
+
+            Vector3 velocity = horizontalVelocity;
             velocity.y = verticalVelocity;
 
             controller.Move(velocity * Time.deltaTime);
@@ -251,14 +263,17 @@ namespace SojaExiles
             return hand.GetFingerPinchStrength(finger) >= pinchStrengthThreshold;
         }
 
+        // Reescala lo que queda fuera de la zona muerta a 0..1: al salir de
+        // ella se empieza desde 0 y no con un salto de velocidad.
         private Vector2 ApplyDeadZone(Vector2 axis)
         {
-            if (axis.magnitude < deadZone)
+            float magnitude = axis.magnitude;
+            if (magnitude < deadZone)
             {
                 return Vector2.zero;
             }
 
-            return axis;
+            return axis / magnitude * Mathf.InverseLerp(deadZone, 1f, magnitude);
         }
 
         private void HandleSnapTurn(Transform head, float turnInput)
@@ -269,7 +284,11 @@ namespace SojaExiles
                 {
                     snapTurnReady = false;
                     Vector3 pivot = head != null ? head.position : transform.position;
-                    transform.RotateAround(pivot, Vector3.up, Mathf.Sign(turnInput) * snapTurnAngle);
+                    float angle = Mathf.Sign(turnInput) * snapAngle;
+                    transform.RotateAround(pivot, Vector3.up, angle);
+                    // La rampa guarda la velocidad en el mundo: girarla tambien
+                    // para no derrapar hacia la direccion anterior.
+                    horizontalVelocity = Quaternion.AngleAxis(angle, Vector3.up) * horizontalVelocity;
                     Physics.SyncTransforms();
                 }
             }

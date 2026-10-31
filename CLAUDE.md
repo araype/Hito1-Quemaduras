@@ -11,6 +11,8 @@ historial de git).
 - **Qué falta:** `docs/PENDIENTES.md`. Al terminar un punto, márcalo ahí.
 - **Qué hay y cómo probarlo:** `docs/QUEMADURA_INMERSION.md`. Las secciones 5
   y 6 cubren la experiencia principal y la secuencia.
+- **Movilidad del jugador:** `docs/MOVILIDAD_MEJORADA.md` explica los cambios y
+  cómo combinar la rama `movilidad-mejorada`.
 - Historia anterior: `docs/HITO2.md` y `docs/AUDITORIA.md`.
 
 ## Ramas
