@@ -67,6 +67,20 @@ namespace SojaExiles
         [HideInInspector] public float rightHandShake;
         [HideInInspector] public float leftHandShake;
 
+        [Header("Caminar")]
+        [Tooltip("Largo de un paso (m). Un ciclo completo son dos pasos.")]
+        public float stepLength = 0.5f;
+        [Tooltip("Giro maximo del muslo al dar un paso (grados).")]
+        public float stepThighDegrees = 24f;
+        [Tooltip("Flexion maxima de la rodilla de la pierna que avanza (grados).")]
+        public float stepKneeDegrees = 38f;
+
+        // Velocidad con que se desplaza el cuerpo (m/s); la fija PatientReach.
+        // Con ella las piernas dan pasos en vez de deslizarse.
+        [HideInInspector] public float walkSpeed;
+        private float walkPhase;
+        private float walkAmount;
+
         [Header("Reacciones (resorte)")]
         public float springStiffness = 160f;
         public float springDamping = 15f;
@@ -490,6 +504,8 @@ namespace SojaExiles
             Vector3 fwd = transform.forward;
             hips.position += up * (reactLift - kneelDrop * kneel);
 
+            ApplyWalk(up);
+
             if (kneel <= 0.001f)
             {
                 return;
@@ -507,6 +523,43 @@ namespace SojaExiles
                     AimToward(leg.foot, leg.toe.position, footDir, kneel);
                 }
             }
+        }
+
+        // Pasos: cada muslo oscila hacia adelante y atras (desfasados medio
+        // ciclo) y la rodilla de la pierna que avanza se dobla. El ciclo
+        // avanza con la distancia recorrida, asi los pies no patinan mucho.
+        private void ApplyWalk(Vector3 up)
+        {
+            float dt = Mathf.Min(Time.deltaTime, 0.05f);
+            float wanted = Mathf.Clamp01(walkSpeed / 0.35f);
+            walkAmount = Mathf.MoveTowards(walkAmount, wanted, dt * 4f);
+            if (walkAmount <= 0.001f)
+            {
+                walkPhase = 0f;
+                return;
+            }
+
+            walkPhase = Mathf.Repeat(walkPhase + walkSpeed * dt / (stepLength * 2f) * Mathf.PI * 2f, Mathf.PI * 2f);
+
+            // Eje de giro de las piernas: el costado del cuerpo. Con angulo
+            // negativo la pierna va hacia adelante.
+            Vector3 side = transform.right;
+            LegStep(rightLeg, walkPhase, side);
+            LegStep(leftLeg, walkPhase + Mathf.PI, side);
+
+            // La cadera baja un poco en cada apoyo.
+            hips.position -= up * (0.012f * walkAmount * Mathf.Abs(Mathf.Sin(walkPhase)));
+        }
+
+        private void LegStep(Leg leg, float phase, Vector3 side)
+        {
+            float swing = Mathf.Sin(phase) * stepThighDegrees * walkAmount;
+            float lift = Mathf.Max(0f, Mathf.Cos(phase)) * stepKneeDegrees * walkAmount;
+            leg.upLeg.rotation = Quaternion.AngleAxis(-swing - lift * 0.35f, side) * leg.upLeg.rotation;
+            leg.leg.rotation = Quaternion.AngleAxis(lift, side) * leg.leg.rotation;
+
+            // El pie queda mas o menos paralelo al suelo.
+            leg.foot.rotation = Quaternion.AngleAxis(swing + lift * 0.35f - lift, side) * leg.foot.rotation;
         }
 
         private void ApplySpine()

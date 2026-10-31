@@ -19,6 +19,12 @@ Ya hecho (ver `docs/QUEMADURA_INMERSION.md`):
 - [x] Secuencia: protocolo de 7 pasos, reloj de 20 min en 90 s, decisión
   médica, resumen con puntaje y registro JSON de cada sesión
   (`secuencia-quemadura`, `8d784f4`; sección 6).
+- [x] Guía y paciente física: escala real de la cocina, menú de modo,
+  tutorial con la taza, narrador con tarjeta y brillo por paso, cuerpo con
+  colliders, brazo agarrable entero, ella pone la mano bajo el chorro,
+  protege la mano y camina con pasos (`guia-y-paciente-fisica`; sección 7).
+  Probado en el editor con Quest Link simulando las acciones; **falta
+  jugarlo con las manos en el visor**.
 
 ## 0. Probar en el visor (urgente)
 
@@ -33,17 +39,29 @@ Ya hecho (ver `docs/QUEMADURA_INMERSION.md`):
 - [ ] Medir que se mantenga en **72 fps** con agua, vapor, tela y ampollas
   activos (RNF-01).
 
+### Defectos vistos al recorrer la escena en el editor (2026-10-30, MCP de Unity)
+
+Flujo completo en Play con Quest Link, acciones simuladas por código: 7/7
+pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
+
+- [ ] La taza del tutorial (`BurnGuide.BuildMug`, sale en (-0.96, 1.02, 7.30))
+  cae al suelo: ese tramo del mesón no tiene collider.
+- [ ] Panel de decisión médica: la tarjeta del narrador ("Paso 8 de 8") se
+  superpone dentro del panel, y "Ir al centro de salud" no cabe en el botón.
+- [ ] La quemadura se ve roja saturada y uniforme (`BurnSkinOverlay`), y la
+  chompa puesta parece un cilindro rígido (`SweaterItem.BuildDrape`).
+
 ## 1. Flujo de la aplicación (siguiente bloque de código)
 
-- [ ] **Menú de inicio** (RF-01) con **modo guiado** y **modo evaluación**.
-  El modo evaluación apaga los puntos dorados (`WaterTap`, `StoveKnob`,
-  `PatientRing`), las pistas de voz (`BurnPatientReactions.voiceHints`) y el
-  texto del reloj (`CoolingClock.showLabel`). Guardar el modo en el JSON
-  (`BurnProtocol.SaveLog`).
-- [ ] **Tutorial** (RF-02) antes de la emergencia: agarrar, girar la perilla y
-  la llave, tomar la muñeca. Incluye el aviso de que la escena tiene gritos y
-  una lesión visible (RNF-03). El accidente (`PotAccident.accidentDelay`)
-  debe empezar después del tutorial.
+- [x] **Menú de inicio** con **modo guiado** y **modo evaluación**; el modo
+  queda en el JSON (`guia-y-paciente-fisica`, `BurnGuide`).
+  - [ ] Falta: en modo evaluación apagar también los puntos dorados
+    (`WaterTap`, `StoveKnob`, `PatientRing`). Ya se apagan la guía, las pistas
+    de voz y el texto del reloj.
+- [x] **Tutorial** antes de la emergencia (agarrar y caminar, dentro de la
+  historia) y aviso de contenido (`guia-y-paciente-fisica`, `BurnGuide`).
+  - [ ] Opcional: practicar también tocar una perilla o una llave antes del
+    accidente.
 - [ ] **Barra de 4 actos** (Planteamiento, Desarrollo, Clímax, Resolución)
   con el contador de aciertos y errores. Leer `BurnProtocol.CurrentAct`,
   `BurnSequenceManager.Errors` y `CriticalErrors`.
@@ -68,6 +86,10 @@ Ya hecho (ver `docs/QUEMADURA_INMERSION.md`):
 
 ## 3. Contenido
 
+- [ ] Grabar también la voz del **narrador** (21 archivos `guia_*.wav`) y las
+  3 frases nuevas de la paciente (`voz_pide_taza`, `voz_gracias_taza`,
+  `voz_mano_no`). Textos en la sección 7 del doc y en `BurnGuide`.
+
 - [ ] Grabar las **voces reales** de la paciente y reemplazar las de TTS
   (21 archivos `voz_*.wav` en `Assets/Hito1/Resources/Hito1Audio`, mismo
   nombre). Guía en la sección 1 del doc.
@@ -77,7 +99,12 @@ Ya hecho (ver `docs/QUEMADURA_INMERSION.md`):
 - [ ] **Pruebas con usuarios**, comparando el modo guiado con el modo
   evaluación. Los JSON quedan en
   `Application.persistentDataPath/sesiones_quemadura/`.
-- [ ] **Actualizar el informe** (`Informe/`):
+- [x] **Actualizar el informe**: hecho en
+  `Informe_Hito_1__Entrenamiento_de_Primeros_Auxilios_ante_Emergencias_Médicas_Domésticas/main.tex`
+  (formato IEEE, `guia-y-paciente-fisica`). Rajan et al. no existe y se
+  reemplazó por Abbas et al. (2023); se quitó el dato del 80 %. Falta: el
+  código de Sebastián (8 dígitos) y capturas nuevas de la escena actual.
+  Puntos originales (para `Informe/`, la versión anterior):
   - sección 4.3: describir lo implementado y agregar capturas nuevas;
   - secciones 4.3 a 4.5 y RNF-02: el proyecto usa el **Meta XR Interaction
     SDK** y `SimpleGrab`, no XR Interaction Toolkit (`XR Grab Interactable`,

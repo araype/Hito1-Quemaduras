@@ -22,6 +22,11 @@ namespace SojaExiles
         public bool respawnIfLost = true;
         public float respawnDrop = 3f;
 
+        // Distancia entre la mano y el objeto a partir de la cual SimpleGrab
+        // lo suelta (negativo: usa la de SimpleGrab). La mano de la paciente
+        // usa una mayor para que no se escape mientras ella camina.
+        public float breakDistance = -1f;
+
         public bool IsHeld { get; internal set; }
 
         private Rigidbody body;

@@ -229,3 +229,58 @@ usuarios y la métrica HEART.
 
 Frases nuevas (TTS): `voz_pregunta_medico`, `voz_decision_ir` y
 `voz_decision_casa`.
+
+## 7. Guía, tutorial y paciente física (rama `guia-y-paciente-fisica`)
+
+Respuesta a la primera prueba en el visor: no se entendía qué hacer, costaba
+encontrar de dónde agarrar a la paciente y llevarla al agua, y su cuerpo era
+"fantasma". Sigue sin tocarse la escena. **Se probó en el editor con Quest
+Link conectado, simulando las acciones del jugador por código. Falta jugarlo
+con las manos en el visor.**
+
+| Qué | Cómo funciona | Componente |
+|---|---|---|
+| Escala de la cocina | El kit estaba a ~1,4 veces el tamaño real (mesón de 1,37 m, refrigerador de 2,46 m). Al dar Play se achica a 0,67 alrededor de la paciente: el mesón queda a 0,92 m. Por eso ella tenía que levantar la mano a la cara para revolver la olla. | `BurnStaging` |
+| Ubicación inicial | La paciente queda de frente a la cocina con la olla delante de su mano derecha; el jugador, a un costado mirándola. | `BurnStaging` |
+| Menú de inicio | Aviso de contenido (gritos y quemadura visible) y dos botones: **Modo guiado** / **Modo evaluación**. El modo se guarda en el JSON (`modo`). | `BurnGuide` |
+| Tutorial en la historia | La tía Rosa cocina y le pide al jugador una taza: hay que agarrarla y llevársela (agarrar y caminar). Ella la recibe y la deja en el mesón. Recién ahí se vuelca la olla. | `BurnGuide`, `PatientBurnArm`, `PotAccident.Trigger` |
+| Guía paso a paso | Narrador (otra voz que la paciente) + tarjeta que acompaña la vista ("Paso 3 de 8") + brillo azul sobre lo que hay que usar: perilla, llave fría, antebrazo, chorro, anillo, chompa, reloj, film/gasa. Si no avanza en 30 s, repite. Si la mano sale del agua, vuelve al paso de llevarla. | `BurnGuide` |
+| Correcciones | Agua caliente, remedios, paño, cubrir antes de tiempo y agarrar la mano quemada: el narrador corrige y la tarjeta muestra "¡Cuidado!". | `BurnGuide` |
+| Modo evaluación | Mismo tutorial; después del accidente no hay tarjeta, ni voz de guía, ni texto en el reloj. | `BurnGuide`, `CoolingClock.showLabel` |
+| Cuerpo físico | 14 cápsulas que siguen los huesos (torso, cabeza, brazos, piernas). El jugador no la atraviesa y los objetos chocan con ella. Tocarla vibra. | `PatientPhysics` |
+| Agarrar el brazo | Se la puede tomar del brazo, el antebrazo, la muñeca o la mano (antes, solo una esfera invisible de 6 cm en la muñeca). Al acercar la mano aparece un brillo verde (antebrazo) o naranja (mano quemada). Tomarla de la mano quemada le duele y cuenta como error (`BurnedHandGrabbed`). | `PatientPhysics`, `GrabRedirect` |
+| Llevarla al agua | Mientras la llevas del brazo camina antes y más rápido (hasta 1,5 m/s) y el agarre no se suelta hasta 0,9 m. Si sueltas su mano a menos de 32 cm del chorro (con agua fría corriendo), ella misma la pone bajo el agua y la mantiene ahí. | `PatientReach`, `PatientBurnArm` |
+| Mano quemada sin sostener | Antes: revuelve la olla con una cuchara de palo. Al quemarse: suelta la cuchara y protege la mano contra el pecho, sostenida por la otra. Si la sueltas lejos del agua, la deja un momento y vuelve a protegerla. Si se cierra el agua o termina de enfriar, la saca. | `PatientBurnArm` |
+| Caminar | Las piernas dan pasos según la velocidad (antes se deslizaba). | `PatientBody` |
+| Charco y remedios | El charco del mesón ya no sobresale del borde; los remedios ya no aparecen sobre las hornillas. | `PotAccident`, `BurnSceneProps` |
+
+### Voces nuevas (TTS)
+
+- Narrador (Microsoft Raúl, es-MX): 21 archivos `guia_*.wav` (bienvenida,
+  intro, tutorial, cada paso y cada corrección).
+- Paciente (Sabina): `voz_pide_taza`, `voz_gracias_taza`, `voz_mano_no`.
+
+Se reemplazan igual que las demás (mismo nombre). El texto de cada frase
+está en `BurnGuide` (tarjetas) y en el informe de la rama.
+
+### Probar
+
+1. Dar Play con Quest Link. En la consola: `[BurnStaging] Cocina escalada a
+   0.67` y `[PatientPhysics] 14 colliders en el cuerpo`.
+2. Elegir el modo tocando un botón. Agarrar la taza y llevársela a la tía.
+3. Tras el accidente, seguir la tarjeta. Probar a tomarla del antebrazo,
+   caminar hasta el lavadero y soltar su mano cerca del chorro.
+4. Probar a tomarla de la mano quemada (queja y corrección).
+
+### Valores para ajustar
+
+- **Escala:** `BurnStaging.CounterHeight` (0,92 m).
+- **Agarre y guía de la paciente:** `PatientPhysics > Hover Distance`,
+  `PatientReach > Led Follow Fraction / Led Max Speed`, `Grabbable >
+  Break Distance` del objetivo de la mano (0,9 m).
+- **Ponerse sola bajo el agua:** `PatientBurnArm > Assist Radius`, `Palm
+  Below Nozzle`, `Withdraw After Cooled`; postura: `Guard Offset`.
+- **Guía:** `BurnGuide > Ask Mode`, `Guided`, `Tutorial`, `Reminder
+  Seconds`, `Card Distance / Card Drop`, `Accident After Tutorial`.
+- **Pasos:** `PatientBody > Step Length / Step Thigh Degrees / Step Knee
+  Degrees`.

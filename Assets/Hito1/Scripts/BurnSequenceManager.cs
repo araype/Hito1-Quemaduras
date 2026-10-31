@@ -49,7 +49,8 @@ namespace SojaExiles
             RemedyApplied,      // se aplico un remedio casero sobre la quemadura
             CoolingInterrupted, // se saco la mano del agua antes de terminar de enfriar
             MedicalDecision,    // se decidio si va al centro de salud (detalle: CentroDeSalud o Casa)
-            StepMissed          // al terminar, falto un paso del protocolo (detalle: el paso)
+            StepMissed,         // al terminar, falto un paso del protocolo (detalle: el paso)
+            BurnedHandGrabbed   // se la tomo de la mano quemada en vez del antebrazo
         }
 
         public enum Severity

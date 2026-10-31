@@ -97,6 +97,48 @@ namespace SojaExiles
 
         private static readonly List<SimpleGrab> Instances = new List<SimpleGrab>();
 
+        // Aviso al agarrar: collider tocado, objeto tomado y si fue la mano
+        // izquierda (la paciente lo usa para saber de donde la tomaron).
+        public static event System.Action<Collider, Rigidbody, bool> OnGrabbed;
+
+        // Suelta el objeto si alguna mano lo tiene (por ejemplo, cuando la
+        // paciente recibe la taza).
+        public static void ForceRelease(Rigidbody rb)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                SimpleGrab grab = Instances[i];
+                if (grab.left.held != null && grab.left.held.rb == rb)
+                {
+                    grab.Release(grab.left);
+                }
+
+                if (grab.right.held != null && grab.right.held.rb == rb)
+                {
+                    grab.Release(grab.right);
+                }
+            }
+        }
+
+        // Posicion del punto de agarre de una mano del jugador.
+        public static bool TryGetHand(bool leftHand, out Vector3 position, out bool holding)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                Hand hand = leftHand ? Instances[i].left : Instances[i].right;
+                if (hand.poseValid)
+                {
+                    position = hand.position;
+                    holding = hand.held != null;
+                    return true;
+                }
+            }
+
+            position = Vector3.zero;
+            holding = false;
+            return false;
+        }
+
         // True si la mano indicada sostiene algo con SimpleGrab.
         public bool IsHolding(bool leftHand)
         {
@@ -398,6 +440,7 @@ namespace SojaExiles
         {
             Collider[] hits = Physics.OverlapSphere(hand.position, grabRadius, ~0, QueryTriggerInteraction.Ignore);
             Rigidbody closest = null;
+            Collider closestCollider = null;
             float closestSqrDistance = float.MaxValue;
             foreach (Collider col in hits)
             {
@@ -411,6 +454,7 @@ namespace SojaExiles
                 if (sqrDistance < closestSqrDistance)
                 {
                     closest = rb;
+                    closestCollider = col;
                     closestSqrDistance = sqrDistance;
                 }
             }
@@ -427,6 +471,7 @@ namespace SojaExiles
             }
 
             Grab(hand, closest);
+            OnGrabbed?.Invoke(closestCollider, closest, hand == left);
         }
 
         private Rigidbody ResolveGrabTarget(Collider col)
@@ -581,7 +626,10 @@ namespace SojaExiles
             }
 
             Vector3 delta = targetPosition - rb.position;
-            if (delta.magnitude > breakDistance)
+            float limit = held.grabbable != null && held.grabbable.breakDistance > 0f
+                ? held.grabbable.breakDistance
+                : breakDistance;
+            if (delta.magnitude > limit)
             {
                 Release(hand);
                 return;

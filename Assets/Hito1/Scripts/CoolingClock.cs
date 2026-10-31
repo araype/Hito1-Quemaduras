@@ -25,6 +25,7 @@ namespace SojaExiles
         private Transform root, minuteHand, secondHand;
         private readonly List<Renderer> marks = new List<Renderer>();
         private TextMesh label;
+        private Renderer labelBackground;
         private int lastLit = -1;
         private float simulatedSeconds;
         private float lastProgress;
@@ -105,13 +106,12 @@ namespace SojaExiles
             PropKit.Part(root, PrimitiveType.Cylinder, Vector3.back * 0.02f, new Vector3(0.016f, 0.004f, 0.016f),
                 Quaternion.Euler(90f, 0f, 0f), "Reloj_Aguja", new Color(0.1f, 0.1f, 0.12f));
 
-            if (showLabel)
-            {
-                label = VRPanelKit.Text(root, "", new Vector2(0f, -r - 0.032f), 0.026f, Color.white, TextAnchor.UpperCenter,
-                    TextAlignment.Center);
-                VRPanelKit.Background(root, new Vector2(0f, -r - 0.058f), new Vector2(0.34f, 0.056f), "Panel_Fondo",
-                    new Color(0.07f, 0.1f, 0.16f), 0.001f);
-            }
+            // El texto se arma siempre y se muestra segun showLabel (el modo
+            // evaluacion lo apaga despues de empezar).
+            label = VRPanelKit.Text(root, "", new Vector2(0f, -r - 0.032f), 0.026f, Color.white, TextAnchor.UpperCenter,
+                TextAlignment.Center);
+            labelBackground = VRPanelKit.Background(root, new Vector2(0f, -r - 0.058f), new Vector2(0.34f, 0.056f),
+                "Panel_Fondo", new Color(0.07f, 0.1f, 0.16f), 0.001f);
 
             UpdateClock(true);
         }
@@ -161,7 +161,19 @@ namespace SojaExiles
 
         private void Update()
         {
+            if (label != null && label.gameObject.activeSelf != showLabel)
+            {
+                label.gameObject.SetActive(showLabel);
+                labelBackground.gameObject.SetActive(showLabel);
+            }
+
             UpdateClock(false);
+        }
+
+        // Centro del reloj (para que la guia lo senale).
+        public Transform Face
+        {
+            get { return root; }
         }
 
         private void UpdateClock(bool force)

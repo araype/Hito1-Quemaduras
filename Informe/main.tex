@@ -1,0 +1,492 @@
+\documentclass[10pt,journal,compsoc]{IEEEtran}
+
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amssymb} % necesario para \checkmark, usado en \ok
+\usepackage{subcaption}
+\usepackage{placeins} % \FloatBarrier: impide que una figura cruce el punto donde lo colocamos
+
+\newcommand{\bad}{\(\times\)}
+\newcommand{\ok}{\(\checkmark\)}
+\newcommand{\pend}{\(\circ\)}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\title{Proyecto Final VR: Simulación de Primeros Auxilios ante una Quemadura Doméstica}
+
+\author{
+\textit{Profesor:} \href{https://utec.instructure.com/courses/24671/users/2196}{Chambilla Aquino, Teófilo}\\[6pt]
+Aracely Ayala \quad 202220416\\
+Sebastián Sánchez \quad 20221320\\
+Jose Osnayo \quad 202010588\\[6pt]
+\textit{Departamento de Ciencias de la Computación - UTEC}\\
+CS2H01 - Interacción Humano-Computador}
+
+\begin{document}
+
+\maketitle
+
+% ==========================================
+% 1. ANTECEDENTES
+% ==========================================
+\section{Antecedentes}
+
+\subsection{Resumen del problema}
+Las quemaduras son una de las lesiones más frecuentes dentro del hogar, y la cocina es el lugar donde más ocurren: derrames de agua hirviendo, contacto con ollas u hornillas encendidas y salpicaduras de aceite. La Organización Mundial de la Salud las reconoce como un problema de salud pública y señala que la mayoría ocurre en el ámbito doméstico \cite{who}. Los primeros minutos son decisivos: enfriar la zona con agua corriente reduce el dolor y limita el daño del tejido, mientras que los remedios caseros (hielo, mantequilla, pasta dental, aceite) lo agravan \cite{nhs,ifrc}.
+
+Aunque esta información está en manuales y videos, la falta de práctica hace que, en el momento real, los miembros de la familia entren en pánico, duden o recurran a esos remedios. El aprendizaje pasivo no reproduce el estrés del momento (el grito de la persona, el vapor, el agua derramada) ni desarrolla la memoria procedimental necesaria para actuar con calma.
+
+La Realidad Virtual (VR) permite situar al usuario en una cocina virtual, frente a una persona que acaba de quemarse, y hacerle ejecutar con sus propias manos la secuencia correcta de primeros auxilios. En una etapa anterior el proyecto contemplaba tres emergencias (quemadura, atragantamiento y corte). Para la versión final se decidió enfocarlo en una sola, la quemadura doméstica, e invertir el esfuerzo en el realismo de la simulación: el aspecto y la evolución de la piel, el comportamiento de la víctima, el agua y el sonido del entorno.
+
+\subsection{Trabajo relacionado}
+La revisión sistemática de Abbas et al. \cite{abbas2023} sobre VR en el entrenamiento de habilidades de emergencia reporta beneficios educativos en adquisición y retención de conocimientos, desempeño de habilidades, aceptación y usabilidad, aunque con poca evidencia sobre su efecto directo en pacientes y sobre su costo-efectividad. La mayoría de los trabajos revisados se dirigen a personal de salud y a la reanimación cardiopulmonar. Nuestra propuesta se diferencia en que se dirige a personas sin formación médica, se centra en una emergencia doméstica concreta y mide el desempeño dentro de la propia simulación (pasos, errores y tiempos) para compararlo entre un modo guiado y un modo de evaluación sin ayudas.
+
+\subsection{Protocolo de primeros auxilios ante quemaduras}
+\label{sec:protocolo}
+La simulación se construye sobre las recomendaciones del NHS y de la IFRC \cite{nhs,ifrc}:
+\begin{enumerate}
+    \item \textbf{Asegurar la escena:} apagar la hornilla para evitar una segunda lesión.
+    \item \textbf{Enfriar la quemadura} bajo agua corriente fría o tibia durante 20 minutos, lo antes posible. No usar hielo ni remedios caseros.
+    \item \textbf{Retirar anillos y pulseras} antes de que aparezca la hinchazón.
+    \item \textbf{Mantener abrigada a la persona} mientras se enfría la zona.
+    \item \textbf{Cubrir la quemadura} sin apretar con film transparente o gasa. No usar algodón ni telas que suelten pelusa.
+    \item \textbf{Evaluar si necesita atención médica}, por ejemplo si hay ampollas en la mano.
+\end{enumerate}
+El sistema distingue dos grados: \textbf{primer grado} (piel roja y seca, sin ampollas; se cuida en casa) y \textbf{segundo grado superficial} (piel roja y brillante con ampollas; en la mano requiere evaluación médica).
+
+% ==========================================
+% 2. REQUISITOS DE DISEÑO Y PERSONA
+% ==========================================
+\section{Requisitos de Diseño y Persona}
+
+\subsection{Fundamentación de los requisitos}
+Los requisitos se derivaron de cuatro fuentes:
+\begin{itemize}
+    \item \textbf{Revisión de literatura:} la práctica en VR favorece la adquisición y retención de habilidades de emergencia \cite{abbas2023}. Esto justifica priorizar un tutorial, la guía procedimental y el aprendizaje por práctica (RF-01 a RF-04).
+    \item \textbf{Guías clínicas:} el protocolo de la sección~\ref{sec:protocolo} define el orden de los pasos y los errores que el sistema debe reconocer (RF-05, RF-06), así como los 20 minutos de enfriamiento que se representan de forma comprimida (RF-07).
+    \item \textbf{Benchmark de aplicaciones:} la retroalimentación puramente textual rompe la presencia en VR. Por eso la escena misma responde a las acciones (la piel cambia, la víctima se calma), además de la voz, los sonidos y la vibración (RF-08, RF-09).
+    \item \textbf{Análisis Cognitivo de Tareas (CTA):} el mapeo de errores comunes (usar hielo o mantequilla, sacar la mano del agua antes de tiempo, olvidar el anillo, cubrir con un paño o con algodón) motivó colocar esos objetos como distractores realistas en la cocina y corregirlos en tiempo real.
+\end{itemize}
+
+\subsection{Requisitos funcionales}
+\begin{itemize}
+    \item \textbf{RF-01 (Menú de inicio y modos):} iniciar la práctica en \textit{modo guiado} (con indicaciones) o en \textit{modo evaluación} (sin ayudas, para medir la retención).
+    \item \textbf{RF-02 (Tutorial inicial):} antes de la emergencia, enseñar los gestos básicos (agarrar y caminar) dentro de la historia.
+    \item \textbf{RF-03 (Affordances resaltadas):} en modo guiado, resaltar el objeto que hay que usar en cada paso (perilla, llave fría, brazo de la víctima, anillo, chompa, film o gasa).
+    \item \textbf{RF-04 (Guía por voz y manos fantasma):} en modo guiado, un narrador y una tarjeta indican cada paso; las ``manos fantasma'' que muestran la postura correcta quedan como mejora pendiente.
+    \item \textbf{RF-05 (Secuencia completa del protocolo):} el usuario puede apagar la hornilla, abrir el agua fría, llevar la mano de la víctima al chorro, mantenerla 20 minutos (comprimidos), retirar el anillo, abrigarla, cubrir la quemadura y decidir si necesita atención médica.
+    \item \textbf{RF-06 (Distractores y registro de errores):} la cocina contiene remedios caseros (hielo, mantequilla, pasta dental, aceite, algodón), una llave de agua caliente y un paño de cocina. Su uso indebido se registra como error o error crítico (Cuadro~\ref{tab:errores}).
+    \item \textbf{RF-07 (Enfriamiento comprimido):} un reloj de pared muestra los 20 minutos de enfriamiento en tiempo acelerado. Si la mano sale del agua, el reloj se pausa y se registra un error.
+    \item \textbf{RF-08 (Escena que responde):} el enrojecimiento, la hinchazón, las ampollas, la voz, la respiración y la postura de la víctima cambian según lo que hace el usuario y el tiempo transcurrido.
+    \item \textbf{RF-09 (Retroalimentación multisensorial):} voz del narrador, voz de la víctima, sonidos espaciales, tarjeta de texto y vibración en los mandos ante aciertos y errores.
+    \item \textbf{RF-10 (Resumen de desempeño):} al terminar, mostrar puntaje, pasos hechos y faltantes, errores, errores críticos, tiempo de primera acción, minutos de enfriamiento, la decisión médica y consejos de mejora; guardar la sesión para las pruebas con usuarios.
+    \item \textbf{RF-11 (Variación del caso):} variar el grado y la extensión de la quemadura entre partidas, para que el usuario practique la decisión médica y no memorice una sola respuesta.
+\end{itemize}
+
+\subsection{Requisitos no funcionales}
+\begin{itemize}
+    \item \textbf{RNF-01 (Rendimiento):} mantener \(\ge 72\) fps en el visor, con agua, vapor, tela y ampollas activos, para prevenir el \textit{cybersickness}.
+    \item \textbf{RNF-02 (Interacción natural):} agarre con las manos o los mandos con respuesta inferior a \(100\) ms.
+    \item \textbf{RNF-03 (Realismo responsable):} la quemadura debe ser reconocible y clínicamente correcta sin contenido gráfico excesivo; se avisa del contenido al inicio y el usuario puede pausar o reiniciar.
+    \item \textbf{RNF-04 (Experiencia individual):} todo el flujo se completa por una sola persona, sin facilitador conectado.
+\end{itemize}
+
+\subsection{Audiencia}
+Jefes de familia y adultos jóvenes (22 a 45 años) que cocinan con frecuencia o cuidan de niños y adultos mayores, y que son el primer punto de respuesta ante una quemadura en casa. No requieren formación médica previa ni experiencia en VR.
+
+\subsection{Especificación final de persona}
+\textbf{Nombre:} Elena Mendoza (34 años, jefa de hogar).\\
+\textbf{Contexto:} Cocina a diario y cuida de su hijo pequeño y de su madre. Es la primera persona a la que acuden cuando alguien se quema en la cocina.\\
+\textbf{Frustraciones:} Teme bloquearse cuando alguien grita de dolor. Ha oído que conviene poner hielo, mantequilla o pasta dental y no sabe qué es cierto. No sabe cuánto tiempo hay que mantener la zona bajo el agua ni cuándo ir al médico.\\
+\textbf{Metas:} Reaccionar sin dudar, enfriar correctamente durante el tiempo necesario, evitar los remedios caseros y reconocer cuándo una quemadura necesita atención médica. Quiere practicar por su cuenta y repetir hasta sentirse segura.
+
+\subsection{Objetivo de la experiencia}
+Que el usuario adquiera memoria procedimental para atender una quemadura doméstica: asegurar la escena, enfriar la quemadura bajo agua corriente el tiempo correcto, evitar los remedios caseros, cubrirla adecuadamente y decidir si se requiere atención médica.
+
+\subsection{Narrativa de la aplicación}
+El usuario está en la cocina con su tía Rosa, que prepara la comida y le pide una taza. Poco después de recibirla, la olla con agua hirviendo se vuelca sobre su mano: grita, el agua se derrama en el mesón y el suelo y sale una nube de vapor. La hornilla sigue encendida. El usuario, solo, debe mantener la calma, asegurar la escena, llevarla al lavadero y ejecutar el protocolo mientras observa cómo la piel y el estado de la víctima responden a cada acción. La práctica cierra con un resumen de su desempeño.
+
+\subsection{Arco de la historia}
+El protocolo se organiza en cuatro actos. El sistema calcula en todo momento en qué acto está el usuario a partir del estado de la quemadura; en modo guiado, la tarjeta del narrador muestra además el número de paso (``Paso 3 de 8'').
+
+\begin{enumerate}
+    \item \textbf{Planteamiento.} Panel de inicio con aviso de contenido (gritos y quemadura visible) y elección de modo. Tutorial dentro de la historia: la tía pide una taza; el usuario la agarra y camina hasta ella (Tutorial 1 y 2 de 2). Al entregarla, la tía la deja en el mesón y, unos segundos después, la olla se vuelca. Desde ese momento corre el tiempo de primera acción.
+    \item \textbf{Desarrollo.} El usuario apaga la hornilla tocando la perilla y abre la llave fría (punto azul); al lado hay una llave caliente (punto rojo). Debe tomar a la víctima del antebrazo, no de la mano quemada, y llevarla al lavadero. En el mesón y junto al refrigerador están los remedios caseros: si los acerca, ella aparta la mano y protesta.
+    \item \textbf{Clímax.} Al soltar su mano cerca del chorro, ella la pone bajo el agua. El reloj de pared avanza los 20 minutos en 90 segundos reales, el enrojecimiento baja y la voz de la víctima se calma. Mientras tanto, el usuario retira el anillo (antes de que la mano se hinche) y la abriga con la chompa de la silla. Si la mano sale del agua, el reloj se pausa, ella se queja y el narrador pide volver.
+    \item \textbf{Resolución.} Terminado el enfriamiento, el usuario cubre la quemadura con film o gasa. La tía agradece y pregunta si debe ir al médico; aparece un panel con dos botones (``Ir al centro de salud'' / ``Cuidarla en casa''). Con ampollas en la mano, la respuesta correcta es el centro de salud. Finalmente se muestra el resumen con el botón \textit{Repetir práctica}.
+\end{enumerate}
+
+El Cuadro~\ref{tab:errores} resume los errores que reconoce el sistema y su retroalimentación. El puntaje es \(100 - 10 \cdot \text{errores} - 25 \cdot \text{errores críticos}\), con mínimo 0. Al terminar también cuentan como error los pasos nunca realizados (apagar el fuego, retirar el anillo y abrigar).
+
+\begin{table*}[t]
+\centering
+\caption{Errores reconocidos por el sistema y su retroalimentación}
+\label{tab:errores}
+\small
+\begin{tabularx}{\textwidth}{@{}L{4.2cm} L{2.2cm} Y@{}}
+\toprule
+\textbf{Acción del usuario} & \textbf{Registro} & \textbf{Retroalimentación} \\
+\midrule
+Acercar hielo, mantequilla, pasta dental o aceite a la quemadura & Error & La víctima aparta la mano y protesta; el narrador corrige; golpe de vibración. \\
+Aplicar uno de esos remedios sobre la piel & Error crítico & Queda una capa sobre la piel y la víctima grita; doble golpe de vibración. El agua quita la grasa y la pasta. \\
+Aplicar algodón & Error & Explicación: suelta fibras que se pegan a la herida. \\
+Poner la mano bajo agua caliente (solo la llave roja) & Error & Vapor en el chorro, la piel vuelve a enrojecer y la víctima grita. \\
+Sacar la mano del agua antes de completar el enfriamiento & Error & El reloj se pausa, la víctima se queja y el narrador pide volver al chorro. \\
+Tomarla de la mano quemada en vez del antebrazo & Error & Queja de dolor y corrección del narrador; brillo naranja al acercar la mano. \\
+No retirar el anillo a tiempo & Error & Con la mano hinchada el anillo se traba y ya no sale. \\
+Cubrir antes de terminar de enfriar & Error & ``Todavía no: primero termina de enfriar la quemadura''. \\
+Cubrir con el paño de cocina & Error & ``El paño de cocina suelta pelusa. Usa film o gasa''. \\
+Decisión médica incorrecta & Error & Explicación en el resumen según el grado de la quemadura. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\subsection{Métrica HEART}
+El Cuadro~\ref{tab:heart} presenta los objetivos, señales y métricas de cada dimensión del modelo HEART \cite{rodden2010}. Las métricas de \textit{Task Success} y \textit{Retention} se obtienen del registro que la aplicación guarda al terminar cada sesión.
+
+\begin{table*}[t]
+\centering
+\caption{Matriz HEART: objetivos, señales y métricas}
+\label{tab:heart}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.1cm} Y Y Y@{}}
+\toprule
+\textbf{Dimensión} & \textbf{Objetivo} & \textbf{Señal} & \textbf{Métrica} \\
+\midrule
+Happiness & Terminar satisfecho, con más confianza y percibiendo la escena como realista. & Cuestionario al finalizar. & Satisfacción y realismo percibidos (Likert 1--5); confianza antes y después. \\
+Engagement & Involucrarse en la emergencia y repetir la práctica. & Interacciones con objetos y con la víctima; uso de \textit{Repetir práctica}. & Tiempo activo y número de repeticiones voluntarias. \\
+Adoption & Adaptarse a la interacción en la primera sesión. & Avance en el tutorial y en modo guiado sin ayuda del facilitador. & Porcentaje que completa la primera sesión sin asistencia; tiempo hasta completar el tutorial. \\
+Retention & Recordar el protocolo sin ayudas. & Desempeño en modo evaluación días después. & Porcentaje de pasos completados en modo evaluación. \\
+Task Success & Completar la escena sin errores críticos y con el enfriamiento completo. & Pasos, errores y errores críticos registrados. & Puntaje, errores por partida, tiempo de primera acción, minutos de enfriamiento y acierto en la decisión médica. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+% ==========================================
+% 3. FRAMEWORK DE DISEÑO
+% ==========================================
+\section{Framework de Diseño}
+
+\subsection{Descripción del framework}\label{sec:framework-desc}
+El marco de diseño se apoya en los principios de IHC vistos en clase \cite{norman2013}:
+\begin{itemize}
+    \item \textbf{Affordances y mappings naturales:} los objetos se usan como en la vida real: la perilla se toca para apagar la llama, la llave se abre con la mano, la víctima se toma del antebrazo y el film se suelta sobre la piel.
+    \item \textbf{Signifiers:} puntos de color sobre los objetos interactivos (azul para el agua fría, rojo para la caliente, dorado para el anillo y la perilla) y un brillo sobre el objeto del paso actual en modo guiado.
+    \item \textbf{Carga cognitiva:} UI diegética (el reloj de pared, la piel que cambia de color) y una sola indicación a la vez, en una tarjeta que acompaña la mirada.
+    \item \textbf{Retroalimentación:} cada acción tiene respuesta visual, sonora y háptica; los errores además tienen una corrección explícita.
+    \item \textbf{Presencia y fidelidad:} una escena coherente (agua, vapor, sonido, víctima que reacciona) refuerza la sensación de estar en una emergencia real y favorece la transferencia del aprendizaje \cite{slater1997}.
+\end{itemize}
+
+\subsection{Plan de diseño}
+\begin{itemize}
+    \item \textbf{¿Qué pueden hacer los usuarios?} Apagar la hornilla, abrir el agua fría, guiar a la víctima hasta el lavadero, mantener su mano bajo el chorro, retirar el anillo, abrigarla, cubrir la quemadura con film o gasa y decidir si debe ir al centro de salud, todo de forma individual.
+    \item \textbf{¿Cuáles son los límites técnicos?} No hay retroalimentación térmica ni resistencia física de la piel o del agua: se sustituyen por vibración y cambios visuales y sonoros. Los 20 minutos de enfriamiento se comprimen en 90 segundos. El modelo de la víctima no tiene \textit{blendshapes}, por lo que no hay expresión facial ni parpadeo.
+    \item \textbf{¿Qué tan profunda es la presencia?} Cocina a escala real que se puede recorrer caminando, audio espacial 3D, manos visibles con o sin mandos, una víctima con cuerpo físico que reacciona y una quemadura que evoluciona en tiempo real.
+\end{itemize}
+
+\subsection{Plan de evaluación}
+La usabilidad se valida con una evaluación heurística adaptada a entornos inmersivos \cite{norman2013} y con sesiones de prueba individuales que comparan el modo guiado con el modo evaluación. Cada sesión se guarda en un archivo JSON en el visor (modo, grado de la quemadura, puntaje, errores, errores críticos, tiempo de primera acción, minutos de enfriamiento, decisión médica, duración y detalle de cada error), lo que permite calcular las métricas HEART del Cuadro~\ref{tab:heart} sin depender de la observación manual.
+
+\FloatBarrier
+
+% ==========================================
+% 4. PROTOTIPO DIGITAL
+% ==========================================
+\section{Prototipo Digital}
+
+\subsection{Baja fidelidad}
+Antes de los wireframes digitales se elaboraron bocetos a mano para definir la distribución espacial, los momentos clave de la narrativa y la composición de la escena de la quemadura (Fig.~\ref{fig:boceto}). Luego se tradujeron en mockups de baja fidelidad del flujo completo, desde el menú inicial hasta el resumen de resultados (Fig.~\ref{fig:mockups}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\linewidth]{images/draw_escena de inicio mas quemadura.jpg}
+    \caption{Boceto inicial a mano: escena de inicio y quemadura.}
+    \label{fig:boceto}
+\end{figure}
+
+\begin{figure*}[t]
+    \centering
+    \begin{subfigure}{0.32\textwidth}
+        \includegraphics[width=\linewidth]{images/primera pantalla_mockup.jpg}
+        \caption{Menú principal.}
+    \end{subfigure}\hfill
+    \begin{subfigure}{0.32\textwidth}
+        \includegraphics[width=\linewidth]{images/planteamiento_mockup.jpg}
+        \caption{Planteamiento e instrucciones.}
+    \end{subfigure}\hfill
+    \begin{subfigure}{0.32\textwidth}
+        \includegraphics[width=\linewidth]{images/desarrollo_mockup.jpg}
+        \caption{Desarrollo: exploración del entorno.}
+    \end{subfigure}\\[6pt]
+    \begin{subfigure}{0.32\textwidth}
+        \includegraphics[width=\linewidth]{images/climax_mockup.jpg}
+        \caption{Clímax: enfriamiento bajo el agua.}
+    \end{subfigure}\hspace{0.02\textwidth}
+    \begin{subfigure}{0.32\textwidth}
+        \includegraphics[width=\linewidth]{images/resolucion_mockup.jpg}
+        \caption{Resolución y retroalimentación.}
+    \end{subfigure}
+    \caption{Mockups de baja fidelidad del flujo de la quemadura doméstica.}
+    \label{fig:mockups}
+\end{figure*}
+
+\FloatBarrier
+
+\subsection{Prototipo digital interactivo (WebApp)}
+Para evaluar la navegación y el flujo de decisiones sin la complejidad del motor 3D, se implementó una WebApp interactiva (\textit{AuxilioSim}). Se construyó en la etapa anterior, cuando se contemplaban tres escenarios; para la versión final se toma como referencia su flujo de quemadura.
+\begin{itemize}
+    \item \textbf{WebApp:} \url{https://ihc-auxilio-sim.vercel.app}
+    \item \textbf{Repositorio:} \url{https://github.com/araype/IHC_AuxilioSim}
+\end{itemize}
+
+Cada pantalla materializa un principio del framework (sección~\ref{sec:framework-desc}), y varias decisiones se trasladaron luego a la versión VR:
+\begin{itemize}
+  \item \textbf{Affordances:} los objetos interactivos se marcan con un punto dorado (Fig.~\ref{fig:auxiliosim_exploracion}). En VR se mantienen los puntos de color sobre la perilla, las llaves y el anillo.
+  \item \textbf{Signifiers:} un indicador circular se llena al mantener la mano bajo el grifo (Fig.~\ref{fig:auxiliosim_mantener}). En VR lo reemplaza el reloj de pared.
+  \item \textbf{Feedback multisensorial:} subtítulo verde o rojo, voz y vibración (Fig.~\ref{fig:auxiliosim_feedback}). En VR lo reemplazan la tarjeta y la voz del narrador, la voz de la víctima y la vibración de los mandos.
+  \item \textbf{Constraints:} no se avanza sin completar la acción. En VR, la víctima no se cubre antes de terminar de enfriar.
+  \item \textbf{Visibilidad:} barra superior con los cuatro actos y el contador de aciertos y errores (Fig.~\ref{fig:auxiliosim_barra}). En VR todavía no está implementada (sección~\ref{sec:futuro}).
+  \item \textbf{Carga cognitiva:} el resumen final entrega el microaprendizaje al terminar (Fig.~\ref{fig:auxiliosim_resumen}), igual que el resumen de la versión VR.
+\end{itemize}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\linewidth]{images/auxiliosim_exploracion_cocina.jpg}
+    \caption{WebApp: exploración de la cocina con los objetos interactivos marcados con un punto dorado (\textbf{affordances}).}
+    \label{fig:auxiliosim_exploracion}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\linewidth]{images/auxiliosim_barra_actos.jpg}
+    \caption{WebApp: barra superior con los cuatro actos y el contador de aciertos y errores (\textbf{visibilidad}).}
+    \label{fig:auxiliosim_barra}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\linewidth]{images/uxiliosim_mantener_grifo.jpg}
+    \caption{WebApp: gesto de mantener bajo el grifo con el indicador circular (\textbf{signifiers} y \textbf{mapping natural}).}
+    \label{fig:auxiliosim_mantener}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/auxiliosim_feedback_acierto.jpg}
+        \caption{Acierto (verde).}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/auxiliosim_feedback_error.jpg}
+        \caption{Error (rojo).}
+    \end{subfigure}
+    \caption{WebApp: subtítulo de la guía tras un acierto y tras un error (\textbf{feedback}).}
+    \label{fig:auxiliosim_feedback}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\linewidth]{images/auxiliosim_resumen_practica.jpg}
+    \caption{WebApp: resumen de la práctica con aciertos, errores, tiempos y microaprendizaje.}
+    \label{fig:auxiliosim_resumen}
+\end{figure}
+
+\subsection{Implementación en Unity}
+La experiencia se desarrolló en Unity 2022.3 con C\# y el Meta XR SDK 201, para el visor Meta Quest (probado con Quest Link). Repositorio: \url{https://github.com/araype/Hito1-Quemaduras}. La escena única es la cocina del \textit{Apartment Kit} (Fig.~\ref{fig:flujo_vr}); los escenarios de atragantamiento y corte de la etapa anterior se retiraron del proyecto.
+
+\subsubsection{Arquitectura}
+La escena no se edita a mano: al iniciar, un instalador (\texttt{Hito1RuntimeBootstrap}) agrega los componentes de la experiencia y no los duplica si ya están en la escena. Primero ajusta la escala de la cocina, que en el kit estaba a unas 1{,}4 veces el tamaño real: la reduce a 0{,}67 alrededor de la víctima para que el mesón quede a 0{,}92~m del piso.
+
+El núcleo es una máquina de estados de la quemadura (\texttt{BurnSequenceManager}: Idle \(\rightarrow\) Burned \(\rightarrow\) Cooling \(\rightarrow\) Cooled \(\rightarrow\) Covered \(\rightarrow\) Success) con un canal único de eventos: cada componente (perilla, llaves, anillo, remedios, film) avisa lo que hizo el usuario junto con su gravedad (ninguna, error o error crítico). Sobre ese canal, \texttt{BurnProtocol} marca los pasos del protocolo, calcula el acto actual, el tiempo de primera acción y el puntaje, arma el resumen y guarda la sesión; \texttt{BurnGuide} conduce el tutorial y la guía. Así, agregar un objeto nuevo solo requiere que avise por ese canal.
+
+\subsubsection{Realismo de la escena}
+\begin{itemize}
+    \item \textbf{Quemadura:} capa de piel enrojecida sobre la mano que se intensifica sin tratamiento, se calma bajo el agua y queda rosada. En segundo grado aparecen ampollas que crecen mientras no se enfría. La hinchazón se simula engrosando el hueso de la mano, porque el modelo no tiene \textit{blendshapes}.
+    \item \textbf{Olla y agua:} olla de acero con agua hirviendo, vapor y llama; al volcarse deja charcos humeantes en el mesón y el suelo. El chorro del grifo se corta en la mano o el lavadero y salpica; en el lavadero se junta un charco que se va por el desagüe. La mano mojada brilla, gotea y se seca.
+    \item \textbf{Víctima:} personaje de Mixamo con texturas, movido por código: respira (rápido con dolor), sacude la mano al quemarse, la protege contra el pecho, camina dando pasos y se calma con el agua. Tiene un cuerpo físico de 14 cápsulas que siguen sus huesos, de modo que el jugador y los objetos no la atraviesan.
+    \item \textbf{Objetos del protocolo:} perilla de la hornilla, llaves fría y caliente, anillo dorado, chompa en una silla, film y gasa junto al lavadero, paño de cocina simulado como tela, y los remedios caseros como distractores.
+    \item \textbf{Sonido:} audio espacial de la olla, la llama, el grifo, el ambiente de la cocina y la respiración. Los 23 efectos se sintetizaron; las 24 frases de la víctima y las 21 del narrador son voces de síntesis (TTS) reemplazables por grabaciones.
+    \item \textbf{Vibración:} suave y continua mientras se sostiene su mano bajo el agua (más fuerte si es caliente), pulsos al acercar la mano al fuego, un golpe por error (dos si es crítico) y un toque leve por acierto.
+\end{itemize}
+
+\subsubsection{Guía y modos}
+El panel de inicio (Fig.~\ref{fig:flujo_vr}) ofrece el modo guiado y el modo evaluación; los botones se presionan tocándolos con la mano. En modo guiado, un narrador con otra voz que la víctima indica cada uno de los 8 pasos con una tarjeta que acompaña la mirada y un brillo azul sobre el objeto a usar; si el usuario no avanza en 30~s, repite la indicación, y ante un error muestra ``¡Cuidado!'' con la corrección. En modo evaluación el tutorial es el mismo, pero después del accidente no hay tarjeta, voz de guía ni texto en el reloj.
+
+\subsubsection{Interacción y locomoción}
+\begin{itemize}
+    \item \textbf{Manos y mandos unificados:} se usan las poses de mano conducidas por el mando del SDK de Meta, de modo que se ven manos mientras se sostienen los mandos y los joysticks siguen funcionando; sin mandos funciona el seguimiento de manos.
+    \item \textbf{Agarre:} un sistema propio (\texttt{SimpleGrab}) agarra con el botón lateral, el gatillo o el pellizco pulgar-índice. El objeto sostenido sigue siendo físico: choca con el mesón y las paredes en vez de atravesarlos. Cada mano tiene además una esfera física que empuja objetos y presiona botones.
+    \item \textbf{Guiar a la víctima:} su brazo se puede tomar del brazo, el antebrazo, la muñeca o la mano; al acercar la mano aparece un brillo verde (antebrazo) o naranja (mano quemada). Mientras se la lleva, ella camina hacia el usuario, y si se suelta su mano a menos de 32~cm del chorro con agua fría, la pone bajo el agua y la mantiene ahí.
+    \item \textbf{Locomoción:} caminar físicamente dentro del área de juego, o joystick izquierdo para avanzar en la dirección de la mirada y derecho para girar a saltos. Sin mandos, pellizcos del dedo medio y anular. Todo pasa por un único \textit{CharacterController} que sigue a la cabeza, por lo que el jugador no atraviesa paredes ni a la víctima. Se reemplazó la locomoción de teletransporte que traía el rig de Meta, que generaba conflictos de movimiento.
+\end{itemize}
+
+\subsubsection{Cierre y registro}
+Al cubrir la quemadura aparece la pregunta médica y luego el resumen (Fig.~\ref{fig:flujo_vr}): puntaje sobre 100, los 7 pasos del protocolo (hechos o faltantes), errores, errores críticos, tiempo de primera acción, minutos de enfriamiento, la decisión y hasta cuatro consejos de qué mejorar. La sesión se guarda como JSON en el visor para las pruebas con usuarios.
+
+\begin{figure*}[p]
+    \centering
+    \newcommand{\vrcap}[2]{\begin{subfigure}[t]{0.235\textwidth}\centering\includegraphics[width=\linewidth]{images/#1}\caption{#2}\end{subfigure}}
+    \vrcap{vr_cocina.jpg}{Cocina a escala real: víctima en el lavadero, reloj de pared, olla y charco en el suelo.}\hfill
+    \vrcap{vr_menu.jpg}{Planteamiento: panel de inicio con aviso de contenido y elección de modo.}\hfill
+    \vrcap{vr_tutorial.jpg}{Tutorial dentro de la historia: la tía pide una taza (agarrar y caminar).}\hfill
+    \vrcap{vr_accidente.jpg}{Accidente: la olla se vuelca, la mano se quema y la llama sigue encendida.}\\[6pt]
+    \vrcap{vr_quemadura.jpg}{Quemadura de segundo grado: enrojecimiento, hinchazón y ampollas.}\hfill
+    \vrcap{vr_remedios.jpg}{Distractores: aceite, pasta dental, mantequilla y algodón en el mesón.}\hfill
+    \vrcap{vr_guia.jpg}{Modo guiado: tarjeta del narrador (``Paso 3 de 8'') que acompaña la vista.}\hfill
+    \vrcap{vr_enfriar.jpg}{Clímax: la mano bajo el chorro de agua fría y el reloj de 20 minutos acelerado.}\\[6pt]
+    \vrcap{vr_anillo_chompa.jpg}{Durante el enfriamiento: anillo retirado y chompa sobre los hombros.}\hfill
+    \vrcap{vr_cubrir.jpg}{Resolución: la mano enfriada, cubierta con film transparente.}\hfill
+    \vrcap{vr_decision.jpg}{Decisión médica: dos botones que se tocan con la mano.}\hfill
+    \vrcap{vr_resumen.jpg}{Resumen: puntaje, pasos del protocolo, errores, tiempos y qué mejorar.}
+    \caption{Recorrido completo de la versión VR, capturado en el editor de Unity en modo Play (cámara del jugador en (b), (c), (g), (k) y (l); cámara libre en el resto).}
+    \label{fig:flujo_vr}
+\end{figure*}
+
+\subsection{Avance de la versión al 50\,\%}
+El Cuadro~\ref{tab:estado} resume qué está implementado. Esta versión ya contiene el ciclo completo de la experiencia, de principio a fin: menú, tutorial, accidente, los 8 pasos del protocolo con sus errores, la decisión médica, el resumen y el registro. Quedan para la versión final la validación con las manos en el visor, las pruebas con usuarios y las mejoras de la sección~\ref{sec:futuro}.
+
+El recorrido de la Fig.~\ref{fig:flujo_vr} se ejecutó en el editor de Unity en modo Play, con el visor conectado por Quest Link, completando por código las acciones del jugador (agarrar, girar la perilla, llevar la mano, soltar objetos). El resultado fue el esperado: 7 de 7 pasos, 0 errores y 100 puntos. La prueba reveló además estos defectos:
+\begin{itemize}
+    \item La taza del tutorial aparece en un tramo del mesón sin colisión y cae al suelo.
+    \item En el panel de decisión médica se superpone la tarjeta del narrador, y el texto ``Ir al centro de salud'' no cabe en su botón.
+    \item La quemadura se ve como un rojo saturado y uniforme, y la chompa como un cilindro rígido: ambos restan realismo.
+\end{itemize}
+
+\begin{table}[htbp]
+\centering
+\caption{Estado de los requisitos (\ok\ hecho, \pend\ parcial o pendiente)}
+\label{tab:estado}
+\small
+\begin{tabularx}{\linewidth}{@{}l c Y@{}}
+\toprule
+\textbf{Req.} & & \textbf{Observación} \\
+\midrule
+RF-01 & \ok & En modo evaluación aún se ven los puntos de color. \\
+RF-02 & \ok & Agarrar y caminar; falta practicar perillas y llaves. \\
+RF-03 & \ok & Brillo azul por paso y puntos de color. \\
+RF-04 & \pend & Narrador y tarjeta listos; faltan las manos fantasma. \\
+RF-05 & \ok & 7 pasos más llevar la mano al chorro. \\
+RF-06 & \ok & Cuadro~\ref{tab:errores}. \\
+RF-07 & \ok & Reloj de pared: 20 min en 90 s, se pausa. \\
+RF-08 & \ok & Sin expresión facial (sin \textit{blendshapes}). \\
+RF-09 & \ok & Voces por TTS. \\
+RF-10 & \ok & Resumen en VR y registro JSON. \\
+RF-11 & \pend & El grado puede variar al azar, pero está desactivado; la extensión aún no varía. \\
+RNF-01 & \pend & Falta medir en el visor. \\
+RNF-02 & \pend & Falta medir la latencia en el visor. \\
+RNF-03 & \pend & Aviso de contenido listo; falta pausa y reinicio en cualquier momento. \\
+RNF-04 & \ok & Experiencia de un solo jugador. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\FloatBarrier
+
+% ==========================================
+% 5. TRABAJO FUTURO
+% ==========================================
+\section{Trabajo Futuro}\label{sec:futuro}
+Para la entrega final quedan:
+\begin{itemize}
+    \item \textbf{Prueba en el visor:} jugar el flujo completo con las manos, revisar la ubicación de los objetos y medir los 72 fps con agua, vapor, tela y ampollas activos (RNF-01).
+    \item \textbf{Corregir los defectos detectados} en la prueba del editor: la taza, la superposición de paneles y el aspecto de la quemadura y de la chompa.
+    \item \textbf{Barra de cuatro actos} con el contador de aciertos y errores, como en la WebApp; el sistema ya calcula el acto actual.
+    \item \textbf{Pausa y reinicio} en cualquier momento (RNF-03).
+    \item \textbf{Variación del caso} (RF-11): activar el grado al azar y variar la extensión.
+    \item \textbf{Manos fantasma} en modo guiado (RF-04).
+    \item \textbf{Modo evaluación sin señales:} ocultar también los puntos de color.
+    \item \textbf{Voces reales:} reemplazar las voces de síntesis por grabaciones del equipo.
+    \item \textbf{Pruebas con usuarios} comparando el modo guiado con el modo evaluación, usando los registros JSON.
+\end{itemize}
+
+Fuera del alcance del curso, se identificaron extensiones que requieren hardware no disponible: analítica de estrés con \textit{eye-tracking} o sensores biométricos, y guantes hápticos o térmicos.
+
+El Cuadro~\ref{tab:assets} lista los recursos externos y propios, y el Cuadro~\ref{tab:gantt} el cronograma por hitos.
+
+\begin{table}[htbp]
+\centering
+\caption{Recursos utilizados}
+\label{tab:assets}
+\small
+\begin{tabularx}{\linewidth}{@{}L{2.1cm} Y@{}}
+\toprule
+\textbf{Uso} & \textbf{Recurso (fuente y licencia)}\\
+\midrule
+Cocina & Apartment Kit, Brick Project Studio (Unity Asset Store, licencia estándar), \url{https://assetstore.unity.com/packages/3d/environments/apartment-kit-124055} \\
+Víctima & Personaje de Mixamo (Adobe), uso gratuito en proyectos propios, \url{https://www.mixamo.com} \\
+VR & Meta XR SDK 201 (rig e Interaction SDK), licencia del SDK de Meta \\
+Olla, objetos del protocolo, remedios, taza, reloj & Creados por código por el equipo \\
+Piel, quemadura, agua, vapor y tela & Materiales, texturas y simulación creados por el equipo \\
+Efectos de sonido (23) & Sintetizados por el equipo \\
+Voces (45 frases) & Síntesis de voz: Microsoft Sabina (víctima) y Raúl (narrador), es-MX \\
+Ilustraciones WebApp & Generadas por código (SVG) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Cronograma por hitos (\ok\ completado, \pend\ pendiente)}
+\label{tab:gantt}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabularx}{\linewidth}{@{}Y c c c c c@{}}
+\toprule
+\textbf{Actividad} & \textbf{H1} & \textbf{H2} & \textbf{H3} & \textbf{H4} & \textbf{H5}\\
+\midrule
+Cocina (Apartment Kit) y agarre de objetos funcional con el visor & \ok & & & & \\
+Locomoción y manos/mandos unificados, colliders, agarre propio con física y poses de mano; enfriar y cubrir & & \ok & & & \\
+Realismo: víctima con texturas y reacciones, quemadura con hinchazón y ampollas, olla, chorro, tela, sonido y vibración; accidente, llaves, anillo, chompa, film, gasa y remedios & & & \ok & & \\
+Secuencia del protocolo, reloj de 20 minutos, decisión médica, resumen, puntaje y registro; menú de modos, tutorial, narrador y víctima con cuerpo físico & & & & \ok & \\
+Prueba en el visor, barra de actos, pausa, variación del caso, voces reales y pruebas con usuarios & & & & & \pend \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ==========================================
+% 6. CONCLUSIONES
+% ==========================================
+\section{Conclusiones}
+Enfocar el proyecto en una sola emergencia, la quemadura doméstica, permitió invertir el esfuerzo en el realismo y en el protocolo completo: una piel que se enrojece, se hincha y forma ampollas según lo que hace el usuario, una víctima con cuerpo físico que grita, se calma y rechaza los remedios caseros, y un entorno con vapor, agua y sonido coherentes. El arco en cuatro actos lleva al usuario desde una situación cotidiana hasta la decisión médica, y cada error tiene una consecuencia visible y una corrección explicada.
+
+La arquitectura basada en un canal único de eventos permitió que guía, puntaje, resumen y registro se construyan sobre las mismas acciones del usuario, y que el modo evaluación y los registros JSON sirvan directamente para medir las métricas HEART. El siguiente paso es validar la experiencia en el visor y con usuarios reales.
+
+% ==========================================
+% BIBLIOGRAFÍA
+% ==========================================
+\begin{thebibliography}{99}
+
+\bibitem{who}
+Organización Mundial de la Salud, ``Burns'' (nota descriptiva). \url{https://www.who.int/news-room/fact-sheets/detail/burns}
+
+\bibitem{nhs}
+National Health Service (NHS), ``Burns and scalds: Treatment''. \url{https://www.nhs.uk/conditions/burns-and-scalds/}
+
+\bibitem{ifrc}
+International Federation of Red Cross and Red Crescent Societies, \textit{International First Aid, Resuscitation and Education Guidelines 2020}. Ginebra: IFRC, 2020.
+
+\bibitem{abbas2023}
+J. R. Abbas, M. M. H. Chu, C. Jeyarajah, R. Isba, A. Payton, B. McGrath, N. Tolley e I. Bruce, ``Virtual reality in simulation-based emergency skills training: A systematic review with a narrative synthesis,'' \textit{Resuscitation Plus}, vol. 16, art. 100484, 2023. doi: 10.1016/j.resplu.2023.100484.
+
+\bibitem{norman2013}
+D. Norman, \textit{The Design of Everyday Things: Revised and Expanded Edition}. Basic Books, 2013.
+
+\bibitem{rodden2010}
+K. Rodden, H. Hutchinson y X. Fu, ``Measuring the user experience on a large scale: User-centered metrics for web applications,'' en \textit{Proc. CHI 2010}, ACM, pp. 2395--2398.
+
+\bibitem{slater1997}
+M. Slater y S. Wilbur, ``A framework for immersive virtual environments (FIVE): Speculations on the role of presence in virtual environments,'' \textit{Presence: Teleoperators and Virtual Environments}, vol. 6, no. 6, pp. 603--616, 1997.
+
+\end{thebibliography}
+
+\end{document}

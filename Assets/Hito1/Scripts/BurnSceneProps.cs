@@ -20,6 +20,7 @@ namespace SojaExiles
         public bool remedies = true;
 
         private readonly List<Vector3> taken = new List<Vector3>();
+        private float avoidRadius = 0.3f;
 
         private IEnumerator Start()
         {
@@ -41,6 +42,15 @@ namespace SojaExiles
             Vector3 stove = pot != null ? pot.BurnerPosition : (towel != null ? towel.position : transform.position);
             float counter = CounterHeight(towel, pot);
             Vector3 avoid = pot != null ? pot.BurnerPosition : new Vector3(0f, -100f, 0f);
+
+            // Toda la cocina (las cuatro hornillas), no solo el quemador de la
+            // olla: antes los remedios quedaban sobre las otras hornillas.
+            if (BurnStaging.StoveArea(out Vector3 stoveCenter, out float stoveRadius))
+            {
+                avoid = stoveCenter;
+                avoidRadius = stoveRadius;
+            }
+
             if (towel != null)
             {
                 taken.Add(towel.position);
@@ -100,9 +110,9 @@ namespace SojaExiles
             float clearance, Vector3 avoid, Vector3? fallback = null)
         {
             Vector3 spot;
-            if (!PropKit.FindSurfaceSpot(near, counter, minRadius, maxRadius, clearance, taken, avoid, 0.3f, out spot)
+            if (!PropKit.FindSurfaceSpot(near, counter, minRadius, maxRadius, clearance, taken, avoid, avoidRadius, out spot)
                 && !(fallback.HasValue && PropKit.FindSurfaceSpot(fallback.Value, counter, 0.35f, 1.2f, clearance,
-                    taken, avoid, 0.3f, out spot)))
+                    taken, avoid, avoidRadius, out spot)))
             {
                 Debug.LogWarning("[BurnSceneProps] No hay lugar libre en el meson para " + prop.name
                     + "; queda sobre el meson cerca de la cocina.");
