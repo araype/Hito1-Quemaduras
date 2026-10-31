@@ -71,8 +71,17 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   `Panel_Fondo_Translucido`); se abre al mirarla o con un aviso
   (2026-10-31, probado en el editor con Quest Link). Si aún estorba:
   correrla cuando tape el objeto del paso, o dejar moverla con la mano.
-- [ ] La quemadura se ve roja saturada y uniforme (`BurnSkinOverlay`), y la
-  chompa puesta parece un cilindro rígido (`SweaterItem.BuildDrape`).
+- [x] La quemadura se veía roja saturada y uniforme, como un guante. Ahora es
+  una mancha irregular en el dorso (`BurnSkinPattern`, shader
+  `Hito1/PielQuemada`): eritema en el borde, rojo intenso con manchas en el
+  centro y, en segundo grado, lecho húmedo y brillante con jirones de piel
+  levantada y relieve. Las ampollas son cúpulas irregulares translúcidas y
+  algunas están rotas (`BurnInjury.BlisterMesh`, `rupturedShare`, material
+  `Ampolla_Rota`). Al enfriar baja el rojo y quedan las ampollas
+  (2026-10-31, probado en el editor en Play con el accidente forzado por
+  código; **falta verlo en el visor**). Si la mancha queda corrida en otro
+  modelo, ajustar `BurnSkinOverlay.burnCenter` y `dorsumDirection`.
+- [ ] La chompa puesta parece un cilindro rígido (`SweaterItem.BuildDrape`).
 
 ## 1. Flujo de la aplicación (siguiente bloque de código)
 

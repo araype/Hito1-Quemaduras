@@ -44,7 +44,9 @@ namespace SojaExiles
         public float blisterOnsetSeconds = 6f;
         [Tooltip("Segundos sin agua hasta llegar a su tamano mayor.")]
         public float blisterGrowSeconds = 45f;
-        public Vector2 blisterDiameter = new Vector2(0.005f, 0.013f);
+        public Vector2 blisterDiameter = new Vector2(0.008f, 0.018f);
+        [Tooltip("Parte de las ampollas que ya se rompieron: queda la piel levantada y arrugada.")]
+        [Range(0f, 1f)] public float rupturedShare = 0.3f;
         [Tooltip("Tamano (0 a 1) que alcanzan aunque se enfrie enseguida.")]
         [Range(0f, 1f)] public float minimumBlister = 0.3f;
 
@@ -117,12 +119,6 @@ namespace SojaExiles
             // La capa de la quemadura se arma en el Start de BurnSkinOverlay.
             yield return null;
             BurnSkinOverlay overlay = GetComponent<BurnSkinOverlay>();
-            if (overlay != null && degree == BurnDegree.SegundoSuperficial)
-            {
-                // Mas roja e intensa que una de primer grado.
-                overlay.burnedColor = new Color(1f, 0.42f, 0.38f, 0.95f);
-            }
-
             if (degree == BurnDegree.SegundoSuperficial)
             {
                 BuildBlisters(overlay != null ? overlay.Overlay : null);
@@ -199,9 +195,11 @@ namespace SojaExiles
 
         // ---------------- ampollas ----------------
 
-        // Elige puntos del dorso de la mano (la cara que mira hacia arriba al
-        // quemarse, donde cayo el agua) y cuelga cada ampolla del hueso que
-        // mas mueve ese punto, para que siga a la mano.
+        // Elige puntos de la zona de segundo grado que marco BurnSkinPattern
+        // (si no hay, del dorso: la cara que mira hacia arriba) y cuelga cada
+        // ampolla del hueso que mas mueve ese punto, para que siga a la mano.
+        // Cada ampolla es una cupula de borde irregular; las rotas, piel
+        // arrugada y casi plana.
         private void BuildBlisters(SkinnedMeshRenderer overlay)
         {
             if (overlay == null || overlay.sharedMesh == null)
@@ -224,12 +222,28 @@ namespace SojaExiles
             }
 
             List<int> candidates = new List<int>();
-            for (int v = 0; v < vertices.Length; v++)
+            Color[] pattern = mesh.colors;
+            if (pattern.Length == vertices.Length)
             {
-                Vector3 n = Skin(skin, weights[v], normals[v], true).normalized;
-                if (n.y > 0.55f)
+                for (int v = 0; v < vertices.Length; v++)
                 {
-                    candidates.Add(v);
+                    if (pattern[v].g > 0.6f)
+                    {
+                        candidates.Add(v);
+                    }
+                }
+            }
+
+            if (candidates.Count < blisterCount)
+            {
+                candidates.Clear();
+                for (int v = 0; v < vertices.Length; v++)
+                {
+                    Vector3 n = Skin(skin, weights[v], normals[v], true).normalized;
+                    if (n.y > 0.55f)
+                    {
+                        candidates.Add(v);
+                    }
                 }
             }
 
@@ -270,12 +284,22 @@ namespace SojaExiles
                     continue;
                 }
 
-                Renderer r = PropKit.Part(bone, PrimitiveType.Sphere, Vector3.zero, Vector3.one, "Ampolla",
-                    new Color(1f, 0.93f, 0.8f, 0.7f));
+                bool ruptured = Random.value < rupturedShare;
+                Renderer r = PropKit.MeshPart(bone, BlisterMesh(ruptured), Vector3.zero, Quaternion.identity,
+                    ruptured ? "Ampolla_Rota" : "Ampolla",
+                    ruptured ? new Color(0.93f, 0.86f, 0.79f, 1f) : new Color(1f, 0.93f, 0.8f, 0.7f));
                 r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                // Como la capa de la quemadura (transparente), no recibe
+                // sombras: si no, la piel rota se ve gris sobre el rojo.
+                r.receiveShadows = false;
                 Transform t = r.transform;
-                t.name = "Ampolla";
-                t.position = p + n * 0.0008f;
+                t.name = ruptured ? "AmpollaRota" : "Ampolla";
+                // La base de la ampolla queda apenas hundida para que no se
+                // vea un borde flotando sobre la piel curva. La piel de una
+                // ampolla rota es casi plana: va justo sobre la capa de la
+                // quemadura (BurnSkinOverlay.surfaceOffset) para no quedar
+                // tapada por ella.
+                t.position = p + n * (ruptured ? 0.0014f : -0.0004f);
                 t.rotation = Quaternion.FromToRotation(Vector3.up, n);
                 t.gameObject.SetActive(false);
                 blisters.Add(new Blister
@@ -287,6 +311,64 @@ namespace SojaExiles
             }
 
             Debug.Log($"[BurnInjury] {blisters.Count} ampollas preparadas");
+        }
+
+        // Cupula de 1 de diametro y 0,5 de alto, con la base en el origen y
+        // el borde irregular (cada ampolla sale distinta). Una ampolla rota
+        // es casi plana: piel arrugada con el borde algo levantado.
+        private static Mesh BlisterMesh(bool ruptured)
+        {
+            const int rings = 6;
+            const int segments = 20;
+            float a2 = Random.Range(0.06f, 0.18f), p2 = Random.Range(0f, 6.28f);
+            float a3 = Random.Range(0.03f, 0.1f), p3 = Random.Range(0f, 6.28f);
+            float wrinkle = Random.Range(0f, 6.28f);
+
+            List<Vector3> vertices = new List<Vector3> { new Vector3(0f, ruptured ? 0.05f : 0.5f, 0f) };
+            List<int> triangles = new List<int>();
+            for (int ring = 1; ring <= rings; ring++)
+            {
+                float t = (float)ring / rings;
+                for (int s = 0; s < segments; s++)
+                {
+                    float angle = s * Mathf.PI * 2f / segments;
+                    float radius = 0.5f * (1f + a2 * Mathf.Sin(2f * angle + p2) + a3 * Mathf.Sin(3f * angle + p3));
+                    float h = ruptured
+                        ? 0.04f + 0.1f * Mathf.Pow(t, 4f) + 0.02f * Mathf.Sin(angle * 4f + t * 7f + wrinkle) + 0.012f * Mathf.Sin(angle * 9f - t * 13f)
+                        : 0.5f * Mathf.Pow(1f - t * t, 0.6f);
+                    vertices.Add(new Vector3(Mathf.Cos(angle) * radius * t, Mathf.Max(0f, h), Mathf.Sin(angle) * radius * t));
+                }
+            }
+
+            for (int s = 0; s < segments; s++)
+            {
+                triangles.Add(0);
+                triangles.Add(1 + (s + 1) % segments);
+                triangles.Add(1 + s);
+            }
+
+            for (int ring = 1; ring < rings; ring++)
+            {
+                int inner = 1 + (ring - 1) * segments;
+                int outer = 1 + ring * segments;
+                for (int s = 0; s < segments; s++)
+                {
+                    int s1 = (s + 1) % segments;
+                    triangles.Add(inner + s);
+                    triangles.Add(inner + s1);
+                    triangles.Add(outer + s);
+                    triangles.Add(inner + s1);
+                    triangles.Add(outer + s1);
+                    triangles.Add(outer + s);
+                }
+            }
+
+            Mesh mesh = new Mesh { name = ruptured ? "AmpollaRota" : "Ampolla" };
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
         }
 
         private static Vector3 Skin(Matrix4x4[] skin, BoneWeight w, Vector3 v, bool direction)
