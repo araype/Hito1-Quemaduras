@@ -10,12 +10,21 @@ namespace SojaExiles
     public class MedicalDecisionPanel : MonoBehaviour
     {
         private BurnProtocol protocol;
+        private static MedicalDecisionPanel current;
+
+        // True mientras el panel esta abierto (la guia oculta su tarjeta,
+        // que quedaba encima).
+        public static bool IsOpen
+        {
+            get { return current != null; }
+        }
 
         public static MedicalDecisionPanel Show(BurnProtocol protocol)
         {
             Transform root = VRPanelKit.CreateRoot("PanelDecisionMedica", 0.55f, 0.25f);
             MedicalDecisionPanel panel = root.gameObject.AddComponent<MedicalDecisionPanel>();
             panel.protocol = protocol;
+            current = panel;
             panel.Build();
             Hito1FX.PlayAt("logro_paso", root.position, 0.4f, 0f);
             return panel;
@@ -36,6 +45,14 @@ namespace SojaExiles
                 new Color(0.16f, 0.42f, 0.78f), () => Choose(true));
             VRPanelKit.Button(t, "Cuidarla en casa", new Vector2(0.135f, -0.08f), new Vector2(0.25f, 0.11f),
                 new Color(0.2f, 0.55f, 0.38f), () => Choose(false));
+        }
+
+        private void OnDestroy()
+        {
+            if (current == this)
+            {
+                current = null;
+            }
         }
 
         private void Choose(bool goToHealthCenter)

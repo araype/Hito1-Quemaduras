@@ -47,7 +47,9 @@ namespace SojaExiles
         [Tooltip("Si la sueltan a esta distancia horizontal del chorro, ella pone la mano bajo el agua.")]
         public float assistRadius = 0.32f;
         [Tooltip("Altura de la palma bajo la boca del grifo (m).")]
-        public float palmBelowNozzle = 0.09f;
+        public float palmBelowNozzle = 0.11f;
+        [Tooltip("Segundos para girar la mano (dorso arriba) al ponerla bajo el chorro.")]
+        public float palmTurnSeconds = 0.4f;
         [Tooltip("Segundos despues de enfriar hasta que saca la mano del agua.")]
         public float withdrawAfterCooled = 3.5f;
 
@@ -84,6 +86,7 @@ namespace SojaExiles
         private float lookAtPlayerUntil;
         private Transform viewer;
         private bool receiving;
+        private float palmDown;
 
         private void Awake()
         {
@@ -251,14 +254,35 @@ namespace SojaExiles
             return flat.magnitude < assistRadius && below > -0.25f && below < 0.5f;
         }
 
-        // Muneca tal que la palma quede bajo el chorro.
+        // La palma (donde esta ahora) queda bajo el chorro, a menos de
+        // 'radius' en horizontal.
+        private bool PalmUnderStream(float radius)
+        {
+            if (stream == null)
+            {
+                return false;
+            }
+
+            Vector3 palm = stream.PalmOf(body.HandBone(rightArm));
+            Vector3 nozzle = stream.NozzlePosition;
+            return PatientBody.Flat(palm - nozzle).magnitude < radius && palm.y < nozzle.y + 0.02f
+                && palm.y > nozzle.y - 0.45f;
+        }
+
+        // Muneca tal que la palma quede bajo el chorro con la mano plana y el
+        // dorso (donde esta la quemadura) hacia arriba: los dedos apuntan
+        // desde el hombro hacia el grifo (ver PatientBody.LayHandFlat).
         private Vector3 WaterGoal()
         {
             Transform hand = body.HandBone(rightArm);
-            Vector3 palm = stream.PalmOf(hand);
-            Vector3 palmToWrist = hand.position - palm;
-            Vector3 wantedPalm = stream.NozzlePosition + Vector3.down * palmBelowNozzle;
-            return wantedPalm + palmToWrist;
+            float palmDistance = Vector3.Distance(stream.PalmOf(hand), hand.position);
+            Vector3 nozzle = stream.NozzlePosition;
+            Vector3 along = PatientBody.Flat(nozzle - body.ShoulderPosition(rightArm));
+            along = along.sqrMagnitude > 1e-4f ? along.normalized : PatientBody.Flat(body.TorsoForward).normalized;
+            Vector3 side = Vector3.Cross(Vector3.up, along);
+            Vector3 fingers = Quaternion.AngleAxis(body.palmDownTiltDegrees, side) * along;
+            Vector3 wantedPalm = nozzle + Vector3.down * palmBelowNozzle;
+            return wantedPalm - fingers * palmDistance;
         }
 
         private Vector3 GuardGoal()
@@ -416,6 +440,27 @@ namespace SojaExiles
 
             UpdateLeftHand();
             UpdateHead();
+            UpdatePalm();
+        }
+
+        // Bajo el chorro (puesta por ella o sostenida ahi por el jugador) la
+        // mano queda plana con el dorso hacia arriba, para que se vea que el
+        // agua cae sobre la quemadura.
+        private void UpdatePalm()
+        {
+            bool held = SimpleGrab.IsHeldObject(target);
+            bool underWater = Current == Mode.InWater
+                || (held && Current != Mode.Cooking && WaterRunning && PalmUnderStream(0.1f));
+            float speed = Time.deltaTime / Mathf.Max(0.05f, palmTurnSeconds);
+            palmDown = Mathf.MoveTowards(palmDown, underWater ? 1f : 0f, speed);
+            if (rightArm)
+            {
+                body.rightPalmDown = palmDown;
+            }
+            else
+            {
+                body.leftPalmDown = palmDown;
+            }
         }
 
         // La otra mano sostiene la quemada por debajo de la muneca, salvo

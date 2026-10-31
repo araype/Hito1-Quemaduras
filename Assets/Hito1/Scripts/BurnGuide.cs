@@ -102,7 +102,8 @@ namespace SojaExiles
                 hint = "Tómala del antebrazo, no de la mano quemada. Suéltala cerca del chorro y ella la pondrá bajo el agua.",
                 clip = "guia_llevar" },
             new StepInfo { id = StepId.Anillo, title = "Quítale el anillo",
-                hint = "Antes de que la mano se hinche. Deja tu mano libre sobre el anillo un momento.", clip = "guia_anillo" },
+                hint = "Antes de que se hinche. Acerca tu mano libre al punto dorado y mantén apretado el botón lateral (o junta pulgar e índice) hasta que salga.",
+                clip = "guia_anillo" },
             new StepInfo { id = StepId.Abrigar, title = "Abrígala con la chompa",
                 hint = "El agua fría también le enfría el cuerpo. Suelta la chompa sobre sus hombros.", clip = "guia_abrigo" },
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
@@ -259,18 +260,20 @@ namespace SojaExiles
             VRPanelKit.Text(root, VRPanelKit.Wrap("Aviso: esta práctica incluye gritos de dolor y una quemadura visible. " +
                     "Puedes quitarte el visor cuando quieras.", 52), new Vector2(0f, 0.125f), 0.019f,
                 new Color(1f, 0.82f, 0.55f), TextAnchor.UpperCenter, TextAlignment.Center);
-            VRPanelKit.Text(root, "Toca un botón con el dedo para elegir:", new Vector2(0f, 0.045f), 0.02f,
+            VRPanelKit.Text(root, "Deja la mano sobre un botón hasta que se llene:", new Vector2(0f, 0.045f), 0.02f,
                 new Color(0.8f, 0.85f, 0.92f), TextAnchor.UpperCenter, TextAlignment.Center);
-            VRPanelKit.Button(root, "Modo guiado", new Vector2(-0.145f, -0.06f), new Vector2(0.26f, 0.1f),
+            VRPanelKit.Button(root, "Modo guiado", new Vector2(-0.152f, -0.06f), new Vector2(0.285f, 0.1f),
                 new Color(0.16f, 0.42f, 0.78f), () => { guided = true; chosen = true; });
-            VRPanelKit.Button(root, "Modo evaluación", new Vector2(0.145f, -0.06f), new Vector2(0.26f, 0.1f),
+            VRPanelKit.Button(root, "Modo evaluación", new Vector2(0.152f, -0.06f), new Vector2(0.285f, 0.1f),
                 new Color(0.45f, 0.3f, 0.62f), () => { guided = false; chosen = true; });
             VRPanelKit.Text(root, VRPanelKit.Wrap("Guiado: te indica cada paso. Evaluación: lo haces solo y se mide.", 56),
                 new Vector2(0f, -0.13f), 0.017f, new Color(0.7f, 0.75f, 0.82f), TextAnchor.UpperCenter,
                 TextAlignment.Center);
 
             Say("guia_bienvenida");
-            Highlight(root.TransformPoint(new Vector3(-0.145f, -0.06f, -0.01f)), 0f);
+            // El mismo brillo en las dos opciones: ninguna se sugiere sobre la otra.
+            Highlight(root.TransformPoint(new Vector3(-0.152f, -0.06f, -0.01f)), 0f);
+            Highlight(root.TransformPoint(new Vector3(0.152f, -0.06f, -0.01f)), 0f);
 
             while (!chosen)
             {
@@ -882,6 +885,13 @@ namespace SojaExiles
             cardText.text = VRPanelKit.Wrap(text ?? "", 30);
             cardHint.text = VRPanelKit.Wrap(hint ?? "", 44);
             LayoutCard();
+            if (MedicalDecisionPanel.IsOpen)
+            {
+                // El panel de decision ya trae la pregunta: la tarjeta lo tapaba.
+                card.gameObject.SetActive(false);
+                return;
+            }
+
             card.gameObject.SetActive(true);
             if (wasHidden)
             {
@@ -905,6 +915,12 @@ namespace SojaExiles
         {
             if (card == null || !card.gameObject.activeSelf)
             {
+                return;
+            }
+
+            if (MedicalDecisionPanel.IsOpen)
+            {
+                card.gameObject.SetActive(false);
                 return;
             }
 

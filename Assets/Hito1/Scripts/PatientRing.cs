@@ -4,9 +4,12 @@ using UnityEngine;
 namespace SojaExiles
 {
     // Anillo en el dedo anular de la mano quemada. El protocolo pide sacarlo
-    // antes de que la mano se hinche: se saca dejando la mano sobre el anillo
-    // un momento (un punto dorado marca donde, como en el grifo). Si la mano
-    // ya se hincho demasiado (BurnInjury), el anillo no sale.
+    // antes de que la mano se hinche: se saca acercando la mano libre al
+    // anillo (un punto dorado marca donde) y manteniendo apretado el boton
+    // lateral o la pinza, como al agarrar. Mientras se aprieta el anillo
+    // avanza por el dedo y el control vibra; si se suelta antes, vuelve.
+    // Apretar ahi no agarra la mano de la paciente (SimpleGrab.AddGrabBlocker).
+    // Si la mano ya se hincho demasiado (BurnInjury), el anillo no sale.
     // Al salir queda como objeto suelto que se puede agarrar.
     // Va en el paciente (el objeto con PatientBody).
     [RequireComponent(typeof(PatientBody))]
@@ -22,9 +25,12 @@ namespace SojaExiles
         [Range(0f, 1f)] public float alongFinger = 0.35f;
 
         [Header("Sacarlo")]
-        [Tooltip("Segundos que hay que dejar la mano sobre el anillo.")]
-        public float holdSeconds = 1.2f;
-        public float touchRadius = 0.035f;
+        [Tooltip("Segundos que hay que mantener apretado junto al anillo.")]
+        public float holdSeconds = 1.5f;
+        [Tooltip("Distancia del punto de agarre al anillo para tirar de el (m).")]
+        public float grabZone = 0.05f;
+        [Tooltip("Cuanto avanza el anillo por el dedo mientras se tira (m).")]
+        public float pullPreview = 0.012f;
         [Tooltip("Con la mano hinchada por encima de esto (0 a 1), ya no sale.")]
         [Range(0f, 1f)] public float stuckSwelling = 0.6f;
 
@@ -32,6 +38,7 @@ namespace SojaExiles
         public Material indicatorMaterial;
         public float markerRadius = 0.014f;
         public Color markerColor = new Color(1f, 0.78f, 0.15f, 0.65f);
+        public Color pullColor = new Color(0.35f, 0.95f, 0.45f, 0.8f);
 
         public bool Removed { get; private set; }
         public bool Stuck { get; private set; }
@@ -41,9 +48,9 @@ namespace SojaExiles
         private Transform ring;
         private Renderer marker;
         private float held;
-        private float lastTouch = float.NegativeInfinity;
+        private float nextTick;
         private bool busy;
-        private readonly Collider[] overlap = new Collider[16];
+        private BurnHaptics haptics;
 
         private void Awake()
         {
@@ -112,6 +119,32 @@ namespace SojaExiles
             ring.localScale = Vector3.one / s;
         }
 
+        private void OnEnable()
+        {
+            SimpleGrab.AddGrabBlocker(ClaimsGrab);
+        }
+
+        private void OnDisable()
+        {
+            SimpleGrab.RemoveGrabBlocker(ClaimsGrab);
+        }
+
+        private bool Active
+        {
+            get
+            {
+                return ring != null && !Removed && !Stuck && !busy && burnSequence != null
+                    && burnSequence.CurrentState != BurnSequenceManager.BurnState.Idle;
+            }
+        }
+
+        // Apretar junto al anillo no agarra la mano de la paciente: tira
+        // del anillo.
+        private bool ClaimsGrab(Vector3 point)
+        {
+            return Active && Vector3.Distance(point, ring.position) < grabZone;
+        }
+
         private void LateUpdate()
         {
             if (ring == null || Removed)
@@ -119,64 +152,95 @@ namespace SojaExiles
                 return;
             }
 
-            if (!busy)
+            bool active = Active;
+            int pulling = -1;
+            bool hovering = false;
+            if (active)
             {
-                PlaceOnFinger(0f);
+                for (int h = 0; h < 2; h++)
+                {
+                    if (!SimpleGrab.TryGetHandInput(h == 0, out Vector3 point, out bool pressed, out bool holding)
+                        || holding)
+                    {
+                        continue;
+                    }
+
+                    float distance = Vector3.Distance(point, ring.position);
+                    if (pressed && distance < grabZone)
+                    {
+                        pulling = h;
+                    }
+                    else if (!pressed && distance < grabZone * 1.4f)
+                    {
+                        hovering = true;
+                    }
+                }
             }
 
-            bool active = burnSequence != null && burnSequence.CurrentState != BurnSequenceManager.BurnState.Idle
-                && !Stuck && !busy;
+            if (pulling >= 0)
+            {
+                held += Time.deltaTime;
+                if (Time.time >= nextTick)
+                {
+                    nextTick = Time.time + 0.18f;
+                    if (haptics == null)
+                    {
+                        haptics = FindObjectOfType<BurnHaptics>();
+                    }
+
+                    if (haptics != null)
+                    {
+                        haptics.Buzz(pulling, 0.25f + 0.4f * Progress, 0.05f);
+                    }
+                }
+            }
+            else
+            {
+                // Si suelta antes de tiempo, el anillo vuelve a su lugar.
+                held = Mathf.MoveTowards(held, 0f, Time.deltaTime * 2f);
+            }
+
+            if (!busy)
+            {
+                PlaceOnFinger(pullPreview * Progress);
+            }
+
             if (marker != null)
             {
                 marker.enabled = active;
                 if (active)
                 {
-                    float fill = held / Mathf.Max(0.1f, holdSeconds);
-                    float pulse = 1f + 0.15f * Mathf.Sin(Time.time * 4f);
+                    float pulse = pulling >= 0 ? 1f : 1f + 0.15f * Mathf.Sin(Time.time * 4f);
                     marker.transform.position = ring.position;
-                    IndicatorUtil.SetWorldDiameter(marker.transform, markerRadius * 2f * (pulse + fill));
+                    IndicatorUtil.SetWorldDiameter(marker.transform, markerRadius * 2f * (pulse + Progress * 0.6f));
+                    Color c = pulling >= 0 ? Color.Lerp(markerColor, pullColor, 0.4f + 0.6f * Progress)
+                        : hovering ? Color.Lerp(markerColor, Color.white, 0.35f) : markerColor;
+                    IndicatorUtil.SetColor(marker, c);
                 }
             }
 
-            if (!active)
+            if (!active || pulling < 0)
             {
-                held = 0f;
                 return;
             }
 
-            if (HandTouching())
-            {
-                lastTouch = Time.time;
-            }
-
-            if (Time.time - lastTouch > 0.25f)
+            BurnInjury injury = BurnInjury.Instance;
+            bool swollen = injury != null && injury.Swelling >= stuckSwelling;
+            if (swollen && held >= holdSeconds * 0.4f)
             {
                 held = 0f;
-                return;
+                StartCoroutine(TryStuck());
             }
-
-            held += Time.deltaTime;
-            if (held >= holdSeconds)
+            else if (held >= holdSeconds)
             {
-                held = 0f;
-                BurnInjury injury = BurnInjury.Instance;
-                bool swollen = injury != null && injury.Swelling >= stuckSwelling;
-                StartCoroutine(swollen ? TryStuck() : SlideOff());
+                StartCoroutine(SlideOff());
             }
         }
 
-        private bool HandTouching()
+        // 0 a 1: cuanto lleva tirando del anillo.
+        public float Progress
         {
-            int n = Physics.OverlapSphereNonAlloc(ring.position, touchRadius, overlap, ~0, QueryTriggerInteraction.Collide);
-            for (int i = 0; i < n; i++)
-            {
-                if (SimpleGrab.IsFreeHandCollider(overlap[i]))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            get { return Mathf.Clamp01(held / Mathf.Max(0.1f, holdSeconds)); }
         }
 
         private IEnumerator SlideOff()
@@ -188,7 +252,7 @@ namespace SojaExiles
             while (t < 0.5f)
             {
                 t += Time.deltaTime;
-                PlaceOnFinger(distance * Mathf.SmoothStep(0f, 1f, t / 0.5f));
+                PlaceOnFinger(Mathf.Lerp(pullPreview, distance, Mathf.SmoothStep(0f, 1f, t / 0.5f)));
                 yield return null;
             }
 

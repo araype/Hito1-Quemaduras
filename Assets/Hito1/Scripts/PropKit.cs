@@ -170,6 +170,13 @@ namespace SojaExiles
                         continue;
                     }
 
+                    // Que haya meson alrededor y no solo debajo: un objeto en
+                    // el borde se vuelca (la taza del tutorial caia al suelo).
+                    if (!Supported(hit, Mathf.Min(clearance, 0.05f)))
+                    {
+                        continue;
+                    }
+
                     if (Flat(hit - avoid).magnitude < avoidRadius || TooClose(hit, taken, clearance * 2f))
                     {
                         continue;
@@ -190,6 +197,22 @@ namespace SojaExiles
 
             spot = center;
             return false;
+        }
+
+        private static bool Supported(Vector3 point, float margin)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                float a = i / 8f * Mathf.PI * 2f;
+                Vector3 probe = point + new Vector3(Mathf.Cos(a) * margin, 0.1f, Mathf.Sin(a) * margin);
+                if (!Physics.Raycast(probe, Vector3.down, out RaycastHit hit, 0.16f, ~0, QueryTriggerInteraction.Ignore)
+                    || Mathf.Abs(hit.point.y - point.y) > 0.01f)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static bool SurfaceAt(Vector3 probe, float surfaceHeight, out Vector3 point)

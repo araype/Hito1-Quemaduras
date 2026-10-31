@@ -142,7 +142,7 @@ en el editor ni en el Quest.**
 | Hinchazón | La mano se engrosa de a poco: rápido sin agua, casi nada bajo el chorro. | `BurnInjury` (paciente) |
 | Ampollas | En segundo grado aparecen a los 6 s y crecen mientras no se enfría. Enfriar a tiempo las deja chicas. | `BurnInjury` |
 | Llaves | La llave que ya estaba es la **fría** (punto azul). Al lado hay una **caliente** (punto rojo). Con solo la caliente abierta sale vapor del chorro, no enfría, vuelve a enrojecer la mano, la paciente grita y cuenta como error. | `WaterTap.hot/pair` |
-| Anillo | Anillo dorado en el anular. Se saca dejando la mano libre sobre él 1,2 s (punto dorado). Si la mano ya se hinchó, se traba y cuenta como error. | `PatientRing` (paciente) |
+| Anillo | Anillo dorado en el anular. Se saca acercando la mano libre al punto dorado y manteniendo apretado el botón lateral (o la pinza) 1,5 s; el anillo avanza, el mando vibra y, si se suelta antes, vuelve. Si la mano ya se hinchó, se traba y cuenta como error. | `PatientRing` (paciente) |
 | Chompa | Doblada en la silla más cercana. Se suelta sobre la espalda o los hombros y queda puesta. | `SweaterItem` |
 | Cubrir | Film y gasa junto al lavadero. Se sueltan sobre la mano **ya enfriada**: la cubren y el caso termina (Success). Si se intenta antes, es un error. El paño de cocina ya no cierra el caso: sobre la quemadura cuenta como error. | `CoverItem`, `TowelMisuse` |
 | Remedios caseros | Mantequilla, pasta dental, aceite y algodón en el mesón; hielo cerca del refrigerador. Al acercarlos, la paciente aparta la mano y protesta (error). Si se aplican, queda una capa sobre la piel y grita (error crítico; el algodón es error común). El agua quita la grasa y la pasta. | `HomeRemedy` |
@@ -267,7 +267,7 @@ está en `BurnGuide` (tarjetas) y en el informe de la rama.
 
 1. Dar Play con Quest Link. En la consola: `[BurnStaging] Cocina escalada a
    0.67` y `[PatientPhysics] 14 colliders en el cuerpo`.
-2. Elegir el modo tocando un botón. Agarrar la taza y llevársela a la tía.
+2. Elegir el modo dejando la mano sobre un botón hasta que se llene la barra. Agarrar la taza y llevársela a la tía.
 3. Tras el accidente, seguir la tarjeta. Probar a tomarla del antebrazo,
    caminar hasta el lavadero y soltar su mano cerca del chorro.
 4. Probar a tomarla de la mano quemada (queja y corrección).

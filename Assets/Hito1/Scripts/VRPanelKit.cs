@@ -108,7 +108,8 @@ namespace SojaExiles
             box.center = new Vector3(0f, 0f, -0.03f);
 
             Renderer background = Background(go.transform, Vector2.zero, size, "Panel_Boton", color);
-            Text(go.transform, label, Vector2.zero, size.y * 0.32f, Color.white, TextAnchor.MiddleCenter,
+            FitLabel(label, size, out string text, out float lineHeight);
+            Text(go.transform, text, Vector2.zero, lineHeight, Color.white, TextAnchor.MiddleCenter,
                 TextAlignment.Center);
 
             TouchButton button = go.AddComponent<TouchButton>();
@@ -117,6 +118,36 @@ namespace SojaExiles
             button.pressedColor = Color.Lerp(color, Color.white, 0.45f);
             button.OnPressed = onPressed;
             return button;
+        }
+
+        // Ancho aproximado de un caracter de la fuente integrada, en
+        // fracciones del alto de linea.
+        private const float CharWidth = 0.5f;
+
+        // Que la etiqueta quepa en el boton: si en una linea queda ancha, se
+        // parte en dos; si aun asi no cabe, se achica la letra.
+        private static void FitLabel(string label, Vector2 size, out string text, out float lineHeight)
+        {
+            float usable = size.x * 0.88f;
+            lineHeight = size.y * 0.32f;
+            text = label;
+            if (label.Length * lineHeight * CharWidth <= usable)
+            {
+                return;
+            }
+
+            int half = Mathf.CeilToInt(label.Length / 2f);
+            text = Wrap(label, half);
+            int longest = 0;
+            int lines = 0;
+            foreach (string line in text.Split('\n'))
+            {
+                longest = Mathf.Max(longest, line.Length);
+                lines++;
+            }
+
+            lineHeight = Mathf.Min(size.y * 0.8f / Mathf.Max(1, lines), size.y * 0.3f);
+            lineHeight = Mathf.Min(lineHeight, usable / Mathf.Max(1, longest * CharWidth));
         }
 
         // Corta el texto en lineas de hasta 'width' caracteres (TextMesh no
