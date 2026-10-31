@@ -5,10 +5,12 @@ qué estado está y cómo combinarla con `main` o con otra rama.
 
 ## Estado
 
-- **Base:** `16cde33` de `guia-y-paciente-fisica` (2026-10-31). Esa base aún no
-  está en `main`.
+- **Ya está en `main`** (merge `3023a5c`, 2026-10-31), junto con `a2c3911` y
+  `16cde33` de `guia-y-paciente-fisica`. Trabaja desde `main`; la sección "Cómo
+  combinar esta rama" solo sirve para ramas que aún no tengan ese merge.
+- **Base de la rama:** `16cde33` de `guia-y-paciente-fisica`.
 - **Verificado:** los 71 scripts compilan sin errores con Roslyn fuera del
-  editor.
+  editor, también después de unir a `main`.
 - **Sin verificar:** no se ha abierto en Unity ni se ha probado en el Quest.
   Los valores son un punto de partida y se pueden tener que ajustar.
 
