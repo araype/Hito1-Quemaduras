@@ -182,6 +182,28 @@ namespace SojaExiles
 
         private static readonly Quaternion Lying = Quaternion.Euler(0f, 0f, 90f);
 
+        // Gasa y film en amarillo: en blanco se perdian sobre el meson.
+        private static readonly Color Yellow = new Color(1f, 0.82f, 0.1f);
+
+        private static void Amarillo(GameObject root, string part, float alpha)
+        {
+            foreach (Renderer r in root.GetComponentsInChildren<Renderer>())
+            {
+                if (r.gameObject.name != part || r.sharedMaterial == null)
+                {
+                    continue;
+                }
+
+                Material m = new Material(r.sharedMaterial) { name = part + "_Amarillo" };
+                if (m.HasProperty("_Color"))
+                {
+                    m.color = new Color(Yellow.r, Yellow.g, Yellow.b, alpha);
+                }
+
+                r.sharedMaterial = m;
+            }
+        }
+
         private static GameObject BuildFilm()
         {
             GameObject root = PropKit.Grabbable("FilmTransparente", Vector3.zero, Quaternion.identity,
@@ -191,6 +213,7 @@ namespace SojaExiles
             PropKit.Part(root.transform, PrimitiveType.Cylinder, new Vector3(0f, 0.026f, 0f),
                 new Vector3(0.026f, 0.155f, 0.026f), Lying, "Carton", new Color(0.6f, 0.45f, 0.3f));
             root.AddComponent<CoverItem>().kind = CoverItem.Kind.Film;
+            Amarillo(root, "Film_Rollo", 0.9f);
             return root;
         }
 
@@ -203,6 +226,7 @@ namespace SojaExiles
             PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.0135f, 0.022f),
                 new Vector3(0.1f, 0.002f, 0.016f), "Plastico_Azul", new Color(0.2f, 0.45f, 0.85f));
             root.AddComponent<CoverItem>().kind = CoverItem.Kind.Gasa;
+            Amarillo(root, "Gasa_Paquete", 1f);
             return root;
         }
 

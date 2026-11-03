@@ -28,7 +28,7 @@ namespace SojaExiles
         [Tooltip("Segundos que hay que mantener apretado junto al anillo.")]
         public float holdSeconds = 1.5f;
         [Tooltip("Distancia del punto de agarre al anillo para tirar de el (m).")]
-        public float grabZone = 0.05f;
+        public float grabZone = 0.08f;
         [Tooltip("Cuanto avanza el anillo por el dedo mientras se tira (m).")]
         public float pullPreview = 0.012f;
         [Tooltip("Con la mano hinchada por encima de esto (0 a 1), ya no sale.")]
@@ -39,6 +39,8 @@ namespace SojaExiles
         public float markerRadius = 0.014f;
         public Color markerColor = new Color(1f, 0.78f, 0.15f, 0.65f);
         public Color pullColor = new Color(0.35f, 0.95f, 0.45f, 0.8f);
+        [Tooltip("Radio del circulo que se llena mientras se tira del anillo (m).")]
+        public float progressRadius = 0.045f;
 
         public bool Removed { get; private set; }
         public bool Stuck { get; private set; }
@@ -51,6 +53,8 @@ namespace SojaExiles
         private float nextTick;
         private bool busy;
         private BurnHaptics haptics;
+        private LineRenderer progressTrack, progressArc;
+        private Transform head;
 
         private void Awake()
         {
@@ -82,6 +86,9 @@ namespace SojaExiles
             marker = IndicatorUtil.CreateSphere("PuntoAnillo", ring, ring.position, markerRadius, indicatorMaterial,
                 markerColor);
             marker.enabled = false;
+
+            progressTrack = CreateArc("ProgresoAnilloFondo", new Color(1f, 1f, 1f, 0.3f), 0.004f);
+            progressArc = CreateArc("ProgresoAnillo", pullColor, 0.007f);
         }
 
         private static Transform FindBone(Transform hand, string suffix)
@@ -219,6 +226,8 @@ namespace SojaExiles
                 }
             }
 
+            UpdateProgress(active && (pulling >= 0 || held > 0.02f));
+
             if (!active || pulling < 0)
             {
                 return;
@@ -234,6 +243,77 @@ namespace SojaExiles
             else if (held >= holdSeconds)
             {
                 StartCoroutine(SlideOff());
+            }
+        }
+
+        private LineRenderer CreateArc(string name, Color color, float width)
+        {
+            GameObject go = new GameObject(name);
+            go.AddComponent<NoAutoCollider>();
+            LineRenderer line = go.AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.widthMultiplier = width;
+            line.numCapVertices = 2;
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            line.material = new Material(Shader.Find("Sprites/Default"));
+            line.startColor = color;
+            line.endColor = color;
+            line.positionCount = 0;
+            line.enabled = false;
+            return line;
+        }
+
+        // Circulo alrededor del anillo, mirando al jugador, que se llena
+        // mientras se mantiene apretado: deja claro que hay que sostener y
+        // cuanto falta (antes solo crecia un poco el punto dorado).
+        private void UpdateProgress(bool show)
+        {
+            if (progressArc == null || progressTrack == null)
+            {
+                return;
+            }
+
+            progressTrack.enabled = show;
+            progressArc.enabled = show && Progress > 0.001f;
+            if (!show)
+            {
+                return;
+            }
+
+            if (head == null)
+            {
+                head = VRPanelKit.Head();
+            }
+
+            Vector3 center = ring.position;
+            Vector3 normal = head != null ? (head.position - center).normalized : Vector3.up;
+            Vector3 side = Vector3.Cross(Vector3.up, normal);
+            if (side.sqrMagnitude < 1e-4f)
+            {
+                side = Vector3.Cross(Vector3.forward, normal);
+            }
+
+            side.Normalize();
+            Vector3 upDir = Vector3.Cross(normal, side).normalized;
+            center += normal * 0.01f;
+            SetArc(progressTrack, center, side, upDir, 1f);
+            Color c = Color.Lerp(markerColor, pullColor, Progress);
+            c.a = 0.95f;
+            progressArc.startColor = c;
+            progressArc.endColor = c;
+            SetArc(progressArc, center, side, upDir, Progress);
+        }
+
+        private void SetArc(LineRenderer line, Vector3 center, Vector3 side, Vector3 upDir, float fraction)
+        {
+            const int segments = 40;
+            int count = Mathf.Max(2, Mathf.CeilToInt(segments * fraction) + 1);
+            line.positionCount = count;
+            for (int i = 0; i < count; i++)
+            {
+                float a = fraction * (i / (float)(count - 1)) * Mathf.PI * 2f;
+                line.SetPosition(i, center + (upDir * Mathf.Cos(a) + side * Mathf.Sin(a)) * progressRadius);
             }
         }
 

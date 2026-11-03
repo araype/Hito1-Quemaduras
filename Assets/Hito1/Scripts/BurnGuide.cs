@@ -43,7 +43,7 @@ namespace SojaExiles
         [Tooltip("Mas lejos y a la altura de los ojos: la tarea (meson, lavadero, manos) queda debajo y no se tapa.")]
         public float cardDistance = 0.9f;
         [Tooltip("Cuanto mas abajo de los ojos va la tarjeta (negativo: mas arriba).")]
-        public float cardDrop = -0.04f;
+        public float cardDrop = 0.1f;
         [Tooltip("Escala de la tarjeta (al estar mas lejos se agranda para leerse igual).")]
         public float cardScale = 1.25f;
         [Tooltip("Angulo de la mirada a partir del cual la tarjeta se reacomoda.")]
@@ -52,7 +52,7 @@ namespace SojaExiles
         public float cardCompactDelay = 3f;
         [Tooltip("Opacidad del fondo: completa y compacta.")]
         public float cardAlphaFull = 0.92f;
-        public float cardAlphaCompact = 0.5f;
+        public float cardAlphaCompact = 0.8f;
 
         [Header("Tutorial")]
         public float grabTimeout = 45f;
@@ -144,6 +144,8 @@ namespace SojaExiles
         private bool cardMoving;
         private float warningUntil;
         private Renderer cardBackground, cardAccent;
+        private RoundedPanel cardPanel;
+        private readonly List<RoundedPanel> cardDots = new List<RoundedPanel>();
         private float cardExpandUntil;
         private float cardGazeTime;
         private float cardOpen = 1f;     // 0 compacta, 1 completa (animado)
@@ -837,8 +839,13 @@ namespace SojaExiles
         // ---------------- tarjeta ----------------
 
         private const float CardHeight = 0.23f;
-        private const float TextLine = 0.024f;
+        private const float CardWidth = 0.44f;
+        private const float CardPad = 0.022f;
+        private const float CardMinHeight = 0.12f;
+        private const float TitleLine = 0.014f;
+        private const float TextLine = 0.026f;
         private const float HintLine = 0.017f;
+        private const float DotSize = 0.007f;
 
         private void CreateCard()
         {
@@ -846,15 +853,32 @@ namespace SojaExiles
             go.AddComponent<NoAutoCollider>();
             card = go.transform;
             go.transform.localScale = Vector3.one * cardScale;
-            cardBackground = VRPanelKit.Background(card, new Vector2(0f, 0f), new Vector2(0.44f, CardHeight),
-                "Panel_Fondo_Translucido", new Color(0.07f, 0.1f, 0.16f), 0.001f);
-            cardAccent = VRPanelKit.Background(card, new Vector2(-0.214f, 0f), new Vector2(0.012f, CardHeight),
-                "Panel_Boton", new Color(0.25f, 0.6f, 1f), 0f);
-            float top = CardHeight * 0.5f - 0.016f;
-            cardTitle = VRPanelKit.Text(card, "", new Vector2(-0.195f, top), 0.016f, new Color(0.55f, 0.78f, 1f));
-            cardText = VRPanelKit.Text(card, "", new Vector2(-0.195f, top - 0.026f), TextLine, Color.white);
-            cardHint = VRPanelKit.Text(card, "", new Vector2(-0.195f, 0f), HintLine, new Color(0.8f, 0.85f, 0.92f));
-            cardWarning = VRPanelKit.Text(card, "", new Vector2(-0.195f, 0f), HintLine, new Color(1f, 0.6f, 0.45f));
+            // Panel de vidrio oscuro: esquinas redondeadas, borde azul a morado
+            // y un brillo suave alrededor.
+            cardPanel = RoundedPanel.Create(card, "FondoTarjeta", Vector2.zero, new Vector2(CardWidth, CardHeight),
+                0.001f, 0.022f, 0.0018f, 0.012f);
+            cardPanel.top = new Color(0.1f, 0.14f, 0.24f, 1f);
+            cardPanel.bottom = new Color(0.05f, 0.07f, 0.14f, 1f);
+            cardPanel.Push();
+            cardBackground = cardPanel.Renderer;
+            cardAccent = null;
+
+            float left = -CardWidth * 0.5f + CardPad;
+            float top = CardHeight * 0.5f - CardPad;
+            // Jerarquia: "Paso 3 de 8" chico, la accion en grande y negrita,
+            // y la explicacion debajo.
+            cardTitle = VRPanelKit.Text(card, "", new Vector2(left, top), TitleLine, new Color(0.62f, 0.8f, 1f));
+            cardText = VRPanelKit.Text(card, "", new Vector2(left, top - 0.024f), TextLine, Color.white);
+            PanelText bold = cardText.GetComponent<PanelText>();
+            if (bold != null && bold.Tmp != null)
+            {
+                bold.Tmp.fontStyle = TMPro.FontStyles.Bold;
+            }
+
+            cardHint = VRPanelKit.Text(card, "", new Vector2(left, 0f), HintLine, new Color(0.82f, 0.87f, 0.95f));
+            cardWarning = VRPanelKit.Text(card, "", new Vector2(left, 0f), HintLine, new Color(1f, 0.66f, 0.45f));
+            // Siempre encima: no se mete en el lavadero, la pared ni la paciente.
+            go.AddComponent<OverlayPanel>();
             go.SetActive(false);
         }
 
@@ -880,7 +904,7 @@ namespace SojaExiles
         // Ubica la pista y el aviso debajo del texto principal.
         private void LayoutCard()
         {
-            float y = cardText.transform.localPosition.y - Lines(cardText.text) * TextLine * 1.2f - 0.008f;
+            float y = cardText.transform.localPosition.y - Lines(cardText.text) * TextLine * 1.2f - 0.01f;
             Vector3 p = cardHint.transform.localPosition;
             cardHint.transform.localPosition = new Vector3(p.x, y, p.z);
             y -= Lines(cardHint.text) * HintLine * 1.2f + 0.008f;
@@ -897,7 +921,8 @@ namespace SojaExiles
 
             bool wasHidden = !card.gameObject.activeSelf;
             cardTitle.text = title ?? "";
-            cardText.text = VRPanelKit.Wrap(text ?? "", 30);
+            UpdateDots(cardTitle.text);
+            cardText.text = VRPanelKit.Wrap(text ?? "", 28);
             cardHint.text = VRPanelKit.Wrap(hint ?? "", 44);
             LayoutCard();
             if (MedicalDecisionPanel.IsOpen)
@@ -984,23 +1009,14 @@ namespace SojaExiles
             float k = Mathf.SmoothStep(0f, 1f, cardOpen);
 
             float top = CardHeight * 0.5f;
-            float compact = 0.016f + 0.026f + Lines(cardText.text) * TextLine * 1.2f + 0.006f;
-            float full = Mathf.Max(CardHeight, top - CardBottom() + 0.012f);
+            float compact = CardPad + 0.024f + Lines(cardText.text) * TextLine * 1.2f + 0.012f;
+            float full = Mathf.Max(CardMinHeight, top - CardBottom() + CardPad);
             float height = Mathf.Lerp(compact, full, k);
-            foreach (Renderer r in new[] { cardBackground, cardAccent })
+            if (cardPanel != null)
             {
-                if (r == null)
-                {
-                    continue;
-                }
-
-                Transform t = r.transform;
-                t.localScale = new Vector3(t.localScale.x, height, t.localScale.z);
-                t.localPosition = new Vector3(t.localPosition.x, top - height * 0.5f, t.localPosition.z);
+                cardPanel.SetRect(new Vector2(0f, top - height * 0.5f), new Vector2(CardWidth, height));
+                cardPanel.SetFillAlpha(Mathf.Lerp(cardAlphaCompact, cardAlphaFull, k));
             }
-
-            Color bg = new Color(0.07f, 0.1f, 0.16f, Mathf.Lerp(cardAlphaCompact, cardAlphaFull, k));
-            IndicatorUtil.SetColor(cardBackground, bg);
             SetAlpha(cardHint, k);
             SetAlpha(cardWarning, k);
         }
@@ -1012,6 +1028,49 @@ namespace SojaExiles
                 - Lines(cardWarning.text) * HintLine * 1.2f
                 : cardHint.transform.localPosition.y - Lines(cardHint.text) * HintLine * 1.2f;
             return y;
+        }
+
+        // Puntitos de progreso a la derecha de "Paso 3 de 8": los hechos en
+        // azul suave, el actual alargado y brillante, los que faltan tenues.
+        private void UpdateDots(string title)
+        {
+            System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(title ?? "",
+                @"(\d+)\s+de\s+(\d+)");
+            int current = m.Success ? int.Parse(m.Groups[1].Value) : 0;
+            int total = m.Success ? Mathf.Clamp(int.Parse(m.Groups[2].Value), 0, 12) : 0;
+
+            while (cardDots.Count < total)
+            {
+                RoundedPanel dot = RoundedPanel.Create(card, "Punto", Vector2.zero, Vector2.one * DotSize, -0.001f,
+                    DotSize * 0.5f, 0f, 0.004f);
+                dot.sheen = 0f;
+                cardDots.Add(dot);
+            }
+
+            float right = CardWidth * 0.5f - CardPad;
+            float y = CardHeight * 0.5f - CardPad - TitleLine * 0.55f;
+            const float gap = 0.0055f;
+            float x = right;
+            for (int i = cardDots.Count - 1; i >= 0; i--)
+            {
+                RoundedPanel dot = cardDots[i];
+                bool show = i < total;
+                dot.gameObject.SetActive(show);
+                if (!show)
+                {
+                    continue;
+                }
+
+                int step = i + 1;
+                bool now = step == current;
+                float width = now ? DotSize * 2.6f : DotSize;
+                dot.SetRect(new Vector2(x - width * 0.5f, y), new Vector2(width, DotSize));
+                x -= width + gap;
+                Color c = now ? new Color(0.45f, 0.86f, 1f, 1f)
+                    : step < current ? new Color(0.5f, 0.72f, 1f, 0.75f)
+                    : new Color(1f, 1f, 1f, 0.25f);
+                dot.SetSolid(c, now ? 0.6f : 0f);
+            }
         }
 
         private static void SetAlpha(TextMesh text, float alpha)

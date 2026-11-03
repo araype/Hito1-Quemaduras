@@ -54,6 +54,8 @@ namespace SojaExiles
             go.AddComponent<NoAutoCollider>();
             go.transform.position = eye + forward * distance + Vector3.down * drop;
             go.transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
+            // Siempre encima de la escena: no lo tapan paredes ni muebles.
+            go.AddComponent<OverlayPanel>();
             return go.transform;
         }
 
@@ -90,6 +92,9 @@ namespace SojaExiles
             renderer.sharedMaterial = Font.material;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
+            // Se dibuja con TextMesh Pro (nitido y con tildes); el TextMesh
+            // queda como fuente del texto para el resto del codigo.
+            go.AddComponent<PanelText>();
             return mesh;
         }
 
@@ -117,6 +122,30 @@ namespace SojaExiles
             button.idleColor = color;
             button.pressedColor = Color.Lerp(color, Color.white, 0.45f);
             button.OnPressed = onPressed;
+            return button;
+        }
+
+        // Boton con fondo redondeado tipo pildora (mismo estilo que las
+        // tarjetas de la guia). Funciona igual que Button.
+        public static TouchButton RoundedButton(Transform parent, string label, Vector2 center, Vector2 size,
+            Color color, System.Action onPressed)
+        {
+            TouchButton button = Button(parent, label, center, size, color, onPressed);
+            Renderer old = button.background;
+            RoundedPanel rounded = RoundedPanel.Create(button.transform, "FondoBoton", Vector2.zero, size, 0f,
+                size.y * 0.5f, 0.0015f, 0.012f);
+            rounded.top = Color.Lerp(color, Color.white, 0.15f);
+            rounded.bottom = Color.Lerp(color, Color.black, 0.25f);
+            rounded.borderLeft = new Color(0.65f, 0.85f, 1f, 0.9f);
+            rounded.borderRight = new Color(0.8f, 0.65f, 1f, 0.9f);
+            rounded.glowStrength = 0.4f;
+            rounded.Push();
+            button.background = rounded.Renderer;
+            if (old != null)
+            {
+                Object.Destroy(old.gameObject);
+            }
+
             return button;
         }
 
