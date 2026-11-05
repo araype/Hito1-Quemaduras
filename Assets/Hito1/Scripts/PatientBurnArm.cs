@@ -38,8 +38,12 @@ namespace SojaExiles
 
         [Header("Proteger la mano")]
         [Tooltip("Muneca respecto del pecho: adelante, al costado de la mano, abajo (m).")]
-        public Vector3 guardOffset = new Vector3(0.2f, 0.05f, 0.2f);
+        public Vector3 guardOffset = new Vector3(0.15f, 0.05f, 0.2f);
         public bool cradleWithOtherHand = true;
+        [Tooltip("Al quemarse se aparta de la cocina: cuanto retrocede y cuanto se corre hacia el lavadero (m).")]
+        public float stepAwayDistance = 0.45f;
+        public float stepAwaySide = 0.35f;
+        public float stepAwayDelay = 0.6f;
         [Tooltip("Segundos que deja la mano donde la soltaron antes de volver a protegerla.")]
         public float holdAfterRelease = 2.5f;
 
@@ -205,6 +209,7 @@ namespace SojaExiles
                         Current = Mode.Guard;
                         // Retira la mano de golpe.
                         velocity = (Goal() - target.position).normalized * 1.2f;
+                        StartCoroutine(StepAwayFromStove());
                     }
 
                     cooledTime = -1f;
@@ -214,6 +219,32 @@ namespace SojaExiles
                     cooledTime = Time.time;
                     break;
             }
+        }
+
+        // Tras el sobresalto se aparta de la cocina, corriendose hacia el
+        // lavadero. Antes se quedaba frente a la hornilla: su cuerpo tapaba la
+        // perilla y la mano protegida quedaba sobre el fuego.
+        private IEnumerator StepAwayFromStove()
+        {
+            yield return new WaitForSeconds(stepAwayDelay);
+            if (reach == null || pot == null || SimpleGrab.IsHeldObject(target))
+            {
+                yield break;
+            }
+
+            Vector3 her = transform.position;
+            Vector3 away = PatientBody.Flat(her - pot.BottomCenter);
+            away = away.sqrMagnitude > 1e-4f ? away.normalized : -PatientBody.Flat(transform.forward).normalized;
+            Vector3 goal = her + away * stepAwayDistance;
+            if (stream != null)
+            {
+                // Solo la parte de costado del camino al lavadero.
+                Vector3 toSink = PatientBody.Flat(stream.NozzlePosition - her);
+                Vector3 side = toSink - away * Vector3.Dot(toSink, away);
+                goal += Vector3.ClampMagnitude(side, stepAwaySide);
+            }
+
+            reach.WalkTo(goal, 0.6f);
         }
 
         private void SetPlaced(Vector3 at)

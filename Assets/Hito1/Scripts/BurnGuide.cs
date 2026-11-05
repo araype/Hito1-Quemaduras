@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace SojaExiles
 {
@@ -151,6 +152,23 @@ namespace SojaExiles
         private readonly List<Renderer> highlights = new List<Renderer>();
         private Material highlightMaterial;
 
+        // Como estaba la cocina al abrir el menu de inicio (ver SceneDisturbed).
+        private struct PropPose
+        {
+            public Rigidbody rb;
+            public Vector3 position;
+            public Quaternion rotation;
+        }
+
+        private readonly List<PropPose> menuProps = new List<PropPose>();
+        private readonly Dictionary<WaterTap, bool> menuTaps = new Dictionary<WaterTap, bool>();
+        private StoveKnob menuKnob;
+        private bool menuKnobOn;
+
+        // Modo elegido antes de recargar la escena: al volver no se pregunta
+        // de nuevo.
+        private static bool? pendingMode;
+
         private bool stepsActive;
         private int currentStep = -1;
         private bool currentIsReturn;
@@ -161,6 +179,14 @@ namespace SojaExiles
         private void Awake()
         {
             Instance = this;
+        }
+
+        // Sin recarga de dominio entre dos Play del editor, el modo pendiente
+        // no debe pasar de una prueba a la siguiente.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ClearPendingMode()
+        {
+            pendingMode = null;
         }
 
         private void OnDestroy()
@@ -223,9 +249,27 @@ namespace SojaExiles
             CreateNarrator();
             CreateCard();
 
-            if (askMode)
+            if (pendingMode.HasValue)
             {
+                // Escena recargada al elegir el modo (ver abajo).
+                guided = pendingMode.Value;
+                pendingMode = null;
+            }
+            else if (askMode)
+            {
+                TakeMenuSnapshot();
                 yield return ChooseMode();
+
+                // Si mientras estaba el menu el jugador boto o movio algo,
+                // abrio una llave, giro la perilla o volco la olla, la
+                // practica no empezaria con la cocina inicial: se recarga la
+                // escena con el modo ya elegido.
+                if (SceneDisturbed())
+                {
+                    pendingMode = guided;
+                    SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+                    yield break;
+                }
             }
 
             ApplyMode();
@@ -266,22 +310,23 @@ namespace SojaExiles
         {
             bool chosen = false;
             Transform root = VRPanelKit.CreateRoot("PanelInicio", 0.6f, 0.15f);
-            VRPanelKit.Background(root, Vector2.zero, new Vector2(0.62f, 0.42f), "Panel_Fondo",
-                new Color(0.07f, 0.1f, 0.16f), 0.001f);
-            VRPanelKit.Text(root, "Primeros auxilios: quemadura en la cocina", new Vector2(0f, 0.18f), 0.03f,
-                Color.white, TextAnchor.UpperCenter, TextAlignment.Center);
+            // Mismo estilo que la tarjeta del narrador (VRPanelKit.CardBackground).
+            const float left = -0.285f;
+            VRPanelKit.CardBackground(root, Vector2.zero, new Vector2(0.62f, 0.42f));
+            VRPanelKit.Text(root, "Antes de empezar", new Vector2(left, 0.19f), 0.016f, VRPanelKit.CardLabelColor);
+            VRPanelKit.Text(root, "Primeros auxilios: quemadura en la cocina", new Vector2(left, 0.165f), 0.026f,
+                Color.white);
             VRPanelKit.Text(root, VRPanelKit.Wrap("Aviso: esta práctica incluye gritos de dolor y una quemadura visible. " +
-                    "Puedes quitarte el visor cuando quieras.", 52), new Vector2(0f, 0.125f), 0.019f,
-                new Color(1f, 0.82f, 0.55f), TextAnchor.UpperCenter, TextAlignment.Center);
-            VRPanelKit.Text(root, "Deja la mano sobre un botón hasta que se llene:", new Vector2(0f, 0.045f), 0.02f,
-                new Color(0.8f, 0.85f, 0.92f), TextAnchor.UpperCenter, TextAlignment.Center);
+                    "Puedes quitarte el visor cuando quieras.", 58), new Vector2(left, 0.12f), 0.018f,
+                VRPanelKit.CardWarningColor);
+            VRPanelKit.Text(root, "Deja la mano sobre un botón hasta que se llene:", new Vector2(left, 0.045f), 0.018f,
+                VRPanelKit.CardHintColor);
             VRPanelKit.Button(root, "Modo guiado", new Vector2(-0.152f, -0.06f), new Vector2(0.285f, 0.1f),
                 new Color(0.16f, 0.42f, 0.78f), () => { guided = true; chosen = true; });
             VRPanelKit.Button(root, "Modo evaluación", new Vector2(0.152f, -0.06f), new Vector2(0.285f, 0.1f),
                 new Color(0.45f, 0.3f, 0.62f), () => { guided = false; chosen = true; });
-            VRPanelKit.Text(root, VRPanelKit.Wrap("Guiado: te indica cada paso. Evaluación: lo haces solo y se mide.", 56),
-                new Vector2(0f, -0.13f), 0.017f, new Color(0.7f, 0.75f, 0.82f), TextAnchor.UpperCenter,
-                TextAlignment.Center);
+            VRPanelKit.Text(root, VRPanelKit.Wrap("Guiado: te indica cada paso. Evaluación: lo haces solo y se mide.", 60),
+                new Vector2(left, -0.13f), 0.017f, VRPanelKit.CardHintColor);
 
             Say("guia_bienvenida");
             // El mismo brillo en las dos opciones: ninguna se sugiere sobre la otra.
@@ -306,6 +351,77 @@ namespace SojaExiles
             }
 
             Debug.Log("[BurnGuide] Modo " + (guided ? "guiado" : "evaluacion"));
+        }
+
+        // Guarda donde estan los objetos sueltos, las llaves y la perilla al
+        // abrir el menu. No cuenta la paciente (su mano agarrable se mueve
+        // con ella) ni el jugador.
+        private void TakeMenuSnapshot()
+        {
+            menuProps.Clear();
+            menuTaps.Clear();
+            PatientReach reach = patient != null ? patient.GetComponent<PatientReach>() : null;
+            foreach (Rigidbody rb in FindObjectsOfType<Rigidbody>())
+            {
+                bool grabbable = rb.GetComponent<Grabbable>() != null
+                    || rb.GetComponentInChildren<Oculus.Interaction.Grabbable>() != null;
+                if ((rb.isKinematic && !grabbable)
+                    || (patient != null && rb.transform.IsChildOf(patient.transform))
+                    || (reach != null && rb == reach.target)
+                    || rb.GetComponentInParent<VRLocomotion>() != null
+                    || rb.GetComponentInParent<OVRCameraRig>() != null)
+                {
+                    continue;
+                }
+
+                menuProps.Add(new PropPose { rb = rb, position = rb.position, rotation = rb.rotation });
+            }
+
+            foreach (WaterTap tap in FindObjectsOfType<WaterTap>())
+            {
+                menuTaps[tap] = tap.IsOpen;
+            }
+
+            menuKnob = FindObjectOfType<StoveKnob>();
+            menuKnobOn = menuKnob != null && menuKnob.IsOn;
+        }
+
+        private bool SceneDisturbed()
+        {
+            if (burnSequence.CurrentState != BurnSequenceManager.BurnState.Idle)
+            {
+                Debug.Log("[BurnGuide] La quemadura ocurrio durante el menu: se reinicia la escena.");
+                return true;
+            }
+
+            foreach (PropPose prop in menuProps)
+            {
+                // Destruido o muy lejos / girado de donde estaba.
+                if (prop.rb == null || Vector3.Distance(prop.rb.position, prop.position) > 0.05f
+                    || Quaternion.Angle(prop.rb.rotation, prop.rotation) > 30f)
+                {
+                    Debug.Log("[BurnGuide] Se movio " + (prop.rb != null ? prop.rb.name : "un objeto")
+                        + " durante el menu: se reinicia la escena.");
+                    return true;
+                }
+            }
+
+            foreach (KeyValuePair<WaterTap, bool> tap in menuTaps)
+            {
+                if (tap.Key != null && tap.Key.IsOpen != tap.Value)
+                {
+                    Debug.Log("[BurnGuide] Se abrio o cerro una llave durante el menu: se reinicia la escena.");
+                    return true;
+                }
+            }
+
+            if (menuKnob != null && menuKnob.IsOn != menuKnobOn)
+            {
+                Debug.Log("[BurnGuide] Se giro la perilla durante el menu: se reinicia la escena.");
+                return true;
+            }
+
+            return false;
         }
 
         // ---------------- tutorial ----------------
@@ -429,7 +545,10 @@ namespace SojaExiles
             Transform t = mug.transform;
             PropKit.Part(t, PrimitiveType.Cylinder, new Vector3(0f, 0.0475f, 0f), new Vector3(0.08f, 0.0475f, 0.08f),
                 "Plato", new Color(0.93f, 0.93f, 0.9f));
-            PropKit.Part(t, PrimitiveType.Cylinder, new Vector3(0f, 0.093f, 0f), new Vector3(0.07f, 0.002f, 0.07f),
+            // Boca de la taza: apenas por encima de la tapa del cuerpo. Antes
+            // su cara de arriba coincidia con la del cuerpo y parpadeaba (se
+            // veian los triangulos como aspas negras).
+            PropKit.Part(t, PrimitiveType.Cylinder, new Vector3(0f, 0.0955f, 0f), new Vector3(0.07f, 0.001f, 0.07f),
                 "Mango", new Color(0.25f, 0.15f, 0.08f));
             PropKit.MeshPart(t, PropKit.Torus("AsaTaza", 0.022f, 0.005f), new Vector3(0.045f, 0.05f, 0f),
                 Quaternion.Euler(90f, 0f, 0f), "Plato", new Color(0.93f, 0.93f, 0.9f));
@@ -846,15 +965,13 @@ namespace SojaExiles
             go.AddComponent<NoAutoCollider>();
             card = go.transform;
             go.transform.localScale = Vector3.one * cardScale;
-            cardBackground = VRPanelKit.Background(card, new Vector2(0f, 0f), new Vector2(0.44f, CardHeight),
-                "Panel_Fondo_Translucido", new Color(0.07f, 0.1f, 0.16f), 0.001f);
-            cardAccent = VRPanelKit.Background(card, new Vector2(-0.214f, 0f), new Vector2(0.012f, CardHeight),
-                "Panel_Boton", new Color(0.25f, 0.6f, 1f), 0f);
+            cardBackground = VRPanelKit.CardBackground(card, Vector2.zero, new Vector2(0.44f, CardHeight),
+                out cardAccent);
             float top = CardHeight * 0.5f - 0.016f;
-            cardTitle = VRPanelKit.Text(card, "", new Vector2(-0.195f, top), 0.016f, new Color(0.55f, 0.78f, 1f));
+            cardTitle = VRPanelKit.Text(card, "", new Vector2(-0.195f, top), 0.016f, VRPanelKit.CardLabelColor);
             cardText = VRPanelKit.Text(card, "", new Vector2(-0.195f, top - 0.026f), TextLine, Color.white);
-            cardHint = VRPanelKit.Text(card, "", new Vector2(-0.195f, 0f), HintLine, new Color(0.8f, 0.85f, 0.92f));
-            cardWarning = VRPanelKit.Text(card, "", new Vector2(-0.195f, 0f), HintLine, new Color(1f, 0.6f, 0.45f));
+            cardHint = VRPanelKit.Text(card, "", new Vector2(-0.195f, 0f), HintLine, VRPanelKit.CardHintColor);
+            cardWarning = VRPanelKit.Text(card, "", new Vector2(-0.195f, 0f), HintLine, VRPanelKit.CardWarningColor);
             go.SetActive(false);
         }
 
@@ -999,7 +1116,8 @@ namespace SojaExiles
                 t.localPosition = new Vector3(t.localPosition.x, top - height * 0.5f, t.localPosition.z);
             }
 
-            Color bg = new Color(0.07f, 0.1f, 0.16f, Mathf.Lerp(cardAlphaCompact, cardAlphaFull, k));
+            Color bg = VRPanelKit.CardColor;
+            bg.a = Mathf.Lerp(cardAlphaCompact, cardAlphaFull, k);
             IndicatorUtil.SetColor(cardBackground, bg);
             SetAlpha(cardHint, k);
             SetAlpha(cardWarning, k);

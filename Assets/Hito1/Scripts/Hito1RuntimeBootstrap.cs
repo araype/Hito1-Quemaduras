@@ -81,6 +81,12 @@ namespace SojaExiles
                 burn.gameObject.AddComponent<BurnSceneProps>();
             }
 
+            // Lo que cae al piso vuelve a su lugar.
+            if (Object.FindObjectOfType<FloorRecovery>() == null)
+            {
+                burn.gameObject.AddComponent<FloorRecovery>();
+            }
+
             // Capa de secuencia: protocolo y puntaje, y el reloj de 20 min.
             if (Object.FindObjectOfType<BurnProtocol>() == null)
             {
@@ -183,6 +189,12 @@ namespace SojaExiles
                 if (patient.GetComponent<PatientPhysics>() == null)
                 {
                     patient.gameObject.AddComponent<PatientPhysics>().burnSequence = burn;
+                }
+
+                // Las manos visibles del jugador no la atraviesan.
+                if (patient.GetComponent<PatientHandLimiter>() == null)
+                {
+                    patient.gameObject.AddComponent<PatientHandLimiter>();
                 }
 
                 if (patient.GetComponent<PatientReach>() != null && patient.GetComponent<PatientBurnArm>() == null)

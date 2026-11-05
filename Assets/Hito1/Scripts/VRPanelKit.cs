@@ -68,6 +68,34 @@ namespace SojaExiles
             return quad;
         }
 
+        // Estilo comun de las tarjetas (narrador, inicio, decision medica y
+        // resumen): fondo oscuro translucido, franja azul a la izquierda,
+        // etiqueta celeste arriba, texto principal blanco y pistas en gris
+        // azulado.
+        public static readonly Color CardColor = new Color(0.07f, 0.1f, 0.16f);
+        public static readonly Color CardLabelColor = new Color(0.55f, 0.78f, 1f);
+        public static readonly Color CardHintColor = new Color(0.8f, 0.85f, 0.92f);
+        public static readonly Color CardWarningColor = new Color(1f, 0.6f, 0.45f);
+        public const float CardAlpha = 0.92f;
+        public const float CardAccentWidth = 0.012f;
+
+        // Fondo de tarjeta centrado en (center) con su franja de color en el
+        // borde izquierdo.
+        public static Renderer CardBackground(Transform parent, Vector2 center, Vector2 size, out Renderer accent)
+        {
+            Renderer background = Background(parent, center, size, "Panel_Fondo_Translucido", CardColor, 0.001f);
+            IndicatorUtil.SetColor(background, new Color(CardColor.r, CardColor.g, CardColor.b, CardAlpha));
+            float accentX = center.x - size.x * 0.5f + CardAccentWidth * 0.5f;
+            accent = Background(parent, new Vector2(accentX, center.y), new Vector2(CardAccentWidth, size.y),
+                "Panel_Boton", new Color(0.25f, 0.6f, 1f), 0f);
+            return background;
+        }
+
+        public static Renderer CardBackground(Transform parent, Vector2 center, Vector2 size)
+        {
+            return CardBackground(parent, center, size, out Renderer _);
+        }
+
         // Texto con alto de linea aproximado 'lineHeight' (m). TextMesh: con
         // characterSize 1, 10 puntos de fuente miden 1 unidad.
         public static TextMesh Text(Transform parent, string text, Vector2 position, float lineHeight, Color color,
@@ -136,8 +164,7 @@ namespace SojaExiles
                 return;
             }
 
-            int half = Mathf.CeilToInt(label.Length / 2f);
-            text = Wrap(label, half);
+            text = SplitInTwo(label);
             int longest = 0;
             int lines = 0;
             foreach (string line in text.Split('\n'))
@@ -148,6 +175,31 @@ namespace SojaExiles
 
             lineHeight = Mathf.Min(size.y * 0.8f / Mathf.Max(1, lines), size.y * 0.3f);
             lineHeight = Mathf.Min(lineHeight, usable / Mathf.Max(1, longest * CharWidth));
+        }
+
+        // Parte la etiqueta en dos lineas lo mas parejas posible, en un
+        // espacio. Antes se cortaba con Wrap a la mitad del largo y "Ir al
+        // centro de salud" quedaba en tres lineas apretadas.
+        private static string SplitInTwo(string label)
+        {
+            int best = -1;
+            int bestLongest = int.MaxValue;
+            for (int i = 0; i < label.Length; i++)
+            {
+                if (label[i] != ' ')
+                {
+                    continue;
+                }
+
+                int longest = Mathf.Max(i, label.Length - i - 1);
+                if (longest < bestLongest)
+                {
+                    bestLongest = longest;
+                    best = i;
+                }
+            }
+
+            return best < 0 ? label : label.Substring(0, best) + "\n" + label.Substring(best + 1);
         }
 
         // Corta el texto en lineas de hasta 'width' caracteres (TextMesh no

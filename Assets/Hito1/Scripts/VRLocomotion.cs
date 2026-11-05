@@ -46,6 +46,10 @@ namespace SojaExiles
         public float minHeight = 0.9f;
         public float maxHeight = 2.2f;
 
+        [Header("Paciente")]
+        [Tooltip("Radio alrededor de los ojos que no puede entrar en el cuerpo de la paciente (m).")]
+        public float headClearance = 0.15f;
+
         private CharacterController controller;
         private OVRCameraRig rig;
         private OVRHand leftHand;
@@ -125,6 +129,49 @@ namespace SojaExiles
             velocity.y = verticalVelocity;
 
             controller.Move(velocity * Time.deltaTime);
+            KeepHeadOutOfPatient(head);
+        }
+
+        // La camara no entra en el cuerpo de la paciente. La capsula ya se
+        // frenaba en ella, pero la cabeza seguia de largo al inclinarse o al
+        // caminar en el espacio real, y tambien cuando ella caminaba hacia el
+        // jugador. Se corre al jugador lo justo, en horizontal.
+        private void KeepHeadOutOfPatient(Transform head)
+        {
+            PatientPhysics patient = PatientPhysics.Current;
+            if (head == null || patient == null || headClearance <= 0f)
+            {
+                return;
+            }
+
+            Vector3 push = patient.PushOut(head.position, headClearance);
+            float amount = push.magnitude;
+            if (amount < 0.001f)
+            {
+                return;
+            }
+
+            push.y = 0f;
+            if (push.magnitude < amount * 0.5f)
+            {
+                // Empuje casi vertical (cabeza sobre su hombro): hacia afuera
+                // de ella, en horizontal.
+                Vector3 away = head.position - patient.transform.position;
+                away.y = 0f;
+                push = away.sqrMagnitude > 1e-6f ? away.normalized * amount : push;
+            }
+
+            Vector3 before = transform.position;
+            controller.Move(push);
+            Vector3 moved = transform.position - before;
+            moved.y = 0f;
+
+            // Si una pared frena la capsula, igual se corre la vista.
+            Transform trackingRoot = rig != null ? rig.transform : null;
+            if (trackingRoot != null && trackingRoot != transform && trackingRoot.IsChildOf(transform))
+            {
+                trackingRoot.position += push - moved;
+            }
         }
 
         private void ResolveReferences()

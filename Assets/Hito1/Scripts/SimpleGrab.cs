@@ -63,6 +63,11 @@ namespace SojaExiles
             public Rigidbody body;
             public SphereCollider bodyCollider;
             public Held held;
+
+            // Interactores de agarre del SDK de Meta de esta mano (mano o
+            // control). Se apagan mientras SimpleGrab sostiene algo.
+            public readonly List<Behaviour> sdkInteractors = new List<Behaviour>();
+            public readonly List<Behaviour> sdkDisabled = new List<Behaviour>();
         }
 
         private class Held
@@ -378,8 +383,93 @@ namespace SojaExiles
 
         private void Update()
         {
+            FindSdkInteractors();
             UpdateInput(left, right);
             UpdateInput(right, left);
+        }
+
+        // ---------------- convivencia con el SDK de Meta ----------------
+        //
+        // Una mano agarra con un solo sistema a la vez. Antes, al pinzar, el
+        // SDK tomaba un objeto suyo (gasa, frasco) y SimpleGrab otro cercano:
+        // quedaban dos objetos en la misma mano.
+
+        private float nextSdkLookup;
+
+        // El rig se arma en runtime: se buscan los interactores con calma.
+        // Cada uno se asigna a la mano cuyo anchor tiene mas cerca.
+        private void FindSdkInteractors()
+        {
+            if (Time.unscaledTime < nextSdkLookup || cameraRig == null)
+            {
+                return;
+            }
+
+            bool found = left.sdkInteractors.Count > 0 && right.sdkInteractors.Count > 0;
+            nextSdkLookup = Time.unscaledTime + (found ? 10f : 1f);
+            Transform leftAnchor = cameraRig.leftHandAnchor, rightAnchor = cameraRig.rightHandAnchor;
+            if (leftAnchor == null || rightAnchor == null)
+            {
+                return;
+            }
+
+            List<Behaviour> all = new List<Behaviour>();
+            all.AddRange(GetComponentsInChildren<Oculus.Interaction.HandGrab.HandGrabInteractor>(true));
+            all.AddRange(GetComponentsInChildren<Oculus.Interaction.GrabInteractor>(true));
+            foreach (Behaviour interactor in all)
+            {
+                if (left.sdkInteractors.Contains(interactor) || right.sdkInteractors.Contains(interactor))
+                {
+                    continue;
+                }
+
+                Vector3 p = interactor.transform.position;
+                bool isLeft = (p - leftAnchor.position).sqrMagnitude < (p - rightAnchor.position).sqrMagnitude;
+                (isLeft ? left : right).sdkInteractors.Add(interactor);
+            }
+        }
+
+        private static bool SdkHolding(Hand hand)
+        {
+            foreach (Behaviour interactor in hand.sdkInteractors)
+            {
+                Oculus.Interaction.IInteractorView view = interactor as Oculus.Interaction.IInteractorView;
+                if (interactor != null && interactor.isActiveAndEnabled && view != null && view.HasSelectedInteractable)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Apagar el interactor tambien suelta lo que hubiera tomado en este
+        // mismo cuadro: queda solo lo de SimpleGrab.
+        private static void SetSdkEnabled(Hand hand, bool enabled)
+        {
+            if (!enabled)
+            {
+                foreach (Behaviour interactor in hand.sdkInteractors)
+                {
+                    if (interactor != null && interactor.enabled)
+                    {
+                        interactor.enabled = false;
+                        hand.sdkDisabled.Add(interactor);
+                    }
+                }
+
+                return;
+            }
+
+            foreach (Behaviour interactor in hand.sdkDisabled)
+            {
+                if (interactor != null)
+                {
+                    interactor.enabled = true;
+                }
+            }
+
+            hand.sdkDisabled.Clear();
         }
 
         private void FixedUpdate()
@@ -396,7 +486,7 @@ namespace SojaExiles
             bool wasPressed = hand.pressed;
             hand.pressed = hand.poseValid && ReadPressed(hand);
 
-            if (hand.pressed && !wasPressed && hand.held == null && !Blocked(hand.position))
+            if (hand.pressed && !wasPressed && hand.held == null && !Blocked(hand.position) && !SdkHolding(hand))
             {
                 TryGrab(hand, otherHand);
             }
@@ -616,12 +706,14 @@ namespace SojaExiles
             }
 
             hand.held = held;
+            SetSdkEnabled(hand, false);
         }
 
         private void Release(Hand hand)
         {
             Held held = hand.held;
             hand.held = null;
+            SetSdkEnabled(hand, true);
             if (held.rb == null)
             {
                 return;

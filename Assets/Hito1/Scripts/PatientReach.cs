@@ -61,6 +61,9 @@ namespace SojaExiles
         private CharacterController mover;
         private Vector3 lastRootPosition;
         private float smoothedSpeed;
+        private Vector3 walkGoal;
+        private float walkGoalSpeed;
+        private bool hasWalkGoal;
 
         // Capsula de piernas y cadera con que se desplaza (la usa
         // PatientPhysics para que sus propios colliders no la frenen).
@@ -130,6 +133,15 @@ namespace SojaExiles
             }
         }
 
+        // Camina hasta un punto (al quemarse se aparta de la cocina). Respeta
+        // muebles y paredes, y se cancela si el jugador la toma del brazo.
+        public void WalkTo(Vector3 point, float speed = 0.5f)
+        {
+            walkGoal = point;
+            walkGoalSpeed = speed;
+            hasWalkGoal = true;
+        }
+
         private void OnDestroy()
         {
             if (mover != null)
@@ -178,6 +190,25 @@ namespace SojaExiles
             Vector3 chest = body.Chest.position;
             Vector3 toHand = PatientBody.Flat(desiredHand - chest);
             float armLength = body.ArmLength(rightArm);
+
+            if (hasWalkGoal)
+            {
+                Vector3 toGoal = PatientBody.Flat(walkGoal - transform.position);
+                if (IsLed || toGoal.magnitude < 0.02f)
+                {
+                    hasWalkGoal = false;
+                }
+                else
+                {
+                    Vector3 before = transform.position;
+                    MoveBody(toGoal.normalized * Mathf.Min(toGoal.magnitude, walkGoalSpeed * dt));
+                    // Trabada contra un mueble: no insiste.
+                    if (PatientBody.Flat(transform.position - before).magnitude < walkGoalSpeed * dt * 0.1f)
+                    {
+                        hasWalkGoal = false;
+                    }
+                }
+            }
 
             if (followBody)
             {

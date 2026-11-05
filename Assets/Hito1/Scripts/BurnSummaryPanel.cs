@@ -30,11 +30,12 @@ namespace SojaExiles
             const float width = 0.92f;
             const float height = 1.1f;
             const float left = -width / 2f + 0.05f;
-            VRPanelKit.Background(t, Vector2.zero, new Vector2(width, height), "Panel_Fondo",
-                new Color(0.07f, 0.1f, 0.16f), 0.001f);
+            VRPanelKit.CardBackground(t, Vector2.zero, new Vector2(width, height));
 
             string scoreColor = p.Score >= 80 ? Green : (p.Score >= 50 ? Amber : Red);
-            VRPanelKit.Text(t, "Resumen de la práctica", new Vector2(left, height / 2f - 0.045f), 0.042f, Color.white);
+            VRPanelKit.Text(t, "Práctica terminada", new Vector2(left, height / 2f - 0.025f), 0.02f,
+                VRPanelKit.CardLabelColor);
+            VRPanelKit.Text(t, "Resumen de la práctica", new Vector2(left, height / 2f - 0.055f), 0.042f, Color.white);
             VRPanelKit.Text(t, $"<color={scoreColor}><b>{p.Score}</b></color> / 100",
                 new Vector2(width / 2f - 0.05f, height / 2f - 0.04f), 0.06f, Color.white, TextAnchor.UpperRight,
                 TextAlignment.Right);

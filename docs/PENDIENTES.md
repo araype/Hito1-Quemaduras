@@ -71,6 +71,52 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   `Panel_Fondo_Translucido`); se abre al mirarla o con un aviso
   (2026-10-31, probado en el editor con Quest Link). Si aún estorba:
   correrla cuando tape el objeto del paso, o dejar moverla con la mano.
+- [x] Mejoras pedidas tras probarlo (2026-11-05, rama
+  `mejoras-tarjetas-colision-reinicio`; **solo compilado, falta probarlo en
+  el editor y en el visor**):
+  - tarjetas unificadas: el panel de inicio, el de decisión médica y el
+    resumen usan el mismo estilo que la tarjeta del narrador (fondo
+    translúcido, franja azul, etiqueta celeste, texto a la izquierda), con
+    `VRPanelKit.CardBackground` y sus colores;
+  - el jugador ya no atraviesa a la paciente: la cámara se corre fuera de su
+    cuerpo al inclinarse, al caminar en el espacio real o si ella camina
+    hacia él (`VRLocomotion.KeepHeadOutOfPatient`, `headClearance`), y las
+    manos visibles del SDK se quedan en su superficie
+    (`PatientHandLimiter`, mismo mecanismo que el SDK usa en los botones;
+    no actúa mientras la mano sostiene algo). Ambos usan
+    `PatientPhysics.PushOut`;
+  - reinicio: si durante el menú de inicio se mueve o bota un objeto, se abre
+    una llave, se gira la perilla o se vuelca la olla, al elegir el modo se
+    recarga la escena con ese modo y sin volver a preguntar
+    (`BurnGuide.SceneDisturbed`).
+- [x] Auditoría del 2026-11-02 (Quest 2, rama `rediseno-tarjetas`), primer
+  bloque (2026-11-05, rama `mejoras-tarjetas-colision-reinicio`; **solo
+  compilado, falta probarlo en el editor y en el visor**):
+  - la olla queda fija en la hornilla hasta el accidente (kinemática y sin
+    interactables del SDK) y, si igual se movió, vuelve antes de volcarse
+    (`PotAccident.SetLocked`). Capturas 9, 10 y 12;
+  - lo que queda quieto en el piso vuelve a su lugar tras 1,5 s
+    (`FloorRecovery`; la tela del paño se reacomoda con `TowelCloth.Snap`).
+    No toca la olla volcada. Captura 10;
+  - una mano agarra con un solo sistema: si el SDK ya sostiene algo,
+    SimpleGrab no agarra, y mientras SimpleGrab sostiene se apagan los
+    interactores del SDK de esa mano. Captura 5;
+  - agarre a distancia del SDK apagado (`HandsControllersUnifier`): los
+    objetos ya no flotan lejos de la mano. Captura 7;
+  - al quemarse, la tía se aparta de la cocina hacia el lavadero
+    (`PatientBurnArm.StepAwayFromStove`, `PatientReach.WalkTo`) y protege la
+    mano más pegada al pecho. Captura 3;
+  - después del accidente la perilla solo apaga (antes se volvía a prender al
+    pasar la mano y la llama seguía con el paso hecho). Capturas 5 y 7;
+  - las etiquetas de botón se parten en dos líneas parejas ("Ir al centro de
+    salud" quedaba en tres). Captura 8;
+  - la boca de la taza ya no parpadea con "aspas" negras (caras coplanares).
+    Capturas 2 y 3.
+- [ ] Auditoría del 2026-11-02, lo que falta: brazo de la tía en poses
+  antinaturales que atraviesa su cuerpo (capturas 4 y 13), límite del área
+  de juego (captura 11), chompa que atraviesa el cuerpo (capturas 6 y 7),
+  tarjeta que tapa el reloj en el paso 6 y que aparece alta en el tutorial,
+  y los puntos de prioridad baja.
 - [ ] La quemadura se ve roja saturada y uniforme (`BurnSkinOverlay`), y la
   chompa puesta parece un cilindro rígido (`SweaterItem.BuildDrape`).
 

@@ -509,6 +509,19 @@ namespace SojaExiles
             }
         }
 
+        // Extiende la tela sobre el objeto donde esta ahora (al devolverlo al
+        // meson desde el piso): sin esto se estiraba por toda la cocina.
+        public void Snap()
+        {
+            for (int k = 0; k < count; k++)
+            {
+                pos[k] = transform.TransformPoint(restLocal[k]);
+                prev[k] = pos[k];
+            }
+
+            freeTime = 0f;
+        }
+
         private void LateUpdate()
         {
             if (count == 0)

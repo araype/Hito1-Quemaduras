@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SojaExiles
@@ -31,10 +32,21 @@ namespace SojaExiles
         private Rigidbody body;
         private ParticleSystem pour;
 
+        // Hasta el accidente la olla esta fija en la hornilla: la tia esta
+        // cocinando. Antes se podia agarrar o empujar y el accidente ocurria
+        // donde estuviera (en medio de la cocina, en el piso).
+        private bool locked;
+        private bool originalKinematic;
+        private Vector3 homePosition;
+        private Quaternion homeRotation;
+        private float nextLockRefresh;
+        private readonly List<Behaviour> lockedInteractables = new List<Behaviour>();
+
         private void Awake()
         {
             pot = GetComponent<PotFX>();
             body = GetComponent<Rigidbody>();
+            originalKinematic = body != null && body.isKinematic;
 
             // Antes del Start de BurnSequenceManager: la mano se quema con el
             // accidente, no con el retraso fijo.
@@ -52,12 +64,60 @@ namespace SojaExiles
                 burnSequence = FindObjectOfType<BurnSequenceManager>();
             }
 
+            homePosition = transform.position;
+            homeRotation = transform.rotation;
+            SetLocked(true);
+
             // Con la guia (menu y tutorial), el accidente lo dispara ella.
             bool guideControls = BurnGuide.Instance != null && BurnGuide.Instance.ControlsAccident;
             if (autoStart && !guideControls)
             {
                 StartCoroutine(Accident(accidentDelay));
             }
+        }
+
+        private void Update()
+        {
+            // Los interactables del SDK (HandGrabPoseSetup) se crean en su
+            // Start: se vuelven a apagar un rato despues.
+            if (locked && Time.time >= nextLockRefresh)
+            {
+                nextLockRefresh = Time.time + 0.5f;
+                SetLocked(true);
+            }
+        }
+
+        private void SetLocked(bool value)
+        {
+            locked = value;
+            if (body != null)
+            {
+                body.isKinematic = value || originalKinematic;
+            }
+
+            if (value)
+            {
+                foreach (Behaviour b in GetComponentsInChildren<Behaviour>(true))
+                {
+                    if (b is Oculus.Interaction.IInteractable && b.enabled)
+                    {
+                        b.enabled = false;
+                        lockedInteractables.Add(b);
+                    }
+                }
+
+                return;
+            }
+
+            foreach (Behaviour b in lockedInteractables)
+            {
+                if (b != null)
+                {
+                    b.enabled = true;
+                }
+            }
+
+            lockedInteractables.Clear();
         }
 
         private bool started;
@@ -80,8 +140,24 @@ namespace SojaExiles
             // paciente se quema igual al tocarla.
             if (body != null && SimpleGrab.IsHeldObject(body))
             {
+                SetLocked(false);
                 Burn();
                 yield break;
+            }
+
+            // Respaldo: si algo la corrio igual, vuelve a la hornilla antes de
+            // volcarse (el accidente debe ocurrir junto a la tia).
+            if (Vector3.Distance(transform.position, homePosition) > 0.03f
+                || Quaternion.Angle(transform.rotation, homeRotation) > 10f)
+            {
+                transform.SetPositionAndRotation(homePosition, homeRotation);
+                if (body != null)
+                {
+                    body.position = homePosition;
+                    body.rotation = homeRotation;
+                }
+
+                Physics.SyncTransforms();
             }
 
             // Se vuelca hacia la paciente (su mano esta junto a la olla).
@@ -94,7 +170,8 @@ namespace SojaExiles
             Vector3 pivot = bottom + dir * pot.Radius;
             Vector3 axis = Vector3.Cross(Vector3.up, dir);
 
-            bool wasKinematic = body != null && body.isKinematic;
+            bool wasKinematic = originalKinematic;
+            locked = false;
             if (body != null)
             {
                 body.isKinematic = true;
@@ -145,6 +222,8 @@ namespace SojaExiles
                 Burn();
             }
 
+            // Desde aca se puede agarrar (por ejemplo, levantarla del piso).
+            SetLocked(false);
             if (body != null)
             {
                 body.isKinematic = wasKinematic;

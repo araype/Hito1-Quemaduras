@@ -56,6 +56,11 @@ namespace SojaExiles
             get { return colliders; }
         }
 
+        // Paciente con cuerpo fisico armado (la usan VRLocomotion y
+        // PatientHandLimiter para que la cabeza y las manos del jugador no
+        // entren en ella).
+        public static PatientPhysics Current { get; private set; }
+
         private void Awake()
         {
             body = GetComponent<PatientBody>();
@@ -89,6 +94,109 @@ namespace SojaExiles
         private void OnDestroy()
         {
             SimpleGrab.OnGrabbed -= HandleGrab;
+            if (Current == this)
+            {
+                Current = null;
+            }
+        }
+
+        // Desplazamiento minimo para sacar una esfera (centro, radio) de las
+        // capsulas del cuerpo; cero si no la toca. Se calcula con la forma de
+        // cada collider (no hace falta un collider para la esfera): asi sirve
+        // para la cabeza del jugador y para las manos que dibuja el SDK.
+        public Vector3 PushOut(Vector3 center, float radius)
+        {
+            Vector3 start = center;
+            for (int pass = 0; pass < 2; pass++)
+            {
+                foreach (Collider col in colliders)
+                {
+                    if (col == null || !col.enabled || !col.gameObject.activeInHierarchy)
+                    {
+                        continue;
+                    }
+
+                    Vector3 a, b;
+                    float r;
+                    if (!Shape(col, out a, out b, out r))
+                    {
+                        continue;
+                    }
+
+                    Vector3 closest = ClosestOnSegment(a, b, center);
+                    Vector3 away = center - closest;
+                    float distance = away.magnitude;
+                    float minimum = r + radius;
+                    if (distance >= minimum)
+                    {
+                        continue;
+                    }
+
+                    if (distance < 1e-4f)
+                    {
+                        // Justo en el eje: hacia afuera del cuerpo, en horizontal.
+                        away = PatientBody.Flat(center - transform.position);
+                        if (away.sqrMagnitude < 1e-6f)
+                        {
+                            away = -transform.forward;
+                        }
+
+                        away.Normalize();
+                    }
+                    else
+                    {
+                        away /= distance;
+                    }
+
+                    center += away * (minimum - distance);
+                }
+            }
+
+            return center - start;
+        }
+
+        // Capsula (o esfera, con a == b) en coordenadas del mundo.
+        private static bool Shape(Collider col, out Vector3 a, out Vector3 b, out float radius)
+        {
+            Transform t = col.transform;
+            Vector3 s = t.lossyScale;
+            float scale = Mathf.Max(Mathf.Abs(s.x), Mathf.Abs(s.y), Mathf.Abs(s.z));
+            CapsuleCollider capsule = col as CapsuleCollider;
+            if (capsule != null)
+            {
+                Vector3 axis = capsule.direction == 0 ? Vector3.right
+                    : capsule.direction == 1 ? Vector3.up : Vector3.forward;
+                float half = Mathf.Max(0f, capsule.height * 0.5f - capsule.radius);
+                a = t.TransformPoint(capsule.center + axis * half);
+                b = t.TransformPoint(capsule.center - axis * half);
+                radius = capsule.radius * scale;
+                return true;
+            }
+
+            SphereCollider sphere = col as SphereCollider;
+            if (sphere != null)
+            {
+                a = b = t.TransformPoint(sphere.center);
+                radius = sphere.radius * scale;
+                return true;
+            }
+
+            a = b = Vector3.zero;
+            radius = 0f;
+            return false;
+        }
+
+        private static Vector3 ClosestOnSegment(Vector3 a, Vector3 b, Vector3 p)
+        {
+            Vector3 ab = b - a;
+            float lengthSq = ab.sqrMagnitude;
+            if (lengthSq < 1e-8f)
+            {
+                return a;
+            }
+
+            float k = Mathf.Clamp01(Vector3.Dot(p - a, ab) / lengthSq);
+            return a + ab * k;
         }
 
         // ---------------- colliders ----------------
@@ -194,6 +302,7 @@ namespace SojaExiles
                 hint.enabled = false;
             }
 
+            Current = this;
             Debug.Log($"[PatientPhysics] {colliders.Count} colliders en el cuerpo; el brazo quemado se agarra en {armColliders.Count} partes");
         }
 

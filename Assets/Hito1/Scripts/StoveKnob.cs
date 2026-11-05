@@ -117,6 +117,16 @@ namespace SojaExiles
 
             bool rearmed = Time.time - lastHandInsideTime > rearmSeconds;
             lastHandInsideTime = Time.time;
+
+            // Despues del accidente la perilla solo apaga: antes, al volver a
+            // pasar la mano (por ejemplo, al atender a la paciente junto a la
+            // cocina) se prendia de nuevo y la llama seguia visible con el
+            // paso "apagar" ya hecho.
+            if (!IsOn && BurnHappened())
+            {
+                return;
+            }
+
             if (rearmed && Time.time >= nextToggleTime)
             {
                 nextToggleTime = Time.time + toggleCooldown;
@@ -149,6 +159,12 @@ namespace SojaExiles
             {
                 burn.Report(on ? BurnSequenceManager.BurnEvent.BurnerOn : BurnSequenceManager.BurnEvent.BurnerOff);
             }
+        }
+
+        private static bool BurnHappened()
+        {
+            BurnSequenceManager burn = FindObjectOfType<BurnSequenceManager>();
+            return burn != null && burn.CurrentState != BurnSequenceManager.BurnState.Idle;
         }
 
         // El punto dorado solo se ve mientras hay fuego (invita a apagarlo).

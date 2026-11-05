@@ -33,13 +33,12 @@ namespace SojaExiles
         private void Build()
         {
             Transform t = transform;
-            VRPanelKit.Background(t, new Vector2(0f, 0f), new Vector2(0.56f, 0.36f), "Panel_Fondo",
-                new Color(0.07f, 0.1f, 0.16f), 0.001f);
-            VRPanelKit.Text(t, "¿Necesita atención médica?", new Vector2(0f, 0.15f), 0.034f, Color.white,
-                TextAnchor.UpperCenter, TextAlignment.Center);
-            VRPanelKit.Text(t, VRPanelKit.Wrap("Mira la quemadura antes de decidir: su color, si tiene ampollas y dónde está.", 44),
-                new Vector2(0f, 0.095f), 0.02f, new Color(0.8f, 0.85f, 0.92f), TextAnchor.UpperCenter,
-                TextAlignment.Center);
+            const float left = -0.255f;
+            VRPanelKit.CardBackground(t, Vector2.zero, new Vector2(0.56f, 0.36f));
+            VRPanelKit.Text(t, "Último paso", new Vector2(left, 0.16f), 0.016f, VRPanelKit.CardLabelColor);
+            VRPanelKit.Text(t, "¿Necesita atención médica?", new Vector2(left, 0.135f), 0.032f, Color.white);
+            VRPanelKit.Text(t, VRPanelKit.Wrap("Mira la quemadura antes de decidir: su color, si tiene ampollas y dónde está.", 50),
+                new Vector2(left, 0.085f), 0.019f, VRPanelKit.CardHintColor);
 
             VRPanelKit.Button(t, "Ir al centro de salud", new Vector2(-0.135f, -0.08f), new Vector2(0.25f, 0.11f),
                 new Color(0.16f, 0.42f, 0.78f), () => Choose(true));
