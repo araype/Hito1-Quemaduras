@@ -176,7 +176,11 @@ namespace SojaExiles
                 Grabbable grabbable = target.GetComponent<Grabbable>();
                 if (grabbable != null)
                 {
-                    grabbable.breakDistance = 0.9f;
+                    // Sigue a la mano del jugador como un resorte y, si se
+                    // tira mas lejos que esto, se suelta (y ella se queja).
+                    grabbable.breakDistance = 0.6f;
+                    grabbable.followSharpness = 14f;
+                    grabbable.maxFollowSpeed = 1.8f;
                 }
             }
 

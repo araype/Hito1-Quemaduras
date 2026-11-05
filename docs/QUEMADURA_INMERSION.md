@@ -1,16 +1,17 @@
-# Quemadura: aspecto, física y sonido
+# Quemadura: qué hay y cómo probarlo
 
-Rama: `quemaduras`. Cambios para que la escena de la cocina (`Escenario_Quemadura`)
-se vea y suene real. **No se tocó ninguna escena**: todo se instala solo al dar
-Play (`Hito1RuntimeBootstrap`, solo si la escena tiene `BurnSequenceManager`).
+Referencia de lo que ya está hecho, por etapas (cada sección nombra la rama
+donde se hizo). Lo que falta está en `docs/PENDIENTES.md`.
+
+**No se tocan las escenas:** todo se instala solo al dar Play
+(`Hito1RuntimeBootstrap`, solo si la escena tiene `BurnSequenceManager`).
 Para ajustar un valor, agrega el componente a mano en el objeto indicado y
 cambia sus campos en el Inspector; si ya está, no se duplica.
 
-> Se verificó que todo compila contra Unity 2022.3.62 y el Meta XR SDK 201, y
-> se simuló la tela fuera de Unity. **No se ha visto en el editor ni en el
-> Quest todavía.**
+Estado de las pruebas: se jugó en el Quest 2 el 2026-11-02 sobre
+`rediseno-tarjetas`; los defectos encontrados están en `PENDIENTES.md`.
 
-## 1. Qué cambió
+## 1. Aspecto, física y sonido (rama `quemaduras`)
 
 | Qué | Antes | Ahora | Componente / dónde |
 |---|---|---|---|
@@ -284,3 +285,20 @@ está en `BurnGuide` (tarjetas) y en el informe de la rama.
   Seconds`, `Card Distance / Card Drop`, `Accident After Tutorial`.
 - **Pasos:** `PatientBody > Step Length / Step Thigh Degrees / Step Knee
   Degrees`.
+
+## 8. Movilidad y tarjetas (`movilidad-mejorada`, `rediseno-tarjetas`)
+
+- **Movilidad** (`VRLocomotion`): caminar a 1,3 m/s (`walkSpeed`), rampa de
+  0,12 s al arrancar y frenar (`moveRampSeconds`), joystick sin salto inicial
+  (`ApplyDeadZone`) y giro a saltos de 30° (`snapAngle`). Los campos tienen
+  nombre nuevo para que la escena (que guarda `moveSpeed: 1.8` y
+  `snapTurnAngle: 45`) no los pise: **no volver a los nombres anteriores**.
+  Para probar valores, cambiarlos en el Inspector durante Play, sin guardar.
+- **Tarjetas y resumen** (`BurnGuide`, `BurnSummaryPanel`, `RoundedPanel`,
+  `PanelText`, `OverlayPanel`): paneles redondeados con TextMesh Pro, siempre
+  encima de la escena, con puntitos de progreso; resumen con puntaje,
+  indicadores, pasos, decisión médica y "qué mejorar"; botón tipo píldora.
+- **Interacción:** barra de progreso al sacar el anillo (`PatientRing`),
+  gasa y film en amarillo (`BurnSceneProps`), la cuchara no atraviesa la olla
+  (`PatientBurnArm`) y la chompa cae desde los hombros y se balancea
+  (`SweaterDrape`).

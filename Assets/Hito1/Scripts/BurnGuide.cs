@@ -108,10 +108,10 @@ namespace SojaExiles
             new StepInfo { id = StepId.AbrirAgua, title = "Abre el agua fría",
                 hint = "Es la llave del punto azul. Tócala con la mano.", clip = "guia_agua" },
             new StepInfo { id = StepId.LlevarAlAgua, title = "Lleva su mano al chorro",
-                hint = "Tómala del antebrazo, no de la mano quemada. Suéltala cerca del chorro y ella la pondrá bajo el agua.",
+                hint = "Tómala del antebrazo, no de la mano quemada, y llévala al chorro: ella la pondrá bajo el agua.",
                 clip = "guia_llevar" },
             new StepInfo { id = StepId.Anillo, title = "Quítale el anillo",
-                hint = "Antes de que se hinche. Acerca tu mano libre al punto dorado y mantén apretado el botón lateral (o junta pulgar e índice) hasta que salga.",
+                hint = "Antes de que se hinche: con tu mano libre en el punto dorado, mantén apretado hasta que salga.",
                 clip = "guia_anillo" },
             new StepInfo { id = StepId.Abrigar, title = "Abrígala con la chompa",
                 hint = "El agua fría también le enfría el cuerpo. Suelta la chompa sobre sus hombros.", clip = "guia_abrigo" },
@@ -141,7 +141,8 @@ namespace SojaExiles
         private Transform card;
         private TextMesh cardTitle, cardText, cardHint, cardWarning;
         private Vector3 cardVelocity;
-        private bool cardMoving;
+        private Vector3 cardAnchor;
+        private int cardChoice = -1;
         private float warningUntil;
         private Renderer cardBackground, cardAccent;
         private RoundedPanel cardPanel;
@@ -163,10 +164,25 @@ namespace SojaExiles
         private void Awake()
         {
             Instance = this;
+            PanelPlacement.ExtraFocus.Add(AddHighlightFocus);
+        }
+
+        // La tarjeta no tapa lo que se esta resaltando (los brillos pegados a
+        // un panel no cuentan: se mueven con el).
+        private void AddHighlightFocus(System.Collections.Generic.List<Vector3> points)
+        {
+            foreach (Renderer r in highlights)
+            {
+                if (r != null && r.enabled && r.GetComponentInParent<PanelFollow>() == null)
+                {
+                    points.Add(r.transform.position);
+                }
+            }
         }
 
         private void OnDestroy()
         {
+            PanelPlacement.ExtraFocus.Remove(AddHighlightFocus);
             if (Instance == this)
             {
                 Instance = null;
@@ -268,8 +284,12 @@ namespace SojaExiles
         {
             bool chosen = false;
             Transform root = VRPanelKit.CreateRoot("PanelInicio", 0.6f, 0.15f);
-            VRPanelKit.Background(root, Vector2.zero, new Vector2(0.62f, 0.42f), "Panel_Fondo",
-                new Color(0.07f, 0.1f, 0.16f), 0.001f);
+            Vector2 menuSize = new Vector2(0.62f, 0.42f);
+            RoundedPanel menuBg = RoundedPanel.Create(root, "FondoInicio", Vector2.zero, menuSize, 0.002f, 0.04f,
+                0.0025f, 0.02f);
+            menuBg.top = new Color(0.1f, 0.14f, 0.24f, 0.96f);
+            menuBg.bottom = new Color(0.05f, 0.07f, 0.14f, 0.96f);
+            menuBg.Push();
             VRPanelKit.Text(root, "Primeros auxilios: quemadura en la cocina", new Vector2(0f, 0.18f), 0.03f,
                 Color.white, TextAnchor.UpperCenter, TextAlignment.Center);
             VRPanelKit.Text(root, VRPanelKit.Wrap("Aviso: esta práctica incluye gritos de dolor y una quemadura visible. " +
@@ -277,18 +297,26 @@ namespace SojaExiles
                 new Color(1f, 0.82f, 0.55f), TextAnchor.UpperCenter, TextAlignment.Center);
             VRPanelKit.Text(root, "Deja la mano sobre un botón hasta que se llene:", new Vector2(0f, 0.045f), 0.02f,
                 new Color(0.8f, 0.85f, 0.92f), TextAnchor.UpperCenter, TextAlignment.Center);
-            VRPanelKit.Button(root, "Modo guiado", new Vector2(-0.152f, -0.06f), new Vector2(0.285f, 0.1f),
+            VRPanelKit.RoundedButton(root, "Modo guiado", new Vector2(-0.152f, -0.06f), new Vector2(0.285f, 0.1f),
                 new Color(0.16f, 0.42f, 0.78f), () => { guided = true; chosen = true; });
-            VRPanelKit.Button(root, "Modo evaluación", new Vector2(0.152f, -0.06f), new Vector2(0.285f, 0.1f),
+            VRPanelKit.RoundedButton(root, "Modo evaluación", new Vector2(0.152f, -0.06f), new Vector2(0.285f, 0.1f),
                 new Color(0.45f, 0.3f, 0.62f), () => { guided = false; chosen = true; });
             VRPanelKit.Text(root, VRPanelKit.Wrap("Guiado: te indica cada paso. Evaluación: lo haces solo y se mide.", 56),
                 new Vector2(0f, -0.13f), 0.017f, new Color(0.7f, 0.75f, 0.82f), TextAnchor.UpperCenter,
                 TextAlignment.Center);
 
             Say("guia_bienvenida");
-            // El mismo brillo en las dos opciones: ninguna se sugiere sobre la otra.
-            Highlight(root.TransformPoint(new Vector3(-0.152f, -0.06f, -0.01f)), 0f);
-            Highlight(root.TransformPoint(new Vector3(0.152f, -0.06f, -0.01f)), 0f);
+            // De frente, sin inclinarse y sin tapar a la tia. Algo mas chico:
+            // a 60 cm (al alcance de la mano) el tamano completo la tapaba
+            // desde cualquier lado.
+            const float menuScale = 0.8f;
+            root.localScale = Vector3.one * menuScale;
+            PanelFollow.Add(root, 0.6f, 0.08f, menuSize * menuScale);
+
+            // El mismo brillo en las dos opciones: ninguna se sugiere sobre la
+            // otra. Van pegados al panel, que se mueve.
+            Highlight(root.TransformPoint(new Vector3(-0.152f, -0.06f, -0.01f)), 0f).transform.SetParent(root, true);
+            Highlight(root.TransformPoint(new Vector3(0.152f, -0.06f, -0.01f)), 0f).transform.SetParent(root, true);
 
             while (!chosen)
             {
@@ -431,7 +459,9 @@ namespace SojaExiles
             Transform t = mug.transform;
             PropKit.Part(t, PrimitiveType.Cylinder, new Vector3(0f, 0.0475f, 0f), new Vector3(0.08f, 0.0475f, 0.08f),
                 "Plato", new Color(0.93f, 0.93f, 0.9f));
-            PropKit.Part(t, PrimitiveType.Cylinder, new Vector3(0f, 0.093f, 0f), new Vector3(0.07f, 0.002f, 0.07f),
+            // Cafe: sobresale 1 mm de la tapa de la taza. A la misma altura las
+            // dos caras se peleaban al dibujarse y se veian aspas negras.
+            PropKit.Part(t, PrimitiveType.Cylinder, new Vector3(0f, 0.0945f, 0f), new Vector3(0.07f, 0.0015f, 0.07f),
                 "Mango", new Color(0.25f, 0.15f, 0.08f));
             PropKit.MeshPart(t, PropKit.Torus("AsaTaza", 0.022f, 0.005f), new Vector3(0.045f, 0.05f, 0f),
                 Quaternion.Euler(90f, 0f, 0f), "Plato", new Color(0.93f, 0.93f, 0.9f));
@@ -1104,11 +1134,20 @@ namespace SojaExiles
             }
 
             forward.Normalize();
-            Vector3 wanted = head.position + forward * cardDistance + Vector3.down * cardDrop;
-            Vector3 toCard = Vector3.ProjectOnPlane(card.position - head.position, Vector3.up);
-            float angle = toCard.sqrMagnitude > 1e-4f ? Vector3.Angle(toCard, forward) : 180f;
-            float distanceError = Mathf.Abs(toCard.magnitude - cardDistance);
 
+            // La base sigue la mirada sin prisa; sobre ella se elige el lugar
+            // que no tapa a la paciente, el reloj ni el objeto del paso.
+            if (snap || cardAnchor.sqrMagnitude < 0.5f || Vector3.Angle(forward, cardAnchor) > cardFollowAngle)
+            {
+                cardAnchor = forward;
+            }
+
+            Vector2 half = new Vector2(CardWidth, CardHeight) * (cardScale * 0.5f);
+            // Al mirar el meson la tarjeta baja con la vista (antes quedaba
+            // arriba, sobre los gabinetes).
+            float lookDown = Mathf.Clamp(-head.forward.y, 0f, 0.6f);
+            float drop = cardDrop + lookDown * cardDistance * 0.5f;
+            Vector3 wanted = PanelPlacement.Choose(head.position, cardAnchor, cardDistance, drop, half, ref cardChoice);
             if (snap)
             {
                 card.position = wanted;
@@ -1116,34 +1155,10 @@ namespace SojaExiles
             }
             else
             {
-                if (angle > cardFollowAngle || distanceError > 0.3f)
-                {
-                    cardMoving = true;
-                }
-
-                if (cardMoving)
-                {
-                    card.position = Vector3.SmoothDamp(card.position, wanted, ref cardVelocity, 0.35f);
-                    if ((card.position - wanted).sqrMagnitude < 0.0004f)
-                    {
-                        cardMoving = false;
-                    }
-                }
-                else
-                {
-                    // Sigue la altura de la cabeza (si se agacha, por ejemplo).
-                    Vector3 p = card.position;
-                    p.y = Mathf.Lerp(p.y, wanted.y, 1f - Mathf.Exp(-3f * Time.deltaTime));
-                    card.position = p;
-                }
+                card.position = Vector3.SmoothDamp(card.position, wanted, ref cardVelocity, 0.35f);
             }
 
-            Vector3 look = card.position - head.position;
-            look.y *= 0.5f;
-            if (look.sqrMagnitude > 1e-4f)
-            {
-                card.rotation = Quaternion.LookRotation(look.normalized, Vector3.up);
-            }
+            card.rotation = PanelPlacement.Facing(card.position, head.position);
         }
 
         // ---------------- brillo ----------------
@@ -1151,7 +1166,7 @@ namespace SojaExiles
         private Renderer Highlight(Vector3 position, float radius)
         {
             Renderer r = IndicatorUtil.CreateSphere("BrilloGuia", null, position, Mathf.Max(0.02f, radius),
-                highlightMaterial, new Color(0.3f, 0.85f, 1f, 0.4f));
+                highlightMaterial, new Color(0.3f, 0.85f, 1f, 0.2f));
             highlights.Add(r);
             return r;
         }
@@ -1178,7 +1193,7 @@ namespace SojaExiles
         private void UpdateHighlights()
         {
             float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 4.5f);
-            Color color = new Color(0.3f, 0.85f, 1f, Mathf.Lerp(0.18f, 0.5f, pulse));
+            Color color = new Color(0.3f, 0.85f, 1f, Mathf.Lerp(0.06f, 0.24f, pulse));
             foreach (Renderer r in highlights)
             {
                 if (r != null && r.enabled)

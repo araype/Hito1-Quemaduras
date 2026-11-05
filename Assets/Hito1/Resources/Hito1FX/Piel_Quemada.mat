@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Piel_Quemada
-  m_Shader: {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}
+  m_Shader: {fileID: 4800000, guid: d2a854fd05f741ba8b274ed8ea4145b1, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
@@ -35,7 +35,7 @@ Material:
     - _SrcBlend: 5
     - _DstBlend: 10
     - _ZWrite: 0
-    - _Glossiness: 0.55
+    - _Glossiness: 0.2
     - _Metallic: 0
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 0.85}

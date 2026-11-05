@@ -41,11 +41,11 @@ namespace SojaExiles
         public Vector3 guardOffset = new Vector3(0.2f, 0.05f, 0.2f);
         public bool cradleWithOtherHand = true;
         [Tooltip("Segundos que deja la mano donde la soltaron antes de volver a protegerla.")]
-        public float holdAfterRelease = 2.5f;
+        public float holdAfterRelease = 1.2f;
 
         [Header("Agua")]
         [Tooltip("Si la sueltan a esta distancia horizontal del chorro, ella pone la mano bajo el agua.")]
-        public float assistRadius = 0.32f;
+        public float assistRadius = 0.42f;
         [Tooltip("Altura de la palma bajo la boca del grifo (m).")]
         public float palmBelowNozzle = 0.11f;
         [Tooltip("Segundos para girar la mano (dorso arriba) al ponerla bajo el chorro.")]
@@ -87,6 +87,12 @@ namespace SojaExiles
         private Transform viewer;
         private bool receiving;
         private float palmDown;
+        private float heldNearStream;
+
+        [Tooltip("Al quemarse se aparta de la cocina esta distancia (m): si no, tapa la perilla.")]
+        public float stepBackAfterBurn = 0.5f;
+        [Tooltip("Si la llevan hasta el chorro y la sostienen ahi este tiempo, ella pone la mano bajo el agua.")]
+        public float placeInWaterAfter = 0.8f;
 
         private void Awake()
         {
@@ -120,6 +126,8 @@ namespace SojaExiles
                 burnSequence.OnStateChanged += HandleState;
             }
 
+            SimpleGrab.OnPulledAway += HandlePulledAway;
+
             bool idle = burnSequence == null || burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle;
             Current = idle && cookBeforeAccident && pot != null ? Mode.Cooking : Mode.Guard;
             if (Current == Mode.Cooking && spoon)
@@ -137,6 +145,7 @@ namespace SojaExiles
         private void OnDestroy()
         {
             Application.onBeforeRender -= UpdateSpoon;
+            SimpleGrab.OnPulledAway -= HandlePulledAway;
             if (burnSequence != null)
             {
                 burnSequence.OnStateChanged -= HandleState;
@@ -205,6 +214,7 @@ namespace SojaExiles
                         Current = Mode.Guard;
                         // Retira la mano de golpe.
                         velocity = (Goal() - target.position).normalized * 1.2f;
+                        StepBackFromStove();
                     }
 
                     cooledTime = -1f;
@@ -213,6 +223,39 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnState.Cooled:
                     cooledTime = Time.time;
                     break;
+            }
+        }
+
+        // Se aparta de la cocina: si se queda delante, tapa la perilla que el
+        // jugador tiene que apagar.
+        private void StepBackFromStove()
+        {
+            if (reach == null || pot == null || stepBackAfterBurn <= 0f)
+            {
+                return;
+            }
+
+            Vector3 away = PatientBody.Flat(transform.position - pot.BurnerPosition);
+            if (away.sqrMagnitude < 1e-4f)
+            {
+                away = -PatientBody.Flat(transform.forward);
+            }
+
+            reach.WalkTo(transform.position + away.normalized * stepBackAfterBurn);
+        }
+
+        // El jugador tiro demasiado fuerte de su mano y se solto: le duele.
+        private void HandlePulledAway(Rigidbody rb)
+        {
+            if (rb != target)
+            {
+                return;
+            }
+
+            BurnPatientReactions reactions = GetComponent<BurnPatientReactions>();
+            if (reactions != null && Current != Mode.Cooking)
+            {
+                reactions.Say("voz_dolor_1", true);
             }
         }
 
@@ -251,7 +294,7 @@ namespace SojaExiles
             Vector3 nozzle = stream.NozzlePosition;
             Vector3 flat = PatientBody.Flat(palm - nozzle);
             float below = nozzle.y - palm.y;
-            return flat.magnitude < assistRadius && below > -0.25f && below < 0.5f;
+            return flat.magnitude < assistRadius && below > -0.45f && below < 0.5f;
         }
 
         // La palma (donde esta ahora) queda bajo el chorro, a menos de
@@ -351,8 +394,24 @@ namespace SojaExiles
                     Current = Mode.Guard;
                 }
 
+                // La llevaron hasta el chorro: ella misma pone la mano bajo el
+                // agua (si no, queda donde la sostiene el jugador, a veces
+                // por encima del lavadero).
+                bool nearWater = Current != Mode.Cooking && WaterRunning && NearStream(target.position);
+                heldNearStream = nearWater ? heldNearStream + Time.fixedDeltaTime : 0f;
+                if (heldNearStream > placeInWaterAfter)
+                {
+                    heldNearStream = 0f;
+                    SimpleGrab.ForceRelease(target);
+                    wasHeld = false;
+                    Current = Mode.InWater;
+                    waterLostTime = -1f;
+                }
+
                 return;
             }
+
+            heldNearStream = 0f;
 
             if (wasHeld)
             {
@@ -371,6 +430,14 @@ namespace SojaExiles
             }
 
             UpdateMode();
+
+            // Protegiendo la mano, mira al jugador: si no, casi siempre queda
+            // de espaldas y no se ve la quemadura.
+            if (Current == Mode.Guard && viewer != null && reach != null && burnSequence != null
+                && burnSequence.CurrentState != BurnSequenceManager.BurnState.Idle)
+            {
+                reach.FaceTo(viewer.position);
+            }
 
             if (!target.isKinematic)
             {
@@ -660,7 +727,8 @@ namespace SojaExiles
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
             rb.velocity = (-transform.forward + Vector3.up * 0.6f) * 1.2f;
             rb.angularVelocity = Random.insideUnitSphere * 6f;
-            spoonRoot.gameObject.AddComponent<Grabbable>();
+            // Se le cayo de la mano: en el suelo es creible, no vuelve.
+            spoonRoot.gameObject.AddComponent<Grabbable>().returnFromFloor = false;
             spoonRoot = null;
         }
     }

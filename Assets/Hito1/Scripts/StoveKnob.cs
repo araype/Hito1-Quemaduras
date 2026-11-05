@@ -24,6 +24,10 @@ namespace SojaExiles
 
         public float toggleCooldown = 0.8f;
         public float rearmSeconds = 0.3f;
+        [Tooltip("Una vez apagada no se vuelve a prender al tocarla de nuevo (antes, un segundo toque la prendia y el paso ya contaba como hecho).")]
+        public bool stayOffOnceOff = true;
+        [Tooltip("Antes del accidente la paciente esta cocinando: tocar la perilla no hace nada.")]
+        public bool onlyAfterBurn = true;
 
         public bool IsOn { get; private set; }
 
@@ -117,6 +121,11 @@ namespace SojaExiles
 
             bool rearmed = Time.time - lastHandInsideTime > rearmSeconds;
             lastHandInsideTime = Time.time;
+            if (!CanToggle())
+            {
+                return;
+            }
+
             if (rearmed && Time.time >= nextToggleTime)
             {
                 nextToggleTime = Time.time + toggleCooldown;
@@ -131,6 +140,31 @@ namespace SojaExiles
                 lastHandInsideTime = Time.time;
             }
         }
+
+        private bool CanToggle()
+        {
+            if (stayOffOnceOff && !IsOn)
+            {
+                return false;
+            }
+
+            if (onlyAfterBurn)
+            {
+                if (burnSequence == null)
+                {
+                    burnSequence = FindObjectOfType<BurnSequenceManager>();
+                }
+
+                if (burnSequence != null && burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private BurnSequenceManager burnSequence;
 
         public void SetOn(bool on)
         {

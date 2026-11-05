@@ -226,6 +226,9 @@ namespace SojaExiles
             reactLiftVelocity += liftMetersPerSecond;
         }
 
+        [Tooltip("Cuanto puede cruzar la mano al otro lado del cuerpo (m), al tirar del brazo.")]
+        public float crossBodyLimit = 0.08f;
+
         // Lleva un punto al espacio que la mano puede alcanzar de verdad:
         // dentro del largo del brazo, no detras de la espalda y no dentro del
         // torso. Lo usan los scripts que dejan al jugador arrastrar la mano.
@@ -240,6 +243,7 @@ namespace SojaExiles
             Vector3 shoulderPos = ShoulderPosition(rightSide);
             float reach = ArmLength(rightSide) * reachFraction;
             Vector3 flatForward = Flat(transform.forward);
+            Vector3 ownSide = Flat(transform.right).normalized * (rightSide ? 1f : -1f);
 
             for (int i = 0; i < 2; i++)
             {
@@ -271,6 +275,14 @@ namespace SojaExiles
                         Vector3 dir = distance > 1e-4f ? radial / distance : flatForward;
                         point += dir * (torsoClearance - distance);
                     }
+                }
+
+                // No pasa al otro lado del cuerpo mas que crossBodyLimit: si
+                // no, el brazo atraviesa el pecho.
+                float lateral = Vector3.Dot(point - hips.position, ownSide);
+                if (lateral < -crossBodyLimit)
+                {
+                    point += ownSide * (-crossBodyLimit - lateral);
                 }
             }
 

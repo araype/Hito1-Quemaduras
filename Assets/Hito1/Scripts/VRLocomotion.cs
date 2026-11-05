@@ -124,7 +124,19 @@ namespace SojaExiles
             Vector3 velocity = horizontalVelocity;
             velocity.y = verticalVelocity;
 
-            controller.Move(velocity * Time.deltaTime);
+            Vector3 step = velocity * Time.deltaTime;
+            Vector3 clipped = PlayArea.Clip(transform.position, step);
+            if (clipped.x != step.x)
+            {
+                horizontalVelocity.x = 0f;
+            }
+
+            if (clipped.z != step.z)
+            {
+                horizontalVelocity.z = 0f;
+            }
+
+            controller.Move(clipped);
         }
 
         private void ResolveReferences()

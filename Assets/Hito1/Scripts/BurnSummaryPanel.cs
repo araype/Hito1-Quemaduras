@@ -28,6 +28,7 @@ namespace SojaExiles
         public static BurnSummaryPanel Show(BurnProtocol protocol)
         {
             Transform root = VRPanelKit.CreateRoot("PanelResumen", 1.0f, 0.12f);
+            PanelFollow.Add(root, 1.0f, 0.12f, new Vector2(Width, Height));
             BurnSummaryPanel panel = root.gameObject.AddComponent<BurnSummaryPanel>();
             panel.Build(protocol);
             return panel;

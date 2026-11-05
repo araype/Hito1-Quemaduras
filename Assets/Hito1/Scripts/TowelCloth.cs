@@ -601,10 +601,9 @@ namespace SojaExiles
 
             ApplyTethers();
 
-            if (mode != Mode.Free || restPull < 0.3f)
-            {
-                CollideWithScene();
-            }
+            // Tambien en reposo: si no, la tela que cuelga del borde del meson
+            // lo atravesaba.
+            CollideWithScene();
         }
 
         // Ninguna particula se aleja de un punto sujeto mas que su distancia

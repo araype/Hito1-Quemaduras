@@ -42,6 +42,12 @@ namespace SojaExiles
         [Tooltip("Respaldo: agarrar tambien los objetos que maneja el Interaction SDK de Meta.")]
         public bool grabInteractionSdkObjects;
 
+        [Tooltip("Apaga el agarre a distancia de Meta: tomaba objetos lejos de la mano (la olla desde el otro lado del meson).")]
+        public bool disableDistanceGrab = true;
+
+        [Tooltip("Al agarrar, el objeto se acerca hasta tocar la mano en vez de quedar flotando a la distancia a la que estaba.")]
+        public bool snapToHand = true;
+
         [Header("Colision de las manos")]
         public bool handCollisions = true;
         public float handColliderRadius = 0.03f;
@@ -63,6 +69,11 @@ namespace SojaExiles
             public Rigidbody body;
             public SphereCollider bodyCollider;
             public Held held;
+
+            // Agarres de Meta de esta mano: se apagan mientras SimpleGrab
+            // sostiene algo, para no tomar dos objetos con la misma mano.
+            public readonly List<MonoBehaviour> metaGrab = new List<MonoBehaviour>();
+            public bool metaEnabled = true;
         }
 
         private class Held
@@ -100,6 +111,10 @@ namespace SojaExiles
         // Aviso al agarrar: collider tocado, objeto tomado y si fue la mano
         // izquierda (la paciente lo usa para saber de donde la tomaron).
         public static event System.Action<Collider, Rigidbody, bool> OnGrabbed;
+
+        // Aviso cuando un objeto se suelta solo porque la mano se alejo
+        // demasiado (se tiro muy fuerte o muy rapido).
+        public static event System.Action<Rigidbody> OnPulledAway;
 
         // Suelta el objeto si alguna mano lo tiene (por ejemplo, cuando la
         // paciente recibe la taza).
@@ -325,6 +340,8 @@ namespace SojaExiles
 
         private void Start()
         {
+            CollectMetaInteractors();
+
             if (grabInteractionSdkObjects)
             {
                 return;
@@ -339,6 +356,91 @@ namespace SojaExiles
                 {
                     Physics.IgnoreCollision(col, left.bodyCollider, true);
                     Physics.IgnoreCollision(col, right.bodyCollider, true);
+                }
+            }
+        }
+
+        // Busca los agarres del Interaction SDK de cada mano (manos y
+        // controles). Los de distancia se apagan.
+        private void CollectMetaInteractors()
+        {
+            foreach (MonoBehaviour mb in FindObjectsOfType<MonoBehaviour>(true))
+            {
+                if (!(mb is Oculus.Interaction.IInteractorView))
+                {
+                    continue;
+                }
+
+                string type = mb.GetType().Name;
+                if (!type.Contains("Grab") || type.Contains("Use"))
+                {
+                    continue;
+                }
+
+                if (type.StartsWith("Distance"))
+                {
+                    if (disableDistanceGrab)
+                    {
+                        mb.enabled = false;
+                    }
+
+                    continue;
+                }
+
+                int side = SideOf(mb.transform);
+                if (side != 0 && mb.enabled)
+                {
+                    (side < 0 ? left : right).metaGrab.Add(mb);
+                }
+            }
+        }
+
+        // -1 izquierda, 1 derecha, 0 si no se sabe (por los nombres del rig).
+        private static int SideOf(Transform t)
+        {
+            for (; t != null; t = t.parent)
+            {
+                if (t.name.Contains("Left"))
+                {
+                    return -1;
+                }
+
+                if (t.name.Contains("Right"))
+                {
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
+
+        private static bool MetaHolding(Hand hand)
+        {
+            foreach (MonoBehaviour mb in hand.metaGrab)
+            {
+                if (mb != null && mb.enabled && ((Oculus.Interaction.IInteractorView)mb).HasSelectedInteractable)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void SyncMetaGrab(Hand hand)
+        {
+            bool wanted = hand.held == null;
+            if (wanted == hand.metaEnabled)
+            {
+                return;
+            }
+
+            hand.metaEnabled = wanted;
+            foreach (MonoBehaviour mb in hand.metaGrab)
+            {
+                if (mb != null)
+                {
+                    mb.enabled = wanted;
                 }
             }
         }
@@ -380,6 +482,8 @@ namespace SojaExiles
         {
             UpdateInput(left, right);
             UpdateInput(right, left);
+            SyncMetaGrab(left);
+            SyncMetaGrab(right);
         }
 
         private void FixedUpdate()
@@ -396,7 +500,7 @@ namespace SojaExiles
             bool wasPressed = hand.pressed;
             hand.pressed = hand.poseValid && ReadPressed(hand);
 
-            if (hand.pressed && !wasPressed && hand.held == null && !Blocked(hand.position))
+            if (hand.pressed && !wasPressed && hand.held == null && !Blocked(hand.position) && !MetaHolding(hand))
             {
                 TryGrab(hand, otherHand);
             }
@@ -538,7 +642,9 @@ namespace SojaExiles
                 Release(otherHand);
             }
 
-            Grab(hand, closest);
+            // Lo que falta para que el objeto toque la mano.
+            Vector3 snap = snapToHand ? hand.position - ClosestPoint(closestCollider, hand.position) : Vector3.zero;
+            Grab(hand, closest, snap);
             OnGrabbed?.Invoke(closestCollider, closest, hand == left);
         }
 
@@ -581,7 +687,7 @@ namespace SojaExiles
             return col.ClosestPoint(point);
         }
 
-        private void Grab(Hand hand, Rigidbody rb)
+        private void Grab(Hand hand, Rigidbody rb, Vector3 snap)
         {
             pending.RemoveAll(p => p.rb == rb);
 
@@ -597,10 +703,17 @@ namespace SojaExiles
                 maxAngularVelocity = rb.maxAngularVelocity
             };
 
+            // Solo se acercan a la mano los objetos que giran con ella (la mano
+            // de la paciente no: la mueve su brazo).
+            if (held.grabbable != null && !held.grabbable.trackRotation)
+            {
+                snap = Vector3.zero;
+            }
+
             Quaternion inverseHand = Quaternion.Inverse(hand.rotation);
-            held.localPosition = inverseHand * (rb.position - hand.position);
+            held.localPosition = inverseHand * (rb.position + snap - hand.position);
             held.localRotation = inverseHand * rb.rotation;
-            held.worldOffset = rb.position - hand.position;
+            held.worldOffset = rb.position + snap - hand.position;
 
             rb.isKinematic = false;
             rb.useGravity = false;
@@ -700,11 +813,19 @@ namespace SojaExiles
             if (delta.magnitude > limit)
             {
                 Release(hand);
+                OnPulledAway?.Invoke(rb);
                 return;
             }
 
             float dt = Time.fixedDeltaTime;
-            rb.velocity = Vector3.ClampMagnitude(delta / dt, maxLinearSpeed);
+            // Con followSharpness el objeto sigue a la mano como con un
+            // resorte (la mano de la paciente); si no, al instante.
+            float sharpness = held.grabbable != null ? held.grabbable.followSharpness : 0f;
+            Vector3 wanted = sharpness > 0f ? delta * Mathf.Min(sharpness, 1f / dt) : delta / dt;
+            float maxSpeed = held.grabbable != null && held.grabbable.maxFollowSpeed > 0f
+                ? Mathf.Min(maxLinearSpeed, held.grabbable.maxFollowSpeed)
+                : maxLinearSpeed;
+            rb.velocity = Vector3.ClampMagnitude(wanted, maxSpeed);
 
             Quaternion rotationDelta = targetRotation * Quaternion.Inverse(rb.rotation);
             rotationDelta.ToAngleAxis(out float angle, out Vector3 axis);

@@ -165,8 +165,7 @@ namespace SojaExiles
                 return;
             }
 
-            int half = Mathf.CeilToInt(label.Length / 2f);
-            text = Wrap(label, half);
+            text = SplitInTwo(label);
             int longest = 0;
             int lines = 0;
             foreach (string line in text.Split('\n'))
@@ -177,6 +176,24 @@ namespace SojaExiles
 
             lineHeight = Mathf.Min(size.y * 0.8f / Mathf.Max(1, lines), size.y * 0.3f);
             lineHeight = Mathf.Min(lineHeight, usable / Mathf.Max(1, longest * CharWidth));
+        }
+
+        // Parte la etiqueta en dos lineas en el espacio mas cercano al medio
+        // (Wrap con la mitad del largo a veces dejaba tres lineas: "Ir al /
+        // centro de / salud").
+        private static string SplitInTwo(string label)
+        {
+            int middle = label.Length / 2;
+            int best = -1;
+            for (int i = 0; i < label.Length; i++)
+            {
+                if (label[i] == ' ' && (best < 0 || Mathf.Abs(i - middle) < Mathf.Abs(best - middle)))
+                {
+                    best = i;
+                }
+            }
+
+            return best < 0 ? label : label.Substring(0, best) + "\n" + label.Substring(best + 1);
         }
 
         // Corta el texto en lineas de hasta 'width' caracteres (TextMesh no

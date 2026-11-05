@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SojaExiles
@@ -19,6 +20,8 @@ namespace SojaExiles
         public bool autoStart = true;
         public float tipAngle = 90f;
         public float tipSeconds = 0.55f;
+        [Tooltip("Antes del accidente la olla no se puede agarrar ni empujar. Si se moviera, el accidente pasaria lejos de la cocina.")]
+        public bool lockUntilAccident = true;
 
         [Header("Agua derramada")]
         public float counterPuddleRadius = 0.24f;
@@ -30,6 +33,14 @@ namespace SojaExiles
         private PotFX pot;
         private Rigidbody body;
         private ParticleSystem pour;
+
+        // Bloqueo antes del accidente: lugar de la olla sobre el quemador y
+        // agarres de Meta que se apagaron mientras tanto.
+        private bool locked;
+        private Vector3 homePosition;
+        private Quaternion homeRotation;
+        private bool homeKinematic;
+        private readonly List<Behaviour> lockedInteractables = new List<Behaviour>();
 
         private void Awake()
         {
@@ -52,6 +63,16 @@ namespace SojaExiles
                 burnSequence = FindObjectOfType<BurnSequenceManager>();
             }
 
+            // BurnStaging ya escalo la cocina (corre antes de cualquier Start):
+            // esta es la pose de la olla sobre el quemador.
+            homePosition = transform.position;
+            homeRotation = transform.rotation;
+            homeKinematic = body != null && body.isKinematic;
+            if (lockUntilAccident)
+            {
+                Lock();
+            }
+
             // Con la guia (menu y tutorial), el accidente lo dispara ella.
             bool guideControls = BurnGuide.Instance != null && BurnGuide.Instance.ControlsAccident;
             if (autoStart && !guideControls)
@@ -61,6 +82,74 @@ namespace SojaExiles
         }
 
         private bool started;
+
+        // La olla queda fija sobre el quemador: kinematica (SimpleGrab no
+        // agarra cuerpos kinematicos y nada la empuja) y sin los agarres del
+        // Interaction SDK de Meta.
+        private void Lock()
+        {
+            locked = true;
+            if (body != null)
+            {
+                if (SimpleGrab.IsHeldObject(body))
+                {
+                    SimpleGrab.ForceRelease(body);
+                }
+
+                body.isKinematic = true;
+            }
+
+            foreach (MonoBehaviour mb in GetComponentsInChildren<MonoBehaviour>(true))
+            {
+                if (mb is Oculus.Interaction.IInteractable && mb.enabled)
+                {
+                    mb.enabled = false;
+                    lockedInteractables.Add(mb);
+                }
+            }
+        }
+
+        private void Unlock()
+        {
+            locked = false;
+            foreach (Behaviour b in lockedInteractables)
+            {
+                if (b != null)
+                {
+                    b.enabled = true;
+                }
+            }
+
+            lockedInteractables.Clear();
+        }
+
+        private void FixedUpdate()
+        {
+            // Si algo la movio igual (otro sistema de agarre), vuelve a su
+            // lugar.
+            if (locked && ((transform.position - homePosition).sqrMagnitude > 1e-6f
+                || Quaternion.Angle(transform.rotation, homeRotation) > 0.5f))
+            {
+                ReturnHome();
+            }
+        }
+
+        private void ReturnHome()
+        {
+            if (body != null)
+            {
+                if (!body.isKinematic)
+                {
+                    body.velocity = Vector3.zero;
+                    body.angularVelocity = Vector3.zero;
+                }
+
+                body.position = homePosition;
+                body.rotation = homeRotation;
+            }
+
+            transform.SetPositionAndRotation(homePosition, homeRotation);
+        }
 
         // Vuelca la olla ahora (o tras 'delay' segundos).
         public void Trigger(float delay = 0f)
@@ -76,9 +165,15 @@ namespace SojaExiles
             started = true;
             yield return new WaitForSeconds(delay);
 
-            // Si el jugador ya tiene la olla en la mano, no se vuelca: la
-            // paciente se quema igual al tocarla.
-            if (body != null && SimpleGrab.IsHeldObject(body))
+            // Bloqueada, se vuelca siempre desde el quemador.
+            if (locked)
+            {
+                ReturnHome();
+            }
+
+            // Sin bloqueo, si el jugador tiene la olla en la mano no se
+            // vuelca: la paciente se quema igual al tocarla.
+            else if (body != null && SimpleGrab.IsHeldObject(body))
             {
                 Burn();
                 yield break;
@@ -94,7 +189,8 @@ namespace SojaExiles
             Vector3 pivot = bottom + dir * pot.Radius;
             Vector3 axis = Vector3.Cross(Vector3.up, dir);
 
-            bool wasKinematic = body != null && body.isKinematic;
+            bool wasKinematic = locked ? homeKinematic : body != null && body.isKinematic;
+            locked = false;
             if (body != null)
             {
                 body.isKinematic = true;
@@ -154,6 +250,9 @@ namespace SojaExiles
                     body.angularVelocity = Vector3.zero;
                 }
             }
+
+            // Ya volcada se puede agarrar (y es un error tocarla caliente).
+            Unlock();
 
             // El golpe de la olla y el grito los pone BurnPatientReactions.
             StartCoroutine(Spread(pivot, dir, hand));

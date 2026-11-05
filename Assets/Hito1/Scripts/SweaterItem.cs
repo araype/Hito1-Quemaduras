@@ -77,10 +77,14 @@ namespace SojaExiles
             Vector3 left = patient.ShoulderPosition(false);
             Vector3 rightShoulder = patient.ShoulderPosition(true);
             Vector3 center = (left + rightShoulder) * 0.5f;
-            float halfWidth = Mathf.Max(0.14f, Vector3.Distance(left, rightShoulder) * 0.5f + 0.05f);
-            const float depth = 0.13f;
+            // Ancha y honda para que entren los brazos y la espalda (antes se
+            // veian los hombros azules a traves de la lana).
+            float shoulderHalf = Vector3.Distance(left, rightShoulder) * 0.5f;
+            float halfWidth = Mathf.Max(0.15f, shoulderHalf + 0.065f);
+            const float depth = 0.14f;
             const float drop = 0.36f;
-            Vector3 top = center + up * 0.035f;
+            // Arranca por encima de los hombros: si no, asomaban por arriba.
+            Vector3 top = center + up * 0.06f;
 
             List<Vector3> v = new List<Vector3>();
             List<Vector3> n = new List<Vector3>();
@@ -97,7 +101,7 @@ namespace SojaExiles
                 // Mas angosta arriba (sobre los hombros); al caer se pega a la
                 // espalda en vez de abrirse como un cilindro.
                 float widen = Mathf.Lerp(0.92f, 1f, h);
-                float cling = Mathf.Lerp(1f, 0.78f, h);
+                float cling = Mathf.Lerp(1f, 0.92f, h);
                 for (int s = 0; s <= segments; s++)
                 {
                     float a = Mathf.Lerp(-100f, 100f, s / (float)segments) * Mathf.Deg2Rad;
@@ -168,17 +172,19 @@ namespace SojaExiles
             MeshRenderer renderer = go.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = PropKit.Mat(materialName, fallbackColor);
 
-            // Mangas colgando por delante de cada hombro.
+            // Mangas vacias que caen por delante, sobre el pecho (como una
+            // chompa echada sobre los hombros). SweaterDrape las saca del
+            // cuerpo si quedan dentro.
             for (int side = -1; side <= 1; side += 2)
             {
-                Vector3 shoulder = top + right * side * halfWidth * 0.85f + forward * 0.03f;
+                Vector3 shoulder = top + right * side * Mathf.Max(0.07f, shoulderHalf - 0.04f);
                 Renderer sleeve = PropKit.Part(go.transform, PrimitiveType.Capsule, Vector3.zero, Vector3.one,
                     materialName, fallbackColor);
                 Transform st = sleeve.transform;
-                st.position = shoulder - up * 0.17f + forward * 0.035f;
-                st.rotation = Quaternion.LookRotation(forward, up);
+                st.position = shoulder - up * 0.15f + forward * 0.12f;
+                st.rotation = Quaternion.LookRotation(forward, Quaternion.AngleAxis(side * 8f, forward) * up);
                 Vector3 ls = st.parent.lossyScale;
-                st.localScale = new Vector3(0.075f / Mathf.Abs(ls.x), 0.19f / Mathf.Abs(ls.y), 0.06f / Mathf.Abs(ls.z));
+                st.localScale = new Vector3(0.06f / Mathf.Abs(ls.x), 0.17f / Mathf.Abs(ls.y), 0.04f / Mathf.Abs(ls.z));
             }
 
             // Cae desde los hombros y se mueve como tela.

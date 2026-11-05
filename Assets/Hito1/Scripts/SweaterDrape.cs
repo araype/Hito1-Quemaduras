@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SojaExiles
@@ -29,6 +30,10 @@ namespace SojaExiles
         private Vector3 lastWorld;
         private Vector3 lag;
 
+        // Capsulas del cuerpo (PatientPhysics): la tela no entra en ellas.
+        public float skin = 0.012f;
+        private CapsuleCollider[] body = new CapsuleCollider[0];
+
         public void Init(Vector3 topPoint, Vector3 upDir, Vector3 forwardDir, float dropLength)
         {
             top = topPoint;
@@ -49,6 +54,21 @@ namespace SojaExiles
                 sleeves[i] = transform.GetChild(i);
                 sleeveScale[i] = sleeves[i].localScale;
                 sleevePosition[i] = sleeves[i].localPosition;
+            }
+
+            PatientBody patient = GetComponentInParent<PatientBody>();
+            if (patient != null)
+            {
+                List<CapsuleCollider> found = new List<CapsuleCollider>();
+                foreach (CapsuleCollider c in patient.GetComponentsInChildren<CapsuleCollider>())
+                {
+                    if (!c.isTrigger && c.transform != transform && !c.transform.IsChildOf(transform))
+                    {
+                        found.Add(c);
+                    }
+                }
+
+                body = found.ToArray();
             }
 
             start = Time.time;
@@ -75,6 +95,39 @@ namespace SojaExiles
             Apply(t);
         }
 
+        // Saca el punto (mundo) de las capsulas del cuerpo.
+        private Vector3 PushOut(Vector3 point, float extra = 0f)
+        {
+            foreach (CapsuleCollider c in body)
+            {
+                if (c == null || !c.enabled)
+                {
+                    continue;
+                }
+
+                Transform t = c.transform;
+                Vector3 axisLocal = c.direction == 0 ? Vector3.right : (c.direction == 1 ? Vector3.up : Vector3.forward);
+                Vector3 s = t.lossyScale;
+                float axisScale = Mathf.Abs(Vector3.Scale(axisLocal, s).magnitude);
+                float radiusScale = c.direction == 0 ? Mathf.Max(Mathf.Abs(s.y), Mathf.Abs(s.z))
+                    : (c.direction == 1 ? Mathf.Max(Mathf.Abs(s.x), Mathf.Abs(s.z)) : Mathf.Max(Mathf.Abs(s.x), Mathf.Abs(s.y)));
+                float radius = c.radius * radiusScale + skin + extra;
+                float half = Mathf.Max(0f, c.height * 0.5f * axisScale - c.radius * radiusScale);
+                Vector3 center = t.TransformPoint(c.center);
+                Vector3 axis = t.TransformDirection(axisLocal).normalized;
+                float along = Mathf.Clamp(Vector3.Dot(point - center, axis), -half, half);
+                Vector3 closest = center + axis * along;
+                Vector3 out_ = point - closest;
+                float distance = out_.magnitude;
+                if (distance < radius)
+                {
+                    point = closest + (distance > 1e-5f ? out_ / distance : -axis) * radius;
+                }
+            }
+
+            return point;
+        }
+
         // Caida con rebote: 0 = recogida en los hombros, 1 = puesta.
         private static float Settle(float t)
         {
@@ -99,7 +152,7 @@ namespace SojaExiles
                 float h = Mathf.Clamp01(below / drop); // 0 cuello, 1 borde
                 Vector3 p = v + up * below * (1f - unfold);
                 p += (forward * sway + lag) * h * h;
-                vertices[i] = p;
+                vertices[i] = body.Length > 0 ? transform.InverseTransformPoint(PushOut(transform.TransformPoint(p))) : p;
             }
 
             mesh.vertices = vertices;
@@ -115,6 +168,11 @@ namespace SojaExiles
                 Vector3 s = sleeveScale[i];
                 sleeves[i].localScale = new Vector3(s.x, s.y * Mathf.Max(0.05f, unfold), s.z);
                 sleeves[i].localPosition = sleevePosition[i] + (forward * sway + lag) * 0.6f;
+                if (body.Length > 0)
+                {
+                    // El centro de la manga queda fuera del cuerpo (mas su grosor).
+                    sleeves[i].position = PushOut(sleeves[i].position, 0.02f);
+                }
             }
         }
     }

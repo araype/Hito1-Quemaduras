@@ -65,6 +65,8 @@ namespace SojaExiles
             // Primero la escala de la cocina y la ubicacion de la paciente y
             // del jugador: lo que se instala despues ya queda a escala.
             BurnStaging.Apply();
+            // Que el jugador no salga de la cocina.
+            PlayArea.FromKitchen();
 
             if (Object.FindObjectOfType<KitchenAmbience>() == null)
             {
