@@ -54,6 +54,8 @@ namespace SojaExiles
             go.AddComponent<NoAutoCollider>();
             go.transform.position = eye + forward * distance + Vector3.down * drop;
             go.transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
+            // Siempre encima de la escena: no lo tapan paredes ni muebles.
+            go.AddComponent<OverlayPanel>();
             return go.transform;
         }
 
@@ -68,32 +70,38 @@ namespace SojaExiles
             return quad;
         }
 
-        // Estilo comun de las tarjetas (narrador, inicio, decision medica y
-        // resumen): fondo oscuro translucido, franja azul a la izquierda,
-        // etiqueta celeste arriba, texto principal blanco y pistas en gris
-        // azulado.
-        public static readonly Color CardColor = new Color(0.07f, 0.1f, 0.16f);
-        public static readonly Color CardLabelColor = new Color(0.55f, 0.78f, 1f);
-        public static readonly Color CardHintColor = new Color(0.8f, 0.85f, 0.92f);
-        public static readonly Color CardWarningColor = new Color(1f, 0.6f, 0.45f);
-        public const float CardAlpha = 0.92f;
-        public const float CardAccentWidth = 0.012f;
+        // Estilo de las tarjetas de la guia (rediseno de Sebastian, rama
+        // rediseno-tarjetas): vidrio oscuro redondeado con borde azul a morado
+        // y brillo; etiqueta celeste chica, titulo blanco en negrita y pistas
+        // en gris azulado. Lo usan tambien el menu de inicio y la decision
+        // medica, para que todas las tarjetas se vean iguales.
+        public static readonly Color CardLabelColor = new Color(0.62f, 0.8f, 1f);
+        public static readonly Color CardHintColor = new Color(0.82f, 0.87f, 0.95f);
+        public static readonly Color CardWarningColor = new Color(1f, 0.66f, 0.45f);
 
-        // Fondo de tarjeta centrado en (center) con su franja de color en el
-        // borde izquierdo.
-        public static Renderer CardBackground(Transform parent, Vector2 center, Vector2 size, out Renderer accent)
+        // Fondo de tarjeta redondeado centrado en (center).
+        public static RoundedPanel CardPanel(Transform parent, Vector2 center, Vector2 size)
         {
-            Renderer background = Background(parent, center, size, "Panel_Fondo_Translucido", CardColor, 0.001f);
-            IndicatorUtil.SetColor(background, new Color(CardColor.r, CardColor.g, CardColor.b, CardAlpha));
-            float accentX = center.x - size.x * 0.5f + CardAccentWidth * 0.5f;
-            accent = Background(parent, new Vector2(accentX, center.y), new Vector2(CardAccentWidth, size.y),
-                "Panel_Boton", new Color(0.25f, 0.6f, 1f), 0f);
-            return background;
+            RoundedPanel panel = RoundedPanel.Create(parent, "FondoTarjeta", center, size, 0.001f, 0.022f, 0.0018f,
+                0.012f);
+            panel.top = new Color(0.1f, 0.14f, 0.24f, 1f);
+            panel.bottom = new Color(0.05f, 0.07f, 0.14f, 1f);
+            panel.Push();
+            return panel;
         }
 
-        public static Renderer CardBackground(Transform parent, Vector2 center, Vector2 size)
+        // Texto en negrita (titulos de las tarjetas).
+        public static TextMesh BoldText(Transform parent, string text, Vector2 position, float lineHeight, Color color)
         {
-            return CardBackground(parent, center, size, out Renderer _);
+            TextMesh mesh = Text(parent, text, position, lineHeight, color);
+            PanelText panelText = mesh.GetComponent<PanelText>();
+            if (panelText != null)
+            {
+                panelText.Init();
+                panelText.Tmp.fontStyle = TMPro.FontStyles.Bold;
+            }
+
+            return mesh;
         }
 
         // Texto con alto de linea aproximado 'lineHeight' (m). TextMesh: con
@@ -118,6 +126,9 @@ namespace SojaExiles
             renderer.sharedMaterial = Font.material;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
+            // Se dibuja con TextMesh Pro (nitido y con tildes); el TextMesh
+            // queda como fuente del texto para el resto del codigo.
+            go.AddComponent<PanelText>();
             return mesh;
         }
 
@@ -145,6 +156,30 @@ namespace SojaExiles
             button.idleColor = color;
             button.pressedColor = Color.Lerp(color, Color.white, 0.45f);
             button.OnPressed = onPressed;
+            return button;
+        }
+
+        // Boton con fondo redondeado tipo pildora (mismo estilo que las
+        // tarjetas de la guia). Funciona igual que Button.
+        public static TouchButton RoundedButton(Transform parent, string label, Vector2 center, Vector2 size,
+            Color color, System.Action onPressed)
+        {
+            TouchButton button = Button(parent, label, center, size, color, onPressed);
+            Renderer old = button.background;
+            RoundedPanel rounded = RoundedPanel.Create(button.transform, "FondoBoton", Vector2.zero, size, 0f,
+                size.y * 0.5f, 0.0015f, 0.012f);
+            rounded.top = Color.Lerp(color, Color.white, 0.15f);
+            rounded.bottom = Color.Lerp(color, Color.black, 0.25f);
+            rounded.borderLeft = new Color(0.65f, 0.85f, 1f, 0.9f);
+            rounded.borderRight = new Color(0.8f, 0.65f, 1f, 0.9f);
+            rounded.glowStrength = 0.4f;
+            rounded.Push();
+            button.background = rounded.Renderer;
+            if (old != null)
+            {
+                Object.Destroy(old.gameObject);
+            }
+
             return button;
         }
 

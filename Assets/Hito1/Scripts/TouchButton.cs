@@ -24,6 +24,7 @@ namespace SojaExiles
         private BoxCollider box;
         private Transform fill;
         private Renderer fillRenderer;
+        private RoundedPanel roundedFill;
         private Vector2 size;
         private float enabledTime;
         private float nextPress;
@@ -67,6 +68,19 @@ namespace SojaExiles
             }
 
             size = new Vector2(box.size.x, box.size.y);
+            RoundedPanel roundedBackground = background.GetComponent<RoundedPanel>();
+            if (roundedBackground != null)
+            {
+                // Boton redondeado: la barra tambien es una pildora que crece.
+                roundedFill = RoundedPanel.Create(transform, "Llenado", Vector2.zero, new Vector2(size.y, size.y),
+                    -0.001f, roundedBackground.radius, 0f, 0f);
+                roundedFill.sheen = 0f;
+                roundedFill.SetSolid(Color.Lerp(idleColor, new Color(0.02f, 0.05f, 0.12f), 0.45f), 0f);
+                fillRenderer = roundedFill.Renderer;
+                fillRenderer.enabled = false;
+                return;
+            }
+
             GameObject go = new GameObject("Llenado");
             go.AddComponent<NoAutoCollider>();
             go.transform.SetParent(transform, false);
@@ -110,7 +124,13 @@ namespace SojaExiles
 
             IndicatorUtil.SetColor(background, Time.time < flashUntil ? pressedColor
                 : hand >= 0 && armed ? Color.Lerp(idleColor, Color.white, 0.12f) : idleColor);
-            if (fill != null)
+            if (roundedFill != null)
+            {
+                float w = Mathf.Max(size.y, size.x * Progress);
+                roundedFill.SetRect(new Vector2(-size.x * 0.5f + w * 0.5f, 0f), new Vector2(w, size.y));
+                fillRenderer.enabled = Progress > 0.001f;
+            }
+            else if (fill != null)
             {
                 fill.localScale = new Vector3(size.x * Progress, 1f, 1f);
                 fillRenderer.enabled = Progress > 0.001f;

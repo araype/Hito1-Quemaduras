@@ -331,7 +331,8 @@ namespace SojaExiles
             float a = Time.time / Mathf.Max(0.5f, stirSeconds) * Mathf.PI * 2f;
             Vector3 circle = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * stirRadius;
             Vector3 center = pot.BottomCenter + Vector3.up * (pot.Height + stirHeight) + toHer * (pot.Radius * 0.35f);
-            spoonTip = pot.BottomCenter + Vector3.up * (pot.Height * 0.35f) + circle * 2.2f;
+            spoonTip = pot.BottomCenter + Vector3.up * (pot.Height * 0.45f)
+                + Vector3.ClampMagnitude(circle * 2.2f, pot.Radius * 0.55f);
             return center + circle;
         }
 
@@ -666,7 +667,10 @@ namespace SojaExiles
                 return;
             }
 
-            spoonRoot.SetPositionAndRotation(grip - dir.normalized * 0.02f, Quaternion.LookRotation(dir, transform.forward));
+            // La cuchara se desliza en la mano para que la paleta (a 0,27 m del
+            // extremo) quede dentro de la olla y no salga por el fondo.
+            float back = Mathf.Max(0.02f, 0.27f - dir.magnitude);
+            spoonRoot.SetPositionAndRotation(grip - dir.normalized * back, Quaternion.LookRotation(dir, transform.forward));
         }
 
         private void DropSpoon()

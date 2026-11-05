@@ -74,10 +74,11 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
 - [x] Mejoras pedidas tras probarlo (2026-11-05, rama
   `mejoras-tarjetas-colision-reinicio`; **solo compilado, falta probarlo en
   el editor y en el visor**):
-  - tarjetas unificadas: el panel de inicio, el de decisión médica y el
-    resumen usan el mismo estilo que la tarjeta del narrador (fondo
-    translúcido, franja azul, etiqueta celeste, texto a la izquierda), con
-    `VRPanelKit.CardBackground` y sus colores;
+  - tarjetas unificadas con el rediseño de Sebastián (rama
+    `rediseno-tarjetas`, unida a esta): el menú de inicio y la decisión
+    médica usan su panel redondeado con borde brillante y botones tipo
+    píldora (`VRPanelKit.CardPanel`, `BoldText`, `RoundedButton`), como la
+    tarjeta del narrador y el resumen;
   - el jugador ya no atraviesa a la paciente: la cámara se corre fuera de su
     cuerpo al inclinarse, al caminar en el espacio real o si ella camina
     hacia él (`VRLocomotion.KeepHeadOutOfPatient`, `headClearance`), y las
