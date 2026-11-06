@@ -135,6 +135,10 @@ namespace SojaExiles
                 new Color(0.22f, 0.48f, 0.95f), Restart);
             VRPanelKit.Text(t, "Deja la mano sobre el botón para repetir", new Vector2(0f, buttonY - 0.05f), 0.015f,
                 Muted, TextAnchor.UpperCenter, TextAlignment.Center);
+
+            // Credito que pide el plan gratis de ElevenLabs (docs/VOCES.md).
+            VRPanelKit.Text(t, "Voces: elevenlabs.io", new Vector2(right, -Height / 2f + 0.03f), 0.012f, Muted,
+                TextAnchor.UpperRight, TextAlignment.Right);
         }
 
         // Indicador: valor grande arriba y etiqueta chica abajo.

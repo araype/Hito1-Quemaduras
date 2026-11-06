@@ -48,7 +48,11 @@ namespace SojaExiles
         public float handShakeDegrees = 32f;
         public float handShakeSeconds = 1.6f;
 
-        private static readonly string[] PainLines = { "voz_dolor_1", "voz_dolor_2", "voz_quemadura_2" };
+        // Mas variantes para que el quejido no se repita cada pocos segundos.
+        private static readonly string[] PainLines =
+        {
+            "voz_dolor_1", "voz_dolor_2", "voz_quemadura_2", "voz_dolor_3", "voz_dolor_4", "voz_dolor_5"
+        };
 
         private PatientBody body;
         private AudioSource voice;
@@ -57,6 +61,7 @@ namespace SojaExiles
         private float stateTime;
         private float burnedWithoutWater;
         private float nextPainLine;
+        private int lastPainLine = -1;
         private float nextTremble;
         private float nextProtest;
         private bool waterHinted, clothHinted, relieved;
@@ -324,7 +329,15 @@ namespace SojaExiles
                 if (Time.time >= nextPainLine && !IsSpeaking)
                 {
                     nextPainLine = Time.time + Random.Range(painLineInterval.x, painLineInterval.y);
-                    Say(PainLines[Random.Range(0, PainLines.Length)], false);
+                    // Nunca el mismo quejido dos veces seguidas.
+                    int line = Random.Range(0, PainLines.Length - (lastPainLine >= 0 ? 1 : 0));
+                    if (lastPainLine >= 0 && line >= lastPainLine)
+                    {
+                        line++;
+                    }
+
+                    lastPainLine = line;
+                    Say(PainLines[line], false);
                 }
 
                 if (voiceHints && !waterHinted && burnedWithoutWater > waterHintDelay && !relieved && !IsSpeaking)

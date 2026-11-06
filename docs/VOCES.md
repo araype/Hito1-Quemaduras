@@ -9,6 +9,14 @@ poner el audio nuevo con el mismo nombre y borrar el anterior (si quedan
 Los textos se sacaron transcribiendo los audios originales (TTS) el
 2026-11-06 y se corrigieron a mano.
 
+**Estado:** las 45 frases y tres quejidos nuevos (`voz_dolor_3` a `voz_dolor_5`)
+se generaron con ElevenLabs (plan gratis) y se pasaron al juego el
+2026-11-06: convertidos a `.wav` 44,1 kHz mono con el mismo nombre (se
+conservan los `.meta`), al mismo volumen que las voces anteriores (unos
+-17 dBFS en las partes con voz) y con 0,3 s de silencio al final. El
+crédito "Voces: elevenlabs.io" está en el resumen final; agregarlo
+también en el informe.
+
 ## Cómo generarlas (ElevenLabs)
 
 1. Modelo **Eleven v3** (si no está en tu plan: Multilingual v2, sin las
@@ -86,11 +94,10 @@ emergencia).
 Para el narrador conviene `[calm]` al inicio de cada frase, y en los
 errores `[firm]` (corrige sin regañar).
 
-## Frases nuevas sugeridas
+## Quejidos adicionales
 
-Hoy la tía repite solo tres quejidos (`voz_dolor_1`, `voz_dolor_2`,
-`voz_quemadura_2`) cada 7 a 12 segundos. Con más variantes suena menos
-repetitivo (habría que sumarlas a `PainLines` en `BurnPatientReactions`):
+Ya generadas y en uso: `PainLines` de `BurnPatientReactions` alterna seis
+quejidos y nunca repite el mismo dos veces seguidas.
 
 | Archivo | Para ElevenLabs |
 |---|---|

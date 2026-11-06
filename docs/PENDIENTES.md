@@ -136,7 +136,11 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   jugador responde con opciones cerca del teléfono ("¿Tiene ampollas?",
   "¿Qué tan grande es?"). La respuesta lleva a `BurnProtocol.Decide`. Voces
   del operador con la herramienta de voz elegida (ver abajo).
-- [ ] **Voces más naturales** para la paciente, el narrador y el operador:
+- [x] **Voces más naturales** de la paciente y el narrador: las 45 frases
+  regeneradas con ElevenLabs (plan gratis, con etiquetas de emoción) y
+  tres quejidos nuevos; guion y detalles en `docs/VOCES.md` (2026-11-06,
+  rama `experiencia-inmersiva`; **falta oírlas en el visor** junto a los
+  efectos). Falta: las del operador del 106. Notas de la investigación:
   generar los `.wav` fuera de Unity con el mismo nombre (no hace falta
   cambiar código). Candidatos: ElevenLabs v3 (etiquetas de emoción como
   `[crying]`, `[whispers]`, `[shouts]`), Azure Neural TTS (voces es-PE
