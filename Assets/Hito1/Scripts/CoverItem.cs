@@ -2,20 +2,22 @@ using UnityEngine;
 
 namespace SojaExiles
 {
-    // Material para cubrir la quemadura despues de enfriarla: film
-    // transparente de cocina o una gasa esteril. Se suelta sobre la mano
-    // quemada y la cubre sin apretar (una capa sobre la piel que sigue a la
-    // mano) y pasa a Covered (falta decidir si va al centro de salud). Si se
-    // intenta antes de terminar de enfriar, no se pone: es un error y la
-    // paciente se queja.
-    // El rollo de film queda (se corta un pedazo); la gasa se usa.
+    // Material para cubrir la quemadura despues de enfriarla: una bolsa
+    // plastica limpia (para una mano, NHS) o una gasa esteril. Se suelta
+    // sobre la mano quemada y la cubre sin apretar (una capa sobre la piel
+    // que sigue a la mano) y pasa a Covered (falta decidir si va al centro de
+    // salud). Si se intenta antes de terminar de enfriar, no se pone: es un
+    // error y la paciente se queja. La bolsa y la gasa se usan.
+    // El film ya no usa este componente: se cubre con tiras (FilmRoll y
+    // FilmStrip). Kind.Film queda por las escenas que guardan el numero.
     [RequireComponent(typeof(Rigidbody))]
     public class CoverItem : MonoBehaviour
     {
         public enum Kind
         {
             Film,
-            Gasa
+            Gasa,
+            Bolsa
         }
 
         public Kind kind;
@@ -71,19 +73,32 @@ namespace SojaExiles
             }
 
             // Capa sobre la piel de la mano, un poco mas separada que la
-            // quemadura y la mano mojada.
-            SkinnedMeshRenderer layer = HandSkinMesh.Build(patient, true, 0.45f, kind == Kind.Film ? 0.0035f : 0.003f,
-                "Body", kind == Kind.Film ? "FilmMano" : "GasaMano", kind == Kind.Film ? "Film_Mano" : "Gasa_Mano");
+            // quemadura y la mano mojada. La bolsa llega hasta la muneca y
+            // queda holgada.
+            SkinnedMeshRenderer layer;
+            switch (kind)
+            {
+                case Kind.Bolsa:
+                    layer = HandSkinMesh.Build(patient, true, 0.25f, 0.01f, "Body", "BolsaMano", "Bolsa_Mano");
+                    break;
+                case Kind.Gasa:
+                    layer = HandSkinMesh.Build(patient, true, 0.45f, 0.003f, "Body", "GasaMano", "Gasa_Mano");
+                    break;
+                default:
+                    layer = HandSkinMesh.Build(patient, true, 0.45f, 0.0035f, "Body", "FilmMano", "Film_Mano");
+                    break;
+            }
+
             if (layer == null)
             {
                 Debug.LogWarning("[CoverItem] No se pudo cubrir la mano (sin malla de piel).", this);
             }
 
-            Hito1FX.PlayAt(kind == Kind.Film ? "film_estirar" : "tela_roce_2", hand.position, 0.7f);
+            Hito1FX.PlayAt(kind == Kind.Gasa ? "tela_roce_2" : "film_estirar", hand.position, 0.7f);
             burnSequence.Report(BurnSequenceManager.BurnEvent.Covered, kind.ToString());
             burnSequence.ChangeState(BurnSequenceManager.BurnState.Covered);
 
-            if (kind == Kind.Gasa)
+            if (kind != Kind.Film)
             {
                 Destroy(gameObject);
             }

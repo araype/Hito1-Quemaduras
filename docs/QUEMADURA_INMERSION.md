@@ -145,7 +145,7 @@ en el editor ni en el Quest.**
 | Llaves | La llave que ya estaba es la **fría** (punto azul). Al lado hay una **caliente** (punto rojo). Con solo la caliente abierta sale vapor del chorro, no enfría, vuelve a enrojecer la mano, la paciente grita y cuenta como error. | `WaterTap.hot/pair` |
 | Anillo | Anillo dorado en el anular. Se saca acercando la mano libre al punto dorado y manteniendo apretado el botón lateral (o la pinza) 1,5 s; el anillo avanza, el mando vibra y, si se suelta antes, vuelve. Si la mano ya se hinchó, se traba y cuenta como error. | `PatientRing` (paciente) |
 | Chompa | Doblada en la silla más cercana. Se suelta sobre la espalda o los hombros y queda puesta. | `SweaterItem` |
-| Cubrir | Film y gasa junto al lavadero. Se sueltan sobre la mano **ya enfriada**: la cubren y el caso termina (Success). Si se intenta antes, es un error. El paño de cocina ya no cierra el caso: sobre la quemadura cuenta como error. | `CoverItem`, `TowelMisuse` |
+| Cubrir | Film y gasa junto al lavadero. Se sueltan sobre la mano **ya enfriada**: la cubren y el caso termina (Success). Si se intenta antes, es un error. El paño de cocina ya no cierra el caso: sobre la quemadura cuenta como error. Ahora el film va en tiras (sección 11). | `CoverItem`, `TowelMisuse` |
 | Remedios caseros | Mantequilla, pasta dental, aceite y algodón en el mesón; hielo cerca del refrigerador. Al acercarlos, la paciente aparta la mano y protesta (error). Si se aplican, queda una capa sobre la piel y grita (error crítico; el algodón es error común). El agua quita la grasa y la pasta. | `HomeRemedy` |
 | Vibración | Suave mientras sostienes la mano de la paciente bajo el agua (más fuerte si está caliente), pulsos al acercar la mano al fuego, un golpe por error (dos si es crítico) y un toque leve en cada acierto. | `BurnHaptics` |
 
@@ -198,7 +198,7 @@ Quest**.
    marcas verdes. Si la mano sale del agua, el reloj **se pausa** (no vuelve a
    cero), la paciente se queja y cuenta como error.
 5. **Mientras tanto:** sacar el anillo y abrigarla con la chompa.
-6. **Cubrir** con film o gasa. La paciente agradece y pregunta si tiene que ir
+6. **Cubrir** con tiras de film o una bolsa plástica (sección 11). La paciente agradece y pregunta si tiene que ir
    al médico.
 7. **Decisión médica:** a los 5 s aparece frente al jugador un panel con dos
    botones (se tocan con la mano). Segundo grado (ampollas en la mano) → centro
@@ -302,3 +302,101 @@ está en `BurnGuide` (tarjetas) y en el informe de la rama.
   gasa y film en amarillo (`BurnSceneProps`), la cuchara no atraviesa la olla
   (`PatientBurnArm`) y la chompa cae desde los hombros y se balancea
   (`SweaterDrape`).
+
+## 9. Arco del juego (`corregir-bugs`)
+
+| Qué | Cómo funciona | Script |
+|---|---|---|
+| Modo evaluación sin puntos dorados | El grifo, la perilla y el anillo solo muestran su punto en modo guiado. El círculo de progreso del anillo y el brillo al acercar la mano al brazo siguen en los dos modos. | `IndicatorUtil.HintsVisible` |
+| Seguridad propia | Tocar la olla volcada (caliente 10 min) o pararse sobre el charco del piso mientras echa vapor es error, una vez cada uno. La mano suelta la olla sola, vibra y sisea. | `PlayerSafety`, `PotAccident.TryGetHotFloorPuddle` |
+| Calmarla (min 3) | Se asusta y pregunta si le quedará marca. Tres respuestas al azar: calmarla, asustarla (error) o pasta dental (error). | `PatientDialog` |
+| Resistencia (min 9) | El agua le parece muy fría y duda. "Aguanta, faltan N minutos" la convence; "sácala un rato", no responder en 14 s o "hielo" hacen que la saque y el reloj se pausa. | `PatientDialog`, `PatientBurnArm.Hesitate/Withdraw` |
+| Pausa | Botón de menú izquierdo (o gesto de menú de la mano; Escape o P en el editor). Detiene el tiempo y el sonido. "Continuar" o "Reiniciar práctica". | `PauseMenu` |
+| Resumen | Barra de los 4 actos con pasos y errores de cada uno; "qué mejorar" con hasta 8 líneas; botón "Otro caso" (el otro grado de quemadura). | `BurnSummaryPanel`, `BurnProtocol.CountAct`, `BurnInjury.NextDegree` |
+
+Botones (`TouchButton`): si el panel aparece donde ya está la mano, hay que
+sacarla y volver a entrar (antes, una mano en reposo elegía sola). En pausa
+detectan la mano por su posición, porque las esferas físicas no se mueven sin
+`FixedUpdate`.
+
+### Probar
+
+1. Elegir modo evaluación: no hay puntos dorados en el grifo ni en la perilla.
+2. Tras el accidente, tocar la olla del piso o pararse sobre el charco: queda
+   como error en el resumen ("No toques la olla…", "Rodea el agua…").
+3. Minuto 3 y minuto 9 del reloj: responder a la tía. Probar "sácala un
+   rato": ella saca la mano y hay que volver a llevarla al chorro.
+4. Pausar con el botón de menú izquierdo y continuar; luego reiniciar.
+5. En el resumen, "Otro caso" reinicia con el otro grado.
+
+### Valores para ajustar
+
+- `PatientDialog > Worry Minute / Resist Minute / Answer Seconds`.
+- `PlayerSafety > Pot Hot Seconds / Touch Distance / Step Radius Fraction`.
+
+### Sin celular (2026-11-05)
+
+Se quitó el celular y el paso "Pedir ayuda a alguien de la casa": ninguna
+guía (NHS, Cruz Roja Británica, LSEBN) lo pide. El "Call" del protocolo es
+llamar a emergencias o pedir consejo médico si la quemadura es seria, y eso lo
+cubre la decisión médica. El resumen queda con 7 pasos. El valor
+`BurnEvent.HelpRequested` sigue en el enum, sin uso, porque las escenas
+guardan el número.
+
+## 10. Bugs de la prueba en Quest 2 (`corregir-bugs`)
+
+Los 38 hallazgos de `Bugs_Experiencia_VR_Quemaduras.pdf` (olla fija antes
+del accidente, brazo de la tía, agarres, llama, chompa, paneles, área de
+juego, aspecto de la quemadura, etc.) están arreglados. El detalle de cada
+uno, con los scripts y valores, está en `docs/PENDIENTES.md` del commit
+`e8d5756` (`git show e8d5756:docs/PENDIENTES.md`).
+
+## 11. Cubrir con film en tiras o bolsa plástica (`corregir-bugs`)
+
+Respaldo: NHS y Cruz Roja Británica (film transparente puesto a lo largo, sin
+envolver, porque la mano se hincha; para una mano sirve una bolsa plástica
+limpia) y la guía LSEBN ("Cover").
+
+| Qué | Cómo funciona | Script |
+|---|---|---|
+| Rollo de film | Se sostiene con una mano. Mientras tanto, el borde de la tira espera en la superficie del rollo, del lado de la otra mano; al agarrar el rollo con esa mano se toma el borde (no se cambia el rollo de mano). Al tirar, la tira se estira desde el rollo y se corta a los 20 cm. Si se suelta el rollo, la tira se corta si ya medía 8 cm. | `FilmRoll`, `FilmStrip` |
+| Poner una tira | Se suelta la tira sobre la mano quemada (a menos de 15 cm). Si va a lo largo (de la muñeca a los dedos) cubre una franja de 6 cm del lado donde se apoyó, como una capa sobre la piel que sigue a la mano. Cada tira queda un poco más afuera que la anterior. | `FilmCoverage`, `HandSkinMesh` (filtro de triángulos), `HandFrame` |
+| Cuánto falta | Se mide sobre la máscara de la quemadura (`BurnSkinOverlay`): con 80 % cubierto pasa a "Covered". En la tarjeta del narrador se ve el porcentaje. Con la quemadura de prueba hacen falta 3 tiras, una al lado de la otra (13 %, 59 %, 84 %). | `FilmCoverage`, `BurnGuide` |
+| Envolver | Una tira atravesada (como si se envolviera la mano) no se pone: la tía dice "me aprieta", el narrador corrige y es error una vez (`BurnEvent.FilmWrapped`, valor nuevo al final). | `FilmStrip`, `BurnPatientReactions`, `BurnProtocol` |
+| Bolsa plástica | En el mesón, junto al film. Se suelta sobre la mano y la cubre entera hasta la muñeca, holgada. Cuenta como cubierta correcta (`CoverItem.Kind.Bolsa`, valor nuevo al final). | `CoverItem`, `BurnSceneProps` |
+| Gasa | Sin cambios (cubre toda la mano). Queda "a decidir" en `PENDIENTES.md`. | `CoverItem` |
+
+El paso del resumen se llama ahora "Cubrir sin apretar (film o bolsa)".
+
+### Voces nuevas (TTS)
+
+- Narrador (Raúl): `guia_cubrir` (texto nuevo de la tarjeta) y
+  `guia_err_envolver` ("No envuelvas su mano: pon las tiras a lo largo,
+  sueltas.").
+- Paciente (Sabina): `voz_aprieta` ("¡Ay, me aprieta! No me envuelvas la
+  mano, por favor.").
+
+### Probar
+
+1. Terminar de enfriar. Tomar el rollo de film con una mano.
+2. Con la otra mano, agarrar el rollo: se toma el borde. Alejarla hasta que
+   la tira se corte.
+3. Soltar la tira sobre el dorso de su mano, a lo largo. La tarjeta muestra
+   el porcentaje cubierto. Repetir al lado hasta llegar a 80 %.
+4. Probar una tira atravesada: ella se queja y en el resumen aparece "No
+   envuelvas la mano con el film…".
+5. En otra partida, soltar la bolsa plástica sobre su mano: queda cubierta de
+   una vez.
+
+**Probado en el editor** colocando las tiras y la bolsa por código (3 tiras
+a lo largo: 84 % y "Covered"; tira atravesada: error una sola vez; bolsa:
+"Covered" sin errores). **Falta probar con las manos** tirar del rollo (en el
+Quest o con Quest Link).
+
+### Valores para ajustar
+
+- `FilmRoll > Strip Width / Tear Length / Min Keep Length`.
+- `FilmStrip > Attach Distance / Loose Seconds`.
+- `FilmCoverage > Coverage Needed / Lengthwise Min / Length Margin / Burn Alpha Min`.
+- Materiales `Film_Tira` (la tira en la mano del jugador), `Film_Mano`
+  (sobre la piel), `Bolsa_Mano` y `Bolsa_Plastico`.

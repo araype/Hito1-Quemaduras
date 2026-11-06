@@ -30,6 +30,10 @@ namespace SojaExiles
         public bool randomDegree;
         public bool rightHand = true;
 
+        // Grado pedido para la proxima partida (boton "Otro caso" del
+        // resumen). Sobrevive a la recarga de la escena y se usa una vez.
+        public static BurnDegree? NextDegree;
+
         [Header("Hinchazon")]
         [Tooltip("Cuanto engrosa la mano hinchada del todo (0,12 = 12 %).")]
         public float maxSwelling = 0.12f;
@@ -83,7 +87,12 @@ namespace SojaExiles
         {
             body = GetComponent<PatientBody>();
             Instance = this;
-            if (randomDegree)
+            if (NextDegree.HasValue)
+            {
+                degree = NextDegree.Value;
+                NextDegree = null;
+            }
+            else if (randomDegree)
             {
                 degree = Random.value < 0.5f ? BurnDegree.Primero : BurnDegree.SegundoSuperficial;
             }

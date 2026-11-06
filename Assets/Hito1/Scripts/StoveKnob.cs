@@ -100,6 +100,7 @@ namespace SojaExiles
                 ApplyRotation();
             }
 
+            UpdateMarker();
             if (marker != null && marker.enabled)
             {
                 float pulse = 1f + 0.15f * Mathf.Sin(Time.time * 4f);
@@ -185,12 +186,13 @@ namespace SojaExiles
             }
         }
 
-        // El punto dorado solo se ve mientras hay fuego (invita a apagarlo).
+        // El punto dorado solo se ve mientras hay fuego (invita a apagarlo) y
+        // en modo guiado.
         private void UpdateMarker()
         {
             if (marker != null)
             {
-                marker.enabled = IsOn;
+                marker.enabled = IsOn && IndicatorUtil.HintsVisible;
             }
         }
     }

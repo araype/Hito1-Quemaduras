@@ -8,8 +8,9 @@ historial de git).
 
 ## Antes de empezar
 
-- **Qué falta y en qué orden:** `docs/PENDIENTES.md` (única lista). Al
-  terminar un punto, márcalo ahí. Los bugs vienen de
+- **Qué falta y en qué orden:** `docs/PENDIENTES.md` (única lista, solo lo
+  que falta). Al terminar un punto, bórralo de ahí y descríbelo en
+  `docs/QUEMADURA_INMERSION.md`. Los bugs vienen de
   `Bugs_Experiencia_VR_Quemaduras.pdf` (raíz, sin versionar).
 - **Qué hay y cómo probarlo:** `docs/QUEMADURA_INMERSION.md`.
 - Los documentos de etapas anteriores se borraron; siguen en el historial.

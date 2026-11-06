@@ -83,6 +83,7 @@ namespace SojaExiles
         private float cooledTime = -1f;
         private Vector3 avoidOffset;
         private float avoidUntil;
+        private float hesitateLift;
         private float lookAtPlayerUntil;
         private Transform viewer;
         private bool receiving;
@@ -184,6 +185,30 @@ namespace SojaExiles
             }
 
             return true;
+        }
+
+        // Duda bajo el agua (quiere sacar la mano por el frio): la levanta un
+        // poco y tiembla, sin salir del chorro. 0 la deja quieta otra vez.
+        public void Hesitate(float lift)
+        {
+            hesitateLift = Mathf.Max(0f, lift);
+        }
+
+        // Saca la mano del agua y la vuelve a proteger contra el pecho (lo
+        // decide ella; PatientDialog). Si el jugador se la sostenia, se suelta.
+        public void Withdraw()
+        {
+            hesitateLift = 0f;
+            if (target != null && SimpleGrab.IsHeldObject(target))
+            {
+                SimpleGrab.ForceRelease(target);
+                wasHeld = false;
+            }
+
+            if (Current == Mode.InWater || Current == Mode.Placed)
+            {
+                Current = Mode.Guard;
+            }
         }
 
         // Mira al jugador un rato (por ejemplo, al pedirle algo).
@@ -370,6 +395,11 @@ namespace SojaExiles
             if (Time.time < avoidUntil)
             {
                 goal += avoidOffset * Mathf.Clamp01((avoidUntil - Time.time) / 0.5f);
+            }
+
+            if (hesitateLift > 0f && Current == Mode.InWater)
+            {
+                goal += Vector3.up * hesitateLift * (0.75f + 0.25f * Mathf.Sin(Time.time * 9f));
             }
 
             return goal;

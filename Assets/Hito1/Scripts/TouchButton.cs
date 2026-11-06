@@ -8,6 +8,9 @@ namespace SojaExiles
     // barra se vacia. Asi todos los botones cuestan lo mismo y un roce al
     // pasar no elige nada. Despues de apretarlo hay que sacar la mano para
     // volver a usarlo.
+    // Usa el tiempo sin escalar: funciona tambien con el juego en pausa
+    // (PauseMenu), y entonces mira la posicion de la mano en vez de su esfera
+    // fisica, que no se mueve sin FixedUpdate.
     [RequireComponent(typeof(BoxCollider))]
     public class TouchButton : MonoBehaviour
     {
@@ -48,8 +51,12 @@ namespace SojaExiles
 
         private void OnEnable()
         {
-            enabledTime = Time.time;
+            enabledTime = Time.unscaledTime;
             held = 0f;
+            // Si el panel aparece donde ya esta la mano (por ejemplo, mientras
+            // sostiene el brazo de la paciente), no cuenta: hay que sacarla y
+            // volver a entrar.
+            waitExit = true;
             box = GetComponent<BoxCollider>();
             box.isTrigger = true;
         }
@@ -96,7 +103,8 @@ namespace SojaExiles
         private void Update()
         {
             int hand = HandInside();
-            bool armed = Time.time - enabledTime >= armDelay && Time.time >= nextPress;
+            float now = Time.unscaledTime;
+            bool armed = now - enabledTime >= armDelay && now >= nextPress;
             if (hand < 0)
             {
                 waitExit = false;
@@ -104,11 +112,11 @@ namespace SojaExiles
 
             if (hand >= 0 && armed && !waitExit)
             {
-                held += Time.deltaTime;
+                held += Time.unscaledDeltaTime;
                 lastHand = hand;
-                if (Time.time >= nextTick)
+                if (now >= nextTick)
                 {
-                    nextTick = Time.time + 0.12f;
+                    nextTick = now + 0.12f;
                     Buzz(hand, 0.12f + 0.2f * Progress, 0.03f);
                 }
 
@@ -119,10 +127,10 @@ namespace SojaExiles
             }
             else
             {
-                held = Mathf.MoveTowards(held, 0f, Time.deltaTime * 2f);
+                held = Mathf.MoveTowards(held, 0f, Time.unscaledDeltaTime * 2f);
             }
 
-            IndicatorUtil.SetColor(background, Time.time < flashUntil ? pressedColor
+            IndicatorUtil.SetColor(background, now < flashUntil ? pressedColor
                 : hand >= 0 && armed ? Color.Lerp(idleColor, Color.white, 0.12f) : idleColor);
             if (roundedFill != null)
             {
@@ -141,8 +149,8 @@ namespace SojaExiles
         {
             held = 0f;
             waitExit = true;
-            nextPress = Time.time + cooldown;
-            flashUntil = Time.time + 0.25f;
+            nextPress = Time.unscaledTime + cooldown;
+            flashUntil = Time.unscaledTime + 0.25f;
             Hito1FX.PlayAt("perilla_clic", transform.position, 0.7f, 0.02f);
             Buzz(lastHand, 0.5f, 0.06f);
             OnPressed?.Invoke();
@@ -158,6 +166,11 @@ namespace SojaExiles
                 return -1;
             }
 
+            if (Time.timeScale <= 0f)
+            {
+                return HandPointInside();
+            }
+
             Vector3 center = transform.TransformPoint(box.center);
             Vector3 half = Vector3.Scale(box.size, transform.lossyScale) * 0.5f;
             half = new Vector3(Mathf.Abs(half.x), Mathf.Abs(half.y), Mathf.Abs(half.z));
@@ -168,6 +181,32 @@ namespace SojaExiles
                 if (SimpleGrab.IsHandCollider(overlap[i]))
                 {
                     return SimpleGrab.IsLeftHandCollider(overlap[i]) ? 0 : 1;
+                }
+            }
+
+            return -1;
+        }
+
+        // Sin fisica: el punto de agarre de cada mano dentro de la caja del
+        // boton (con un margen del tamano de la esfera de la mano).
+        private int HandPointInside()
+        {
+            for (int h = 0; h < 2; h++)
+            {
+                if (!SimpleGrab.TryGetHand(h == 0, out Vector3 p, out bool _))
+                {
+                    continue;
+                }
+
+                Vector3 local = transform.InverseTransformPoint(p) - box.center;
+                Vector3 scale = transform.lossyScale;
+                const float margin = 0.02f;
+                Vector3 half = box.size * 0.5f;
+                if (Mathf.Abs(local.x * scale.x) <= Mathf.Abs(half.x * scale.x) + margin
+                    && Mathf.Abs(local.y * scale.y) <= Mathf.Abs(half.y * scale.y) + margin
+                    && Mathf.Abs(local.z * scale.z) <= Mathf.Abs(half.z * scale.z) + margin)
+                {
+                    return h;
                 }
             }
 

@@ -18,6 +18,17 @@ namespace SojaExiles
         public static SkinnedMeshRenderer Build(Component owner, bool rightHand, float minHandWeight,
             float surfaceOffset, string skinRendererName, string objectName, string materialName)
         {
+            return Build(owner, rightHand, minHandWeight, surfaceOffset, skinRendererName, objectName, materialName,
+                null);
+        }
+
+        // Igual, pero solo con los triangulos que acepta 'filter' (recibe el
+        // centro y la normal del triangulo en el espacio de la malla, en la
+        // pose de enlace). Lo usan las tiras de film, que cubren una franja.
+        public static SkinnedMeshRenderer Build(Component owner, bool rightHand, float minHandWeight,
+            float surfaceOffset, string skinRendererName, string objectName, string materialName,
+            System.Func<Vector3, Vector3, bool> filter)
+        {
             SkinnedMeshRenderer skin = null;
             foreach (SkinnedMeshRenderer r in owner.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
@@ -85,6 +96,12 @@ namespace SojaExiles
             {
                 int a = triangles[t], b = triangles[t + 1], c = triangles[t + 2];
                 if (!isHand[a] || !isHand[b] || !isHand[c])
+                {
+                    continue;
+                }
+
+                if (filter != null && !filter((vertices[a] + vertices[b] + vertices[c]) / 3f,
+                    (normals[a] + normals[b] + normals[c]).normalized))
                 {
                     continue;
                 }

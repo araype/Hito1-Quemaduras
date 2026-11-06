@@ -118,7 +118,8 @@ namespace SojaExiles
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
                 hint = "Mantén su mano bajo el agua hasta que el reloj complete las 20 marcas.", clip = "guia_esperar" },
             new StepInfo { id = StepId.Cubrir, title = "Cubre la quemadura",
-                hint = "Con film o una gasa, sin apretar. Suéltalo sobre su mano.", clip = "guia_cubrir" },
+                hint = "Sostén el film con una mano y tira una tira con la otra. Suéltala a lo largo de su mano, sin envolver, hasta cubrirla. También sirve una bolsa plástica limpia.",
+                clip = "guia_cubrir" },
             new StepInfo { id = StepId.Decidir, title = "¿Necesita atención médica?",
                 hint = "Mira la quemadura: si tiene ampollas, debe verla un médico.", clip = "guia_decidir" }
         };
@@ -150,6 +151,7 @@ namespace SojaExiles
         private float cardExpandUntil;
         private float cardGazeTime;
         private float cardOpen = 1f;     // 0 compacta, 1 completa (animado)
+        private bool hiddenForDialog;
 
         private readonly List<Renderer> highlights = new List<Renderer>();
         private Material highlightMaterial;
@@ -601,7 +603,30 @@ namespace SojaExiles
             if (step >= 0)
             {
                 UpdateStepHighlight(Steps[step].id);
+
+                // Con cada tira de film, la tarjeta dice cuanto va cubierto.
+                if (Steps[step].id == StepId.Cubrir)
+                {
+                    int cover = CoverPercent();
+                    if (cover != shownCover)
+                    {
+                        shownCover = cover;
+                        if (cover > 0)
+                        {
+                            ShowStep(step, false, false);
+                        }
+                    }
+                }
             }
+        }
+
+        private int shownCover = -1;
+
+        // Porcentaje de la quemadura cubierto con film (-1 si aun no hay tiras).
+        private static int CoverPercent()
+        {
+            FilmCoverage coverage = FindObjectOfType<FilmCoverage>();
+            return coverage != null && coverage.Strips > 0 ? Mathf.RoundToInt(coverage.Coverage * 100f) : -1;
         }
 
         private void ShowStep(int index, bool isReturn, bool speak)
@@ -617,6 +642,13 @@ namespace SojaExiles
             StepInfo info = Steps[index];
             string title = isReturn ? "Vuelve a poner su mano bajo el agua" : info.title;
             string hint = isReturn ? "El reloj se pausó. Tómala del antebrazo y llévala al chorro." : info.hint;
+            int cover = CoverPercent();
+            if (!isReturn && info.id == StepId.Cubrir && cover >= 0)
+            {
+                FilmCoverage coverage = FindObjectOfType<FilmCoverage>();
+                hint = $"Cubierto con film: {cover} % (hace falta {Mathf.RoundToInt(coverage.coverageNeeded * 100f)} %). "
+                    + "Pon otra tira al lado, a lo largo de su mano.";
+            }
             ShowCard($"Paso {index + 1} de {Steps.Length}", title, hint);
             if (speak)
             {
@@ -700,6 +732,14 @@ namespace SojaExiles
                         points.Add(rr != null ? rr.bounds.center : item.transform.position);
                     }
 
+                    foreach (FilmRoll roll in FindObjectsOfType<FilmRoll>())
+                    {
+                        if (!roll.GetComponent<Grabbable>().IsHeld)
+                        {
+                            points.Add(roll.transform.TransformPoint(roll.axisCenter));
+                        }
+                    }
+
                     radius = 0.08f;
                     break;
             }
@@ -767,6 +807,24 @@ namespace SojaExiles
                     break;
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:
                     Correct("guia_err_temprano", "Todavía no: primero termina de enfriar la quemadura.");
+                    break;
+                case BurnSequenceManager.BurnEvent.PatientAlarmed:
+                    Correct("guia_err_calma", "Háblale con calma: dile que el agua fría alivia.");
+                    break;
+                case BurnSequenceManager.BurnEvent.BadAdvice:
+                    Correct("guia_err_remedio", "No le pongas nada en la quemadura: solo agua fría corriente.");
+                    break;
+                case BurnSequenceManager.BurnEvent.CoolingGaveUp:
+                    Correct("guia_err_aguantar", "Anímala a aguantar: hay que completar los 20 minutos.");
+                    break;
+                case BurnSequenceManager.BurnEvent.HotPotTouched:
+                    Correct("guia_err_olla", "No toques la olla: sigue caliente y también te quemarías.");
+                    break;
+                case BurnSequenceManager.BurnEvent.HotSpillStepped:
+                    Correct("guia_err_charco", "No pises el agua derramada: quema y resbala. Rodéala.");
+                    break;
+                case BurnSequenceManager.BurnEvent.FilmWrapped:
+                    Correct("guia_err_envolver", "No envuelvas su mano: pon las tiras a lo largo, sueltas.");
                     break;
             }
         }
@@ -985,8 +1043,29 @@ namespace SojaExiles
         // mirada se aleja mucho.
         private void UpdateCard()
         {
-            if (card == null || !card.gameObject.activeSelf)
+            if (card == null)
             {
+                return;
+            }
+
+            // Mientras la paciente pregunta algo (PatientDialog) la tarjeta se
+            // esconde y vuelve al cerrarse el panel.
+            if (hiddenForDialog && !PatientDialog.IsOpen)
+            {
+                hiddenForDialog = false;
+                card.gameObject.SetActive(true);
+                PlaceCard(true);
+            }
+
+            if (!card.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            if (PatientDialog.IsOpen)
+            {
+                hiddenForDialog = true;
+                card.gameObject.SetActive(false);
                 return;
             }
 

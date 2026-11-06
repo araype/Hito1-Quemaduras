@@ -34,6 +34,34 @@ namespace SojaExiles
         private Rigidbody body;
         private ParticleSystem pour;
 
+        // Momento (Time.time) en que se volco la olla; infinito negativo si
+        // todavia no.
+        public float SpillTime { get; private set; } = float.NegativeInfinity;
+
+        public bool Spilled
+        {
+            get { return SpillTime > float.NegativeInfinity; }
+        }
+
+        // Charco caliente del suelo (PlayerSafety avisa si el jugador lo
+        // pisa). Caliente mientras echa vapor.
+        private Puddle floorPuddle;
+        private float floorPuddleHotUntil;
+
+        public bool TryGetHotFloorPuddle(out Vector3 center, out float radius)
+        {
+            if (floorPuddle == null || Time.time > floorPuddleHotUntil)
+            {
+                center = Vector3.zero;
+                radius = 0f;
+                return false;
+            }
+
+            center = floorPuddle.Point;
+            radius = floorPuddle.CurrentRadius;
+            return radius > 0.01f;
+        }
+
         // Bloqueo antes del accidente: lugar de la olla sobre el quemador y
         // agarres de Meta que se apagaron mientras tanto.
         private bool locked;
@@ -223,6 +251,7 @@ namespace SojaExiles
                 if (!pouring && angle > 45f)
                 {
                     pouring = true;
+                    SpillTime = Time.time;
                     pot.Spill();
                     StartPour(pivot + Vector3.up * pot.Height * 0.9f, dir);
                 }
@@ -361,6 +390,9 @@ namespace SojaExiles
                 counter = new Puddle(top.point, top.normal, radius, 1);
             }
 
+            floorPuddle = floor;
+            floorPuddleHotUntil = Time.time + steamSeconds;
+
             float elapsed = 0f;
             while (elapsed < steamSeconds)
             {
@@ -415,6 +447,7 @@ namespace SojaExiles
         private class Puddle
         {
             public Vector3 Point;
+            public float CurrentRadius;
             private readonly Transform transform;
             private readonly ParticleSystem steam;
             private readonly float radius;
@@ -446,6 +479,7 @@ namespace SojaExiles
             public void Update(float grow, float elapsed, float steamSeconds)
             {
                 float r = radius * Mathf.Sqrt(grow);
+                CurrentRadius = r;
                 transform.localScale = new Vector3(r, 1f, r);
                 ParticleSystem.EmissionModule emission = steam.emission;
                 emission.rateOverTime = grow > 0f ? 9f * (1f - elapsed / steamSeconds) : 0f;

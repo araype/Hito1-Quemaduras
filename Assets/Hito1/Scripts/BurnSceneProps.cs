@@ -6,7 +6,8 @@ namespace SojaExiles
 {
     // Pone en la cocina los objetos del protocolo y los distractores, sin
     // tocar la escena:
-    //   - junto al lavadero: film transparente y gasa (para cubrir);
+    //   - junto al lavadero: film transparente, bolsa plastica y gasa (para
+    //     cubrir);
     //   - en la silla mas cercana a la paciente: una chompa (para abrigarla);
     //   - en el meson, cerca de la cocina: mantequilla, pasta dental, aceite
     //     y algodon; el hielo, cerca del refrigerador.
@@ -66,6 +67,7 @@ namespace SojaExiles
                 WaterTap tap = FindObjectOfType<WaterTap>();
                 Vector3 sink = tap != null ? tap.transform.position : stove;
                 Place(BuildFilm(), sink, counter, 0.3f, 0.9f, 0.09f, avoid);
+                Place(BuildBag(), sink, counter, 0.3f, 0.9f, 0.09f, avoid);
                 Place(BuildGauze(), sink, counter, 0.3f, 0.9f, 0.07f, avoid);
             }
 
@@ -182,7 +184,7 @@ namespace SojaExiles
 
         private static readonly Quaternion Lying = Quaternion.Euler(0f, 0f, 90f);
 
-        // Gasa y film en amarillo: en blanco se perdian sobre el meson.
+        // Gasa, film y bolsa en amarillo: en blanco se perdian sobre el meson.
         private static readonly Color Yellow = new Color(1f, 0.82f, 0.1f);
 
         private static void Amarillo(GameObject root, string part, float alpha)
@@ -212,8 +214,24 @@ namespace SojaExiles
                 new Vector3(0.05f, 0.15f, 0.05f), Lying, "Film_Rollo", new Color(0.9f, 0.95f, 1f, 0.5f));
             PropKit.Part(root.transform, PrimitiveType.Cylinder, new Vector3(0f, 0.026f, 0f),
                 new Vector3(0.026f, 0.155f, 0.026f), Lying, "Carton", new Color(0.6f, 0.45f, 0.3f));
-            root.AddComponent<CoverItem>().kind = CoverItem.Kind.Film;
+            // Se sostiene con una mano y se tiran tiras con la otra.
+            root.AddComponent<FilmRoll>();
             Amarillo(root, "Film_Rollo", 0.9f);
+            return root;
+        }
+
+        // Bolsa plastica limpia, doblada: para una mano quemada sirve como
+        // cubierta holgada (NHS).
+        private static GameObject BuildBag()
+        {
+            GameObject root = PropKit.Grabbable("BolsaPlastica", Vector3.zero, Quaternion.identity,
+                new Vector3(0.16f, 0.012f, 0.2f), 0.02f);
+            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.004f, 0f),
+                new Vector3(0.16f, 0.006f, 0.2f), "Bolsa_Plastico", new Color(0.92f, 0.95f, 1f, 0.6f));
+            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.0085f, -0.03f),
+                new Vector3(0.15f, 0.003f, 0.12f), "Bolsa_Plastico", new Color(0.92f, 0.95f, 1f, 0.6f));
+            root.AddComponent<CoverItem>().kind = CoverItem.Kind.Bolsa;
+            Amarillo(root, "Bolsa_Plastico", 0.75f);
             return root;
         }
 
