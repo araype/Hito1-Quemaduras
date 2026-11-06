@@ -3,20 +3,21 @@ using UnityEngine;
 namespace SojaExiles
 {
     // Material para cubrir la quemadura despues de enfriarla: una bolsa
-    // plastica limpia (para una mano, NHS) o una gasa esteril. Se suelta
+    // plastica limpia (para una mano, NHS). Se suelta
     // sobre la mano quemada y la cubre sin apretar (una capa sobre la piel
     // que sigue a la mano) y pasa a Covered (falta decidir si va al centro de
     // salud). Si se intenta antes de terminar de enfriar, no se pone: es un
-    // error y la paciente se queja. La bolsa y la gasa se usan.
+    // error y la paciente se queja. La bolsa se usa (desaparece).
     // El film ya no usa este componente: se cubre con tiras (FilmRoll y
-    // FilmStrip). Kind.Film queda por las escenas que guardan el numero.
+    // FilmStrip). Kind.Film y Kind.Gasa quedan sin uso por las escenas que
+    // guardan el numero (la gasa se quito: se pega a la herida).
     [RequireComponent(typeof(Rigidbody))]
     public class CoverItem : MonoBehaviour
     {
         public enum Kind
         {
             Film,
-            Gasa,
+            Gasa,   // sin uso
             Bolsa
         }
 
@@ -81,9 +82,6 @@ namespace SojaExiles
                 case Kind.Bolsa:
                     layer = HandSkinMesh.Build(patient, true, 0.25f, 0.01f, "Body", "BolsaMano", "Bolsa_Mano");
                     break;
-                case Kind.Gasa:
-                    layer = HandSkinMesh.Build(patient, true, 0.45f, 0.003f, "Body", "GasaMano", "Gasa_Mano");
-                    break;
                 default:
                     layer = HandSkinMesh.Build(patient, true, 0.45f, 0.0035f, "Body", "FilmMano", "Film_Mano");
                     break;
@@ -94,7 +92,7 @@ namespace SojaExiles
                 Debug.LogWarning("[CoverItem] No se pudo cubrir la mano (sin malla de piel).", this);
             }
 
-            Hito1FX.PlayAt(kind == Kind.Gasa ? "tela_roce_2" : "film_estirar", hand.position, 0.7f);
+            Hito1FX.PlayAt("film_estirar", hand.position, 0.7f);
             burnSequence.Report(BurnSequenceManager.BurnEvent.Covered, kind.ToString());
             burnSequence.ChangeState(BurnSequenceManager.BurnState.Covered);
 

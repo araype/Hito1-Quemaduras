@@ -5,9 +5,11 @@ namespace SojaExiles
     // Seguridad propia (E.8): quien ayuda no debe quemarse tambien.
     //   - Tocar la olla despues de que se volco: esta caliente. Vibra, suena
     //     el siseo, la mano la suelta sola y cuenta como error.
-    //   - Pisar el agua caliente derramada en el suelo mientras echa vapor:
-    //     cuenta como error (quema y resbala).
-    // Cada error se cuenta una sola vez; las veces siguientes solo vibra.
+    //   - Pisar el agua derramada en el suelo: no es error (el agua
+    //     derramada se enfria rapido y en la vida real no quema a traves del
+    //     zapato), pero el piso mojado resbala. Vibra y suena, y en el modo
+    //     guiado el narrador avisa que la rodee (HotSpillStepped sin gravedad).
+    // La olla cuenta como error una sola vez; las veces siguientes solo vibra.
     // Avisa por BurnSequenceManager.Report (HotPotTouched, HotSpillStepped).
     // Va en el objeto de BurnSequenceManager.
     public class PlayerSafety : MonoBehaviour
@@ -165,8 +167,7 @@ namespace SojaExiles
             if (!SteppedOnSpill)
             {
                 SteppedOnSpill = true;
-                burnSequence.Report(BurnSequenceManager.BurnEvent.HotSpillStepped, null,
-                    BurnSequenceManager.Severity.Error);
+                burnSequence.Report(BurnSequenceManager.BurnEvent.HotSpillStepped);
             }
         }
     }

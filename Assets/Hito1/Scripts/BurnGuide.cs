@@ -792,6 +792,15 @@ namespace SojaExiles
             switch (e)
             {
                 case BurnSequenceManager.BurnEvent.HotWaterOn:
+                    // Con la fria abierta, la caliente solo la templa (sale
+                    // tibia): esta bien, no se corrige.
+                    if (coldTap != null && coldTap.IsOpen)
+                    {
+                        break;
+                    }
+
+                    Correct("guia_err_caliente", "Esa es la llave caliente. Ciérrala y usa la del punto azul.");
+                    break;
                 case BurnSequenceManager.BurnEvent.HotWaterOnBurn:
                     Correct("guia_err_caliente", "Esa es la llave caliente. Ciérrala y usa la del punto azul.");
                     break;
@@ -803,7 +812,7 @@ namespace SojaExiles
                     Correct("guia_err_mano", "Sujétala del antebrazo: la mano quemada le duele.");
                     break;
                 case BurnSequenceManager.BurnEvent.ClothOnBurn:
-                    Correct("guia_err_pano", "El paño de cocina suelta pelusa. Usa film o gasa.");
+                    Correct("guia_err_pano", "El paño de cocina suelta pelusa. Usa film o una bolsa limpia.");
                     break;
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:
                     Correct("guia_err_temprano", "Todavía no: primero termina de enfriar la quemadura.");
@@ -815,13 +824,13 @@ namespace SojaExiles
                     Correct("guia_err_remedio", "No le pongas nada en la quemadura: solo agua fría corriente.");
                     break;
                 case BurnSequenceManager.BurnEvent.CoolingGaveUp:
-                    Correct("guia_err_aguantar", "Anímala a aguantar: hay que completar los 20 minutos.");
+                    Correct("guia_err_aguantar", "Anímala a aguantar o témplale un poco el agua: hay que completar los 20 minutos.");
                     break;
                 case BurnSequenceManager.BurnEvent.HotPotTouched:
                     Correct("guia_err_olla", "No toques la olla: sigue caliente y también te quemarías.");
                     break;
                 case BurnSequenceManager.BurnEvent.HotSpillStepped:
-                    Correct("guia_err_charco", "No pises el agua derramada: quema y resbala. Rodéala.");
+                    Correct("guia_err_charco", "El piso mojado resbala: rodea el agua derramada.");
                     break;
                 case BurnSequenceManager.BurnEvent.FilmWrapped:
                     Correct("guia_err_envolver", "No envuelvas su mano: pon las tiras a lo largo, sueltas.");

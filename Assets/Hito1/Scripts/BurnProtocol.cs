@@ -509,7 +509,7 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnEvent.BadAdvice:
                     return ExplainRemedy(detail);
                 case BurnSequenceManager.BurnEvent.HotSpillStepped:
-                    return "Rodea el agua derramada: quema y resbala. Tu seguridad va primero.";
+                    return "Rodea el agua derramada: el piso mojado resbala. Tu seguridad va primero.";
                 case BurnSequenceManager.BurnEvent.RemedyNear:
                 case BurnSequenceManager.BurnEvent.RemedyApplied:
                     return ExplainRemedy(detail);

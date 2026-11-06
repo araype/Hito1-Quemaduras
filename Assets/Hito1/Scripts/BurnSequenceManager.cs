@@ -8,7 +8,7 @@ namespace SojaExiles
     //   Burned (la mano se quema: la olla se vuelca, PotAccident; sin el
     //   accidente se dispara tras un retraso) -> Cooling (la mano esta bajo
     //   el chorro de agua fria) -> Cooled (se mantuvo bajo el agua el tiempo
-    //   necesario) -> Covered (se cubrio con tiras de film, una bolsa o gasa) ->
+    //   necesario) -> Covered (se cubrio con tiras de film o una bolsa) ->
     //   Success (se decidio si va al centro de salud, MedicalDecisionPanel).
     // Los cambios Cooling/Cooled los hacen los BurnContactDetector del
     // trigger de la quemadura. Si se saca la mano del agua antes de tiempo,
@@ -42,7 +42,7 @@ namespace SojaExiles
             RingRemoved,        // se saco el anillo a tiempo
             RingStuck,          // la mano ya se hincho: el anillo no sale
             SweaterOn,          // se abrigo a la paciente
-            Covered,            // quemadura cubierta (detalle: Film, Bolsa o Gasa)
+            Covered,            // quemadura cubierta (detalle: Film o Bolsa)
             CoveredTooEarly,    // se quiso cubrir antes de enfriar
             ClothOnBurn,        // se cubrio con el pano de cocina (suelta pelusa)
             RemedyNear,         // se acerco un remedio casero a la quemadura
@@ -52,13 +52,13 @@ namespace SojaExiles
             StepMissed,         // al terminar, falto un paso del protocolo (detalle: el paso)
             BurnedHandGrabbed,  // se la tomo de la mano quemada en vez del antebrazo
             HotPotTouched,      // el jugador toco la olla caliente (seguridad propia)
-            HotSpillStepped,    // el jugador piso el agua caliente derramada
+            HotSpillStepped,    // el jugador piso el agua derramada (solo aviso: resbala)
             HelpRequested,      // sin uso: se quito el celular (se deja por el numero que guardan las escenas)
             PatientReassured,   // se calmo a la paciente cuando se asusto
             PatientAlarmed,     // se la asusto mas en vez de calmarla
             BadAdvice,          // se le recomendo un remedio casero (detalle: cual)
-            CoolingConvinced,   // se la convencio de seguir con la mano en el agua
-            CoolingGaveUp,      // saco la mano por el frio (detalle: Consejo o SinRespuesta)
+            CoolingConvinced,   // siguio con la mano en el agua (detalle: null, o Templada si se templo el agua)
+            CoolingGaveUp,      // saco la mano por el frio (detalle: Consejo, SinRespuesta o SinTemplar)
             FilmWrapped         // se puso el film atravesado, envolviendo la mano (aprieta al hincharse)
         }
 

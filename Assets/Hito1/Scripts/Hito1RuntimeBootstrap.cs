@@ -139,7 +139,7 @@ namespace SojaExiles
                 }
             }
 
-            // La quemadura se cubre con film (FilmRoll), bolsa o gasa
+            // La quemadura se cubre con film (FilmRoll) o una bolsa
             // (CoverItem), no con el pano de cocina: el detector del pano ya
             // no la da por cubierta.
             foreach (BurnContactDetector detector in Object.FindObjectsOfType<BurnContactDetector>())

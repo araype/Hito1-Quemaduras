@@ -6,8 +6,9 @@ namespace SojaExiles
 {
     // Pone en la cocina los objetos del protocolo y los distractores, sin
     // tocar la escena:
-    //   - junto al lavadero: film transparente, bolsa plastica y gasa (para
-    //     cubrir);
+    //   - junto al lavadero: film transparente y bolsa plastica (para
+    //     cubrir; la gasa se quito: una gasa seca se pega a la herida y las
+    //     guias prefieren film o bolsa);
     //   - en la silla mas cercana a la paciente: una chompa (para abrigarla);
     //   - en el meson, cerca de la cocina: mantequilla, pasta dental, aceite
     //     y algodon; el hielo, cerca del refrigerador.
@@ -68,7 +69,6 @@ namespace SojaExiles
                 Vector3 sink = tap != null ? tap.transform.position : stove;
                 Place(BuildFilm(), sink, counter, 0.3f, 0.9f, 0.09f, avoid);
                 Place(BuildBag(), sink, counter, 0.3f, 0.9f, 0.09f, avoid);
-                Place(BuildGauze(), sink, counter, 0.3f, 0.9f, 0.07f, avoid);
             }
 
             if (remedies)
@@ -184,7 +184,7 @@ namespace SojaExiles
 
         private static readonly Quaternion Lying = Quaternion.Euler(0f, 0f, 90f);
 
-        // Gasa, film y bolsa en amarillo: en blanco se perdian sobre el meson.
+        // Film y bolsa en amarillo: en blanco se perdian sobre el meson.
         private static readonly Color Yellow = new Color(1f, 0.82f, 0.1f);
 
         private static void Amarillo(GameObject root, string part, float alpha)
@@ -232,19 +232,6 @@ namespace SojaExiles
                 new Vector3(0.15f, 0.003f, 0.12f), "Bolsa_Plastico", new Color(0.92f, 0.95f, 1f, 0.6f));
             root.AddComponent<CoverItem>().kind = CoverItem.Kind.Bolsa;
             Amarillo(root, "Bolsa_Plastico", 0.75f);
-            return root;
-        }
-
-        private static GameObject BuildGauze()
-        {
-            GameObject root = PropKit.Grabbable("GasaEsteril", Vector3.zero, Quaternion.identity,
-                new Vector3(0.1f, 0.014f, 0.08f), 0.03f);
-            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.007f, 0f),
-                new Vector3(0.1f, 0.012f, 0.08f), "Gasa_Paquete", new Color(0.96f, 0.96f, 0.94f));
-            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.0135f, 0.022f),
-                new Vector3(0.1f, 0.002f, 0.016f), "Plastico_Azul", new Color(0.2f, 0.45f, 0.85f));
-            root.AddComponent<CoverItem>().kind = CoverItem.Kind.Gasa;
-            Amarillo(root, "Gasa_Paquete", 1f);
             return root;
         }
 

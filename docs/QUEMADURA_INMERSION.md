@@ -145,7 +145,7 @@ en el editor ni en el Quest.**
 | Llaves | La llave que ya estaba es la **fría** (punto azul). Al lado hay una **caliente** (punto rojo). Con solo la caliente abierta sale vapor del chorro, no enfría, vuelve a enrojecer la mano, la paciente grita y cuenta como error. | `WaterTap.hot/pair` |
 | Anillo | Anillo dorado en el anular. Se saca acercando la mano libre al punto dorado y manteniendo apretado el botón lateral (o la pinza) 1,5 s; el anillo avanza, el mando vibra y, si se suelta antes, vuelve. Si la mano ya se hinchó, se traba y cuenta como error. | `PatientRing` (paciente) |
 | Chompa | Doblada en la silla más cercana. Se suelta sobre la espalda o los hombros y queda puesta. | `SweaterItem` |
-| Cubrir | Film y gasa junto al lavadero. Se sueltan sobre la mano **ya enfriada**: la cubren y el caso termina (Success). Si se intenta antes, es un error. El paño de cocina ya no cierra el caso: sobre la quemadura cuenta como error. Ahora el film va en tiras (sección 11). | `CoverItem`, `TowelMisuse` |
+| Cubrir | Film y gasa junto al lavadero (la gasa se quitó, sección 12). Se sueltan sobre la mano **ya enfriada**: la cubren y el caso termina (Success). Si se intenta antes, es un error. El paño de cocina ya no cierra el caso: sobre la quemadura cuenta como error. Ahora el film va en tiras (sección 11). | `CoverItem`, `TowelMisuse` |
 | Remedios caseros | Mantequilla, pasta dental, aceite y algodón en el mesón; hielo cerca del refrigerador. Al acercarlos, la paciente aparta la mano y protesta (error). Si se aplican, queda una capa sobre la piel y grita (error crítico; el algodón es error común). El agua quita la grasa y la pasta. | `HomeRemedy` |
 | Vibración | Suave mientras sostienes la mano de la paciente bajo el agua (más fuerte si está caliente), pulsos al acercar la mano al fuego, un golpe por error (dos si es crítico) y un toque leve en cada acierto. | `BurnHaptics` |
 
@@ -245,7 +245,7 @@ con las manos en el visor.**
 | Ubicación inicial | La paciente queda de frente a la cocina con la olla delante de su mano derecha; el jugador, a un costado mirándola. | `BurnStaging` |
 | Menú de inicio | Aviso de contenido (gritos y quemadura visible) y dos botones: **Modo guiado** / **Modo evaluación**. El modo se guarda en el JSON (`modo`). | `BurnGuide` |
 | Tutorial en la historia | La tía Rosa cocina y le pide al jugador una taza: hay que agarrarla y llevársela (agarrar y caminar). Ella la recibe y la deja en el mesón. Recién ahí se vuelca la olla. | `BurnGuide`, `PatientBurnArm`, `PotAccident.Trigger` |
-| Guía paso a paso | Narrador (otra voz que la paciente) + tarjeta que acompaña la vista ("Paso 3 de 8"), a la altura de los ojos y a 90 cm para no tapar el mesón; completa mientras habla el narrador, con un aviso o si se la mira, y luego compacta y translúcida (solo el paso) + brillo azul sobre lo que hay que usar: perilla, llave fría, antebrazo, chorro, anillo, chompa, reloj, film/gasa. Si no avanza en 30 s, repite. Si la mano sale del agua, vuelve al paso de llevarla. | `BurnGuide` |
+| Guía paso a paso | Narrador (otra voz que la paciente) + tarjeta que acompaña la vista ("Paso 3 de 8"), a la altura de los ojos y a 90 cm para no tapar el mesón; completa mientras habla el narrador, con un aviso o si se la mira, y luego compacta y translúcida (solo el paso) + brillo azul sobre lo que hay que usar: perilla, llave fría, antebrazo, chorro, anillo, chompa, reloj, film/bolsa. Si no avanza en 30 s, repite. Si la mano sale del agua, vuelve al paso de llevarla. | `BurnGuide` |
 | Correcciones | Agua caliente, remedios, paño, cubrir antes de tiempo y agarrar la mano quemada: el narrador corrige y la tarjeta muestra "¡Cuidado!". | `BurnGuide` |
 | Modo evaluación | Mismo tutorial; después del accidente no hay tarjeta, ni voz de guía, ni texto en el reloj. | `BurnGuide`, `CoolingClock.showLabel` |
 | Cuerpo físico | 14 cápsulas que siguen los huesos (torso, cabeza, brazos, piernas). El jugador no la atraviesa y los objetos chocan con ella. Tocarla vibra. | `PatientPhysics` |
@@ -299,7 +299,7 @@ está en `BurnGuide` (tarjetas) y en el informe de la rama.
   encima de la escena, con puntitos de progreso; resumen con puntaje,
   indicadores, pasos, decisión médica y "qué mejorar"; botón tipo píldora.
 - **Interacción:** barra de progreso al sacar el anillo (`PatientRing`),
-  gasa y film en amarillo (`BurnSceneProps`), la cuchara no atraviesa la olla
+  film y bolsa en amarillo (`BurnSceneProps`), la cuchara no atraviesa la olla
   (`PatientBurnArm`) y la chompa cae desde los hombros y se balancea
   (`SweaterDrape`).
 
@@ -308,9 +308,9 @@ está en `BurnGuide` (tarjetas) y en el informe de la rama.
 | Qué | Cómo funciona | Script |
 |---|---|---|
 | Modo evaluación sin puntos dorados | El grifo, la perilla y el anillo solo muestran su punto en modo guiado. El círculo de progreso del anillo y el brillo al acercar la mano al brazo siguen en los dos modos. | `IndicatorUtil.HintsVisible` |
-| Seguridad propia | Tocar la olla volcada (caliente 10 min) o pararse sobre el charco del piso mientras echa vapor es error, una vez cada uno. La mano suelta la olla sola, vibra y sisea. | `PlayerSafety`, `PotAccident.TryGetHotFloorPuddle` |
+| Seguridad propia | Tocar la olla volcada (caliente 10 min) es error una vez. La mano suelta la olla sola, vibra y sisea. Pararse sobre el charco del piso ya no es error (sección 12). | `PlayerSafety`, `PotAccident.TryGetHotFloorPuddle` |
 | Calmarla (min 3) | Se asusta y pregunta si le quedará marca. Tres respuestas al azar: calmarla, asustarla (error) o pasta dental (error). | `PatientDialog` |
-| Resistencia (min 9) | El agua le parece muy fría y duda. "Aguanta, faltan N minutos" la convence; "sácala un rato", no responder en 14 s o "hielo" hacen que la saque y el reloj se pausa. | `PatientDialog`, `PatientBurnArm.Hesitate/Withdraw` |
+| Resistencia (min 9) | El agua le parece muy fría y duda. "Aguanta, faltan N minutos" o templar el agua (sección 12) la convencen; "sácala un rato", no responder en 14 s o "hielo" hacen que la saque y el reloj se pausa. | `PatientDialog`, `PatientBurnArm.Hesitate/Withdraw` |
 | Pausa | Botón de menú izquierdo (o gesto de menú de la mano; Escape o P en el editor). Detiene el tiempo y el sonido. "Continuar" o "Reiniciar práctica". | `PauseMenu` |
 | Resumen | Barra de los 4 actos con pasos y errores de cada uno; "qué mejorar" con hasta 8 líneas; botón "Otro caso" (el otro grado de quemadura). | `BurnSummaryPanel`, `BurnProtocol.CountAct`, `BurnInjury.NextDegree` |
 
@@ -322,8 +322,8 @@ detectan la mano por su posición, porque las esferas físicas no se mueven sin
 ### Probar
 
 1. Elegir modo evaluación: no hay puntos dorados en el grifo ni en la perilla.
-2. Tras el accidente, tocar la olla del piso o pararse sobre el charco: queda
-   como error en el resumen ("No toques la olla…", "Rodea el agua…").
+2. Tras el accidente, tocar la olla del piso: queda como error en el resumen
+   ("No toques la olla…").
 3. Minuto 3 y minuto 9 del reloj: responder a la tía. Probar "sácala un
    rato": ella saca la mano y hay que volver a llevarla al chorro.
 4. Pausar con el botón de menú izquierdo y continuar; luego reiniciar.
@@ -364,7 +364,7 @@ limpia) y la guía LSEBN ("Cover").
 | Cuánto falta | Se mide sobre la máscara de la quemadura (`BurnSkinOverlay`): con 80 % cubierto pasa a "Covered". En la tarjeta del narrador se ve el porcentaje. Con la quemadura de prueba hacen falta 3 tiras, una al lado de la otra (13 %, 59 %, 84 %). | `FilmCoverage`, `BurnGuide` |
 | Envolver | Una tira atravesada (como si se envolviera la mano) no se pone: la tía dice "me aprieta", el narrador corrige y es error una vez (`BurnEvent.FilmWrapped`, valor nuevo al final). | `FilmStrip`, `BurnPatientReactions`, `BurnProtocol` |
 | Bolsa plástica | En el mesón, junto al film. Se suelta sobre la mano y la cubre entera hasta la muñeca, holgada. Cuenta como cubierta correcta (`CoverItem.Kind.Bolsa`, valor nuevo al final). | `CoverItem`, `BurnSceneProps` |
-| Gasa | Sin cambios (cubre toda la mano). Queda "a decidir" en `PENDIENTES.md`. | `CoverItem` |
+| Gasa | Se quitó (sección 12). | — |
 
 El paso del resumen se llama ahora "Cubrir sin apretar (film o bolsa)".
 
@@ -400,3 +400,47 @@ Quest o con Quest Link).
 - `FilmCoverage > Coverage Needed / Lengthwise Min / Length Margin / Burn Alpha Min`.
 - Materiales `Film_Tira` (la tira en la mano del jugador), `Film_Mano`
   (sobre la piel), `Bolsa_Mano` y `Bolsa_Plastico`.
+
+## 12. Revisión contra el protocolo real (`corregir-bugs`, 2026-11-05)
+
+Tres mecánicas que no coincidían con las guías (NHS, Cruz Roja Británica,
+LSEBN: "Stop, Remove, Cool and warm, Cover, Call").
+
+| Qué | Cómo funciona ahora | Script |
+|---|---|---|
+| Templar el agua (min 9) | Las guías piden agua fresca o tibia, no helada. Cuando ella dice que el agua está muy fría hay dos respuestas correctas: "Aguanta un poco más" o "Espera, te templo un poco el agua con la llave caliente". Con la segunda, ella dice "ábrela solo un poquito, que la caliente quema" y espera hasta 12 s con la mano en el agua a que se abra también la llave caliente (con las dos abiertas sale tibia, `WaterTap.Heat` = 0,5). Si se templa: "así está mejor, aguanto" (`CoolingConvinced`, detalle `Templada`). Si no: saca la mano (`CoolingGaveUp`, detalle `SinTemplar`) y el reloj se pausa. También vale abrir la caliente directamente con el panel abierto, sin tocar ningún botón. Si el agua ya sale tibia al llegar el minuto 9, no se queja. El panel tiene ahora 4 respuestas (al azar). | `PatientDialog` |
+| Llave caliente con la fría abierta | El narrador ya no la corrige ("Esa es la llave caliente…"): solo templa el agua. Sola sigue siendo error al caer sobre la quemadura (`HotWaterOnBurn`). | `BurnGuide` |
+| Charco del piso | Ya no es error: el agua derramada se enfría rápido y no quema a través del zapato. Al pisarlo vibra y suena una gota; en modo guiado el narrador avisa "El piso mojado resbala: rodea el agua derramada" (`HotSpillStepped` sin gravedad). Tocar la olla caliente sigue siendo error. | `PlayerSafety`, `BurnGuide` |
+| Gasa | Se quitó del mesón: una gasa seca puede pegarse a la herida y las guías prefieren film o una bolsa plástica limpia. `CoverItem.Kind.Gasa` queda en el enum sin uso (las escenas guardan el número). Se borraron los materiales `Gasa_Mano` y `Gasa_Paquete`; `Gasa_Trama.png` se queda porque la usa `Remedio_Algodon`. | `BurnSceneProps`, `CoverItem` |
+
+### Voces nuevas (TTS)
+
+- Paciente (Sabina): `voz_templar_pide` ("Ya, pero ábrela solo un poquito,
+  que la caliente quema.") y `voz_templada` ("Ay, así está mejor. Aguanto.").
+- Narrador (Raúl), regrabadas con texto nuevo: `guia_err_charco` ("El piso
+  mojado resbala: rodea el agua derramada."), `guia_err_pano` ("…Usa film o
+  una bolsa limpia.") y `guia_err_aguantar` ("Anímala a aguantar o témplale
+  un poco el agua: hay que completar los veinte minutos.").
+
+### Probar
+
+1. Llevar su mano al chorro frío y esperar al minuto 9 del reloj.
+2. Elegir "te templo un poco el agua" y tocar la llave caliente (punto rojo):
+   ella dice "así está mejor" y sigue en el agua; sin errores en el resumen.
+3. Otra vez, elegir esa respuesta y no abrir la caliente: a los 12 s saca la
+   mano y hay que volver a llevarla.
+4. Otra vez, sin tocar el panel, abrir la caliente: cuenta como templar.
+5. Tras el accidente, pararse sobre el charco del piso: vibra, el narrador
+   avisa (modo guiado) y el resumen no muestra error.
+6. En el mesón junto al lavadero solo están el film y la bolsa.
+
+**Probado en el editor** forzando el minuto 9 por código: con el panel
+abierto, abrir la caliente da `CoolingConvinced Templada`; elegir templar y
+abrir la caliente después, también; sin responder, `CoolingGaveUp
+SinRespuesta`; ningún error al templar; la gasa ya no aparece. **Solo
+compilado:** el aviso del charco (no se probó pisarlo). **Falta en el Quest:**
+tocar las llaves con la mano y ver que el panel de 4 respuestas se lea bien.
+
+### Valores para ajustar
+
+- `PatientDialog > Temper Seconds` (12 s de espera para templar).

@@ -16,21 +16,12 @@ en el Quest, en el editor o si solo se compiló.
 - Los valores nuevos de `BurnEvent` y demás enums van **al final**: las
   escenas guardan el número.
 
-## A decidir (revisión contra el protocolo real)
+## Regla
 
-Comparación con NHS, British Red Cross y la guía LSEBN (Stop, Remove, Cool
-and warm, Cover, Call) del 2026-11-05:
-
-- **Resistencia al frío (min 9):** la respuesta correcta hoy es solo
-  "aguanta". Las guías dicen agua fresca (no helada) y abrigar a la persona:
-  agregar como correctas templar un poco el agua o abrigarla, y dejar el
-  hielo y "sácala" como errores.
-- **Pisar el charco (E.8):** respaldo débil (el agua derramada se enfría
-  rápido). La olla caliente sí está respaldada ("maintain personal safety").
-  Decidir si se deja.
-- **Gasa (D.4):** las guías prefieren film o bolsa plástica; una gasa seca
-  puede pegarse. Si se deja, que sea estéril y no adherente, y con menos
-  prioridad que el film.
+Toda mecánica nueva debe estar respaldada por las guías reales (NHS, Cruz
+Roja Británica, guía LSEBN). Lo que no tenga respaldo se anota aquí como "a
+decidir" antes de implementarlo como error. La última revisión (templar el
+agua, charco, gasa) está en `docs/QUEMADURA_INMERSION.md`, sección 12.
 
 ## Plan: orden para lo que falta
 
@@ -55,7 +46,6 @@ and warm, Cover, Call) del 2026-11-05:
   Verlet como `TowelCloth` con las 14 cápsulas de `PatientPhysics`. Se toma de
   los hombros y se deja caer desde atrás. Si no da 72 fps, copiar la piel de
   hombros y espalda como `HandSkinMesh`.
-- **Gasa (D.4):** apoyarla sin frotar ni apretar (ver "A decidir").
 
 ## E. Arco del juego
 
@@ -74,7 +64,7 @@ and warm, Cover, Call) del 2026-11-05:
 - Voz real del narrador (`guia_*.wav`) y de la paciente (`voz_*.wav`),
   reemplazando las TTS con el mismo nombre. `guia_anillo` ya no coincide con
   el texto de la tarjeta. Las frases TTS nuevas están listadas en
-  `docs/QUEMADURA_INMERSION.md`, secciones 9 y 11.
+  `docs/QUEMADURA_INMERSION.md`, secciones 9, 11 y 12.
 
 ## G. Validación, pruebas e informe
 
@@ -82,8 +72,10 @@ and warm, Cover, Call) del 2026-11-05:
   atención: brazo de la tía, agarre doble, agarre distante, paño, **tirar
   el film con las dos manos** (sostener el rollo, tomar el borde con la otra
   mano, cortar y soltar la tira a lo largo; solo se probó colocando las
-  tiras por código), gesto de pausa y que los paneles de la tía no estorben mientras
-  se le sostiene el brazo.
+  tiras por código), **templar el agua en el minuto 9** (tocar la llave
+  caliente con la fría abierta; el panel tiene ahora 4 respuestas), pisar el
+  charco (solo aviso; no se probó), gesto de pausa y que los paneles de la
+  tía no estorben mientras se le sostiene el brazo.
 - Medir **72 fps** con agua, vapor, tela y ampollas (RNF-01).
 - Detalles abiertos: la tarjeta puede subir por encima de la cabeza de la
   tía cuando ella está justo delante; la olla volcada cae al piso (decidir si
