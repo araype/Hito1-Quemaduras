@@ -118,8 +118,34 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   de juego (captura 11), chompa que atraviesa el cuerpo (capturas 6 y 7),
   tarjeta que tapa el reloj en el paso 6 y que aparece alta en el tutorial,
   y los puntos de prioridad baja.
-- [ ] La quemadura se ve roja saturada y uniforme (`BurnSkinOverlay`), y la
-  chompa puesta parece un cilindro rígido (`SweaterItem.BuildDrape`).
+- [x] La quemadura se veía roja saturada y uniforme, como un guante
+  (`BurnSkinOverlay`). Ahora una máscara por vértice la concentra en el
+  dorso de la mano, donde cae el agua, con bordes irregulares y la piel
+  visible debajo; se extiende y el centro se oscurece mientras no se enfría
+  (`BurnSkinOverlay.PaintMask`, shader `Hito1/PielQuemada`, material
+  `Piel_Quemada_Zonas`). Las ampollas salen en el centro de la quemadura
+  (2026-11-06, rama `experiencia-inmersiva`; probado renderizando la mano
+  en el editor, **falta verlo en el visor**).
+- [ ] La chompa puesta parece un cilindro rígido (`SweaterItem.BuildDrape`;
+  revisar si `SweaterDrape` de la rama `rediseno-tarjetas` ya lo resolvió).
+
+## Experiencia menos "básica" (pedido del profesor, 2026-11-06)
+
+- [ ] **Llamada al 106 (SAMU)** en lugar del panel de decisión médica: un
+  celular en el mesón; al llevarlo a la oreja, el operador pregunta y el
+  jugador responde con opciones cerca del teléfono ("¿Tiene ampollas?",
+  "¿Qué tan grande es?"). La respuesta lleva a `BurnProtocol.Decide`. Voces
+  del operador con la herramienta de voz elegida (ver abajo).
+- [ ] **Voces más naturales** para la paciente, el narrador y el operador:
+  generar los `.wav` fuera de Unity con el mismo nombre (no hace falta
+  cambiar código). Candidatos: ElevenLabs v3 (etiquetas de emoción como
+  `[crying]`, `[whispers]`, `[shouts]`), Azure Neural TTS (voces es-PE
+  Camila y Alex), OpenAI `gpt-4o-mini-tts` (tono por instrucciones) y, sin
+  costo y local, Chatterbox (licencia MIT, clonación en español).
+- [ ] **Variación del caso** y distractores (teléfono que suena, segunda
+  hornilla, la tía que insiste en la mantequilla).
+- [ ] **Línea de tiempo** en el resumen: qué hizo el jugador y cuándo,
+  comparado con lo ideal.
 
 ## 1. Flujo de la aplicación (siguiente bloque de código)
 

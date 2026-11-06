@@ -223,11 +223,15 @@ namespace SojaExiles
                 skin[i] = bones[i] != null ? bones[i].localToWorldMatrix * bindposes[i] : Matrix4x4.identity;
             }
 
+            // Con la mascara de BurnSkinOverlay (color de los vertices), las
+            // ampollas salen en el centro de la quemadura y no en la palma.
+            Color[] mask = mesh.colors;
+            bool hasMask = mask.Length == vertices.Length;
             List<int> candidates = new List<int>();
             for (int v = 0; v < vertices.Length; v++)
             {
                 Vector3 n = Skin(skin, weights[v], normals[v], true).normalized;
-                if (n.y > 0.55f)
+                if (hasMask ? mask[v].a > 0.75f : n.y > 0.55f)
                 {
                     candidates.Add(v);
                 }
