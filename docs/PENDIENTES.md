@@ -103,7 +103,7 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 ## G. Validación, pruebas e informe
 
 - **Probar en el Quest con las manos** todo lo hecho en el editor. Con más
-  atención: los arreglos de `docs/QUEMADURA_INMERSION.md`, sección 15
+  atención: los arreglos de `docs/QUEMADURA_INMERSION.md`, sección 16
   (solapa del film, gesto de envolver la mano con el film, taza que recibe
   la tía, olla, llamada en espera), brazo de la tía, agarre doble, agarre distante, paño, **tirar
   el film con las dos manos** (sostener el rollo, tomar el borde con la otra
@@ -113,6 +113,11 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
   charco (solo aviso; no se probó), gesto de pausa, que los paneles de la
   tía no estorben mientras se le sostiene el brazo, **la llamada al 106**
   (llevar el celular a la oreja) y **sacar el anillo** con la mano ofrecida.
+- **Botones con el dedo y brazo de la tía** (`QUEMADURA_INMERSION.md`,
+  sección 15): con controles y sin ellos, que el círculo del cursor
+  coincida con la punta del índice (si no, ajustar
+  `SimpleGrab.controllerFingertipOffset`), que el dedo se vea delante de
+  la tarjeta y que llevar a la tía del brazo ya no la contorsione.
 - Medir **72 fps** con agua, vapor, tela y ampollas (RNF-01).
 - Detalles abiertos: la tarjeta puede subir por encima de la cabeza de la
   tía cuando ella está justo delante; la olla volcada cae al piso y el

@@ -366,7 +366,7 @@ limpia) y la guía LSEBN ("Cover").
 | Rollo de film | Se sostiene con una mano. Mientras tanto, el borde de la tira espera en la superficie del rollo, del lado de la otra mano; al agarrar el rollo con esa mano se toma el borde (no se cambia el rollo de mano). Al tirar, la tira se estira desde el rollo y se corta a los 20 cm. Si se suelta el rollo, la tira se corta si ya medía 8 cm. | `FilmRoll`, `FilmStrip` |
 | Poner una tira | Se suelta la tira sobre la mano quemada (a menos de 15 cm). Si va a lo largo (de la muñeca a los dedos) cubre una franja de 6 cm del lado donde se apoyó, como una capa sobre la piel que sigue a la mano. Cada tira queda un poco más afuera que la anterior. | `FilmCoverage`, `HandSkinMesh` (filtro de triángulos), `HandFrame` |
 | Cuánto falta | Se mide sobre la máscara de la quemadura (`BurnSkinOverlay`): con 80 % cubierto pasa a "Covered". En la tarjeta del narrador se ve el porcentaje. Con la quemadura de prueba hacen falta 3 tiras, una al lado de la otra (13 %, 59 %, 84 %). | `FilmCoverage`, `BurnGuide` |
-| Envolver | Dar la vuelta a la mano quemada con la tira en la mano (unos 270° alrededor de su eje largo, a menos de 15 cm) o soltar la tira atravesada la deja **envuelta**: se ve una banda de film alrededor de la mano durante 6 s y se retira. No cuenta para cubrir. La tía dice "me aprieta", el narrador corrige y es error una vez (`BurnEvent.FilmWrapped`, valor nuevo al final). Ver sección 15. | `FilmStrip` (gesto), `FilmCoverage.Wrap`, `BurnPatientReactions`, `BurnProtocol` |
+| Envolver | Dar la vuelta a la mano quemada con la tira en la mano (unos 270° alrededor de su eje largo, a menos de 15 cm) o soltar la tira atravesada la deja **envuelta**: se ve una banda de film alrededor de la mano durante 6 s y se retira. No cuenta para cubrir. La tía dice "me aprieta", el narrador corrige y es error una vez (`BurnEvent.FilmWrapped`, valor nuevo al final). Ver sección 16. | `FilmStrip` (gesto), `FilmCoverage.Wrap`, `BurnPatientReactions`, `BurnProtocol` |
 | Bolsa plástica | En el mesón, junto al film. Se suelta sobre la mano y la cubre entera hasta la muñeca, holgada. Cuenta como cubierta correcta (`CoverItem.Kind.Bolsa`, valor nuevo al final). | `CoverItem`, `BurnSceneProps` |
 | Gasa | Se quitó (sección 12). | — |
 
@@ -492,7 +492,55 @@ mientras ella espera una respuesta (`PatientDialog`, `EmergencyCall`).
 **Solo compilado** (Roslyn fuera de Unity). Qué probar primero:
 `docs/PENDIENTES.md`, sección 0. Voces por regenerar: `docs/VOCES.md`.
 
-## 15. Arreglos de la prueba en el visor (`mejoras-demo`, 2026-11-07)
+## 15. Botones con el dedo y brazo más natural (`mejoras-demo`, 2026-11-07)
+
+Pedido tras probar `corregir-bugs` en el Quest: costaba apretar los botones
+(sobre todo en el resumen), la mano "se transparentaba" al acercarse a la
+tarjeta y el brazo de la tía se veía rígido y se contorsionaba al llevarla.
+
+| Qué | Cómo funciona | Script |
+|---|---|---|
+| Botones con la punta del índice | El botón cuenta la punta del índice de la mano visible (con manos o con controles, que también dibujan una mano). Antes solo contaba un punto invisible a la altura de la palma, 3 cm delante del control, y la mano dibujada llegaba ~10 cm más adelante. El dedo cuenta desde 3,5 cm delante del botón hasta 3 cm detrás. Sigue valiendo la esfera de la mano. | `SimpleGrab.TryGetFingertip`, `controllerFingertipOffset`, `TouchButton` |
+| Cursor del dedo | Círculo sobre la tarjeta donde apunta el dedo, cuando está a menos de 20 cm de un botón: se achica al acercarse y se pone celeste dentro del botón (mientras se llena la barra). Lo agrega cada botón a su panel. | `PanelFingerCursor` |
+| La tarjeta ya no tapa la mano | Las tarjetas se dibujan encima de todo (para que no las tapen paredes ni la tía) y por eso tapaban también la mano. Con una mano a menos de 25 cm del panel vuelven a usar la profundidad normal: el dedo se ve delante. | `OverlayPanel.handNearDistance` |
+| Mano relajada | Los dedos se doblan un poco (más el meñique que el índice) y la muñeca cede hacia la palma. Antes quedaban rectos, como en la T-pose. Bajo el chorro la mano sigue plana. | `PatientBody.fingerCurlDegrees`, `wristRelaxDegrees`, `RelaxHand` |
+| Menos contorsión | Torso: inclinación máxima 24° (antes 35°) más 10° si no llega (antes 15°), giro 15° (antes 25°). El brazo se estira hasta el 92 % (antes 97 %) y da un paso al 72 % (antes 85 %). Se suelta si se tira a más de 45 cm (antes 60). La mano no sube más de 25 cm sobre el hombro. Los campos tienen nombre nuevo para que no los pisen los valores guardados en la escena: **no volver a los nombres viejos**. | `PatientReach.armReach`, `stepAtFraction`, `leanLimit`, `leanReachExtra`, `twistLimit`; `PatientBody.maxAboveShoulder`; `PatientPhysics` |
+
+Jugar **sin controles** ya era posible: el proyecto acepta manos y
+controles (`OculusProjectConfig`, `handTrackingSupport`). Con las manos se
+agarra con la pinza de pulgar e índice y se camina con la pinza del medio o
+del anular (`VRLocomotion`).
+
+**Probado en el editor** (Play con Quest Link, 2026-11-07): con la punta del
+dedo simulada por código delante de "Modo guiado", a 8 cm aparece el
+círculo, a 2 cm se pone celeste y se llena la barra, y al completarse elige
+el modo guiado; con las manos reales (seguimiento de manos por Quest Link)
+el círculo sigue a la punta del dedo. Con el accidente forzado y la llave
+fría abierta, la tía sigue llegando al chorro (estado `Cooling`, torso a
+34°) con la mano plana y los dedos algo doblados. **Falta en el Quest:**
+ver el dedo delante de la tarjeta, apretar con controles y llevarla del
+brazo con las manos.
+
+### Probar
+
+1. Menú de inicio: acercar el índice a "Modo guiado". Aparece el círculo,
+   se achica y se pone celeste al tocar; el dedo se ve delante de la tarjeta.
+2. Lo mismo en el resumen ("Repetir práctica", "Otro caso") y en la pausa.
+3. Dejar los controles y repetir con las manos.
+4. Llevar a la tía del brazo: dedos algo doblados, sin doblarse de cintura
+   ni girar el torso de más; da un paso antes de estirar el brazo recto.
+5. Llevarla al chorro: la mano debe seguir llegando bajo el agua.
+
+### Valores para ajustar
+
+- `SimpleGrab > Controller Fingertip Offset` (si con controles el círculo
+  no coincide con la punta del dedo).
+- `PanelFingerCursor > Show Distance / Near Diameter / Far Diameter`.
+- `OverlayPanel > Hand Near Distance`.
+- `PatientBody > Finger Curl Degrees / Wrist Relax Degrees / Max Above Shoulder`.
+- `PatientReach > Arm Reach / Step At Fraction / Lean Limit / Lean Reach Extra / Twist Limit`.
+
+## 16. Arreglos de la prueba en el visor (`mejoras-demo`, 2026-11-07)
 
 Probado **en el editor** (Play en `Prueba_LuzHorneada`, sin visor, con las
 manos simuladas por código). Falta probar con las manos en el Quest

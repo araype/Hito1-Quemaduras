@@ -31,6 +31,8 @@ namespace SojaExiles
         public float grabRadius = 0.08f;
         // Punto de agarre relativo al anchor del control (en metros).
         public Vector3 controllerGrabOffset = new Vector3(0f, 0f, 0.03f);
+        [Tooltip("Punta del indice relativa al anchor del control, si no hay esqueleto de mano (m). La usan los botones de los paneles.")]
+        public Vector3 controllerFingertipOffset = new Vector3(0f, -0.015f, 0.09f);
         public float pinchGrabThreshold = 0.8f;
         public float pinchReleaseThreshold = 0.5f;
         // Si el objeto queda trabado (p.ej. contra el meson) y la mano se
@@ -64,6 +66,7 @@ namespace SojaExiles
             public bool pressed;
             public bool poseValid;
             public Vector3 position;
+            public Vector3 fingertip;
             public Quaternion rotation;
 
             public Rigidbody body;
@@ -151,6 +154,25 @@ namespace SojaExiles
 
             position = Vector3.zero;
             holding = false;
+            return false;
+        }
+
+        // Punta del indice de la mano visible (con manos o con controles, que
+        // tambien dibujan una mano). Con eso se aprietan los botones de los
+        // paneles, como se tocaria una pantalla.
+        public static bool TryGetFingertip(bool leftHand, out Vector3 position)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                Hand hand = leftHand ? Instances[i].left : Instances[i].right;
+                if (hand.poseValid)
+                {
+                    position = hand.fingertip;
+                    return true;
+                }
+            }
+
+            position = Vector3.zero;
             return false;
         }
 
@@ -557,9 +579,10 @@ namespace SojaExiles
             {
                 // Con hand tracking el agarre ocurre en la pinza: punto medio
                 // entre la punta del pulgar y la del indice.
-                hand.position = TryGetPinchPoint(hand, out Vector3 pinch)
-                    ? pinch
-                    : hand.anchor.position;
+                bool skeletonOk = TryGetPinchPoint(hand, out Vector3 pinch);
+                hand.position = skeletonOk ? pinch : hand.anchor.position;
+                hand.fingertip = skeletonOk ? hand.indexTip.position
+                    : hand.anchor.TransformPoint(controllerFingertipOffset);
                 hand.poseValid = true;
                 return;
             }
@@ -567,6 +590,7 @@ namespace SojaExiles
             if (OVRInput.IsControllerConnected(hand.controller))
             {
                 hand.position = hand.anchor.TransformPoint(controllerGrabOffset);
+                hand.fingertip = hand.anchor.TransformPoint(controllerFingertipOffset);
                 hand.poseValid = true;
             }
         }

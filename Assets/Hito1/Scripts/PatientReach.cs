@@ -22,8 +22,13 @@ namespace SojaExiles
         public Rigidbody target;
         public bool rightArm = true;
 
+        // Los limites de estirarse e inclinarse tienen nombre nuevo
+        // (2026-11-07) para que no los pisen los valores guardados en la
+        // escena (0,97 / 35 / 15 / 25), que hacian que la paciente se
+        // contorsionara antes de dar un paso: no volver a los nombres viejos.
         [Header("Limites del brazo")]
-        [Range(0.8f, 1f)] public float reachFraction = 0.97f;
+        [Tooltip("Fraccion del largo del brazo que puede estirarse (1 = brazo recto).")]
+        [Range(0.8f, 1f)] public float armReach = 0.92f;
         [Tooltip("Cuanto puede ir la mano detras del plano de los hombros (m).")]
         public float behindLimit = 0.12f;
         [Tooltip("Distancia minima entre la mano y la columna (m).")]
@@ -32,7 +37,7 @@ namespace SojaExiles
         [Header("Seguir con el cuerpo")]
         public bool followBody = true;
         [Tooltip("Fraccion del largo del brazo a partir de la cual el cuerpo se acerca.")]
-        public float startFollowFraction = 0.85f;
+        public float stepAtFraction = 0.72f;
         public float stepSpeed = 0.6f;
         [Tooltip("Mientras el jugador la lleva del brazo: empieza a caminar antes y puede ir mas rapido.")]
         public float ledFollowFraction = 0.55f;
@@ -47,10 +52,12 @@ namespace SojaExiles
         public float bodyHeight = 1.0f;
 
         [Header("Postura")]
-        public float maxLean = 35f;
+        [Tooltip("Inclinacion maxima del torso (grados).")]
+        public float leanLimit = 24f;
         [Tooltip("Inclinacion extra si aun asi el brazo no llega (p.ej. al chorro del grifo, al fondo del meson).")]
-        public float reachLeanExtra = 15f;
-        public float maxTwist = 25f;
+        public float leanReachExtra = 10f;
+        [Tooltip("Giro maximo del torso hacia la mano (grados).")]
+        public float twistLimit = 15f;
         public float postureSpeed = 4f;
 
         private PatientBody body;
@@ -181,7 +188,7 @@ namespace SojaExiles
             desiredHand = next;
             hasDesired = true;
 
-            Vector3 allowed = body.ConstrainReach(rightArm, next, reachFraction, behindLimit, torsoClearance);
+            Vector3 allowed = body.ConstrainReach(rightArm, next, armReach, behindLimit, torsoClearance);
             if ((allowed - next).sqrMagnitude > 1e-8f)
             {
                 target.velocity = (allowed - position) / dt;
@@ -228,7 +235,7 @@ namespace SojaExiles
                 // mas rapido (hasta ledMaxSpeed): asi no se suelta.
                 bool led = IsLed;
                 Vector3 fromShoulder = PatientBody.Flat(desiredHand - shoulder);
-                float excess = fromShoulder.magnitude - armLength * (led ? ledFollowFraction : startFollowFraction);
+                float excess = fromShoulder.magnitude - armLength * (led ? ledFollowFraction : stepAtFraction);
                 if (excess > 0.005f)
                 {
                     float speed = led ? Mathf.Clamp(excess * 5f, stepSpeed, ledMaxSpeed) : stepSpeed;
@@ -300,17 +307,17 @@ namespace SojaExiles
             float below = shoulder.y - hand.y;
             float fromHips = PatientBody.Flat(hand - body.Hips.position).magnitude;
 
-            float leanDown = Mathf.Clamp01((below - 0.3f) / 0.45f) * maxLean;
-            float leanFar = Mathf.Clamp01((fromHips - armLength * 0.7f) / 0.35f) * maxLean;
+            float leanDown = Mathf.Clamp01((below - 0.3f) / 0.45f) * leanLimit;
+            float leanFar = Mathf.Clamp01((fromHips - armLength * 0.7f) / 0.35f) * leanLimit;
             // Si el brazo no llega a donde quiere ir la mano, se inclina mas.
-            float deficit = Vector3.Distance(shoulder, hand) - armLength * reachFraction;
-            float leanReach = Mathf.Clamp01((deficit + 0.04f) / 0.14f) * (maxLean + reachLeanExtra);
+            float deficit = Vector3.Distance(shoulder, hand) - armLength * armReach;
+            float leanReach = Mathf.Clamp01((deficit + 0.04f) / 0.14f) * (leanLimit + leanReachExtra);
             float wantedLean = Mathf.Max(Mathf.Max(leanDown, leanFar), leanReach);
 
             float angle = toHand.magnitude > 0.1f
                 ? Vector3.SignedAngle(PatientBody.Flat(transform.forward), toHand, Vector3.up)
                 : 0f;
-            float wantedTwist = Mathf.Clamp(angle * 0.35f, -maxTwist, maxTwist);
+            float wantedTwist = Mathf.Clamp(angle * 0.35f, -twistLimit, twistLimit);
 
             float k = 1f - Mathf.Exp(-postureSpeed * dt);
             body.lean = Mathf.Lerp(body.lean, wantedLean, k);
