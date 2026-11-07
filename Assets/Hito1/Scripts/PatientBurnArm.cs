@@ -104,6 +104,10 @@ namespace SojaExiles
         private float lookAtPlayerUntil;
         private Transform viewer;
         private bool receiving;
+        private bool facingForReceive;
+        private float attendUntil;
+        // Hacia donde mira al empezar (la cocina): vuelve ahi tras atender.
+        private Vector3 homeForward = Vector3.forward;
         private float palmDown;
         private float showUntil;
         private float heldNearStream;
@@ -128,6 +132,7 @@ namespace SojaExiles
             pot = FindObjectOfType<PotFX>();
             stream = FindObjectOfType<WaterStreamFX>();
             viewer = VRPanelKit.Head();
+            homeForward = PatientBody.Flat(transform.forward).normalized;
             if (target == null || !body.IsReady)
             {
                 enabled = false;
@@ -233,13 +238,32 @@ namespace SojaExiles
             lookAtPlayerUntil = Time.time + seconds;
         }
 
-        // Recibe un objeto con la mano libre y lo deja sobre el meson.
-        public void ReceiveObject(Rigidbody rb, Vector3 putDown)
+        // Recibe un objeto con la mano libre: se voltea hacia el jugador, lo
+        // toma, vuelve a mirar la cocina y lo deja sobre el meson ('putDown'
+        // se pide recien entonces, ya mirando la cocina).
+        public void ReceiveObject(Rigidbody rb, System.Func<Vector3> putDown)
         {
             if (!receiving && rb != null)
             {
                 StartCoroutine(Receive(rb, putDown));
             }
+        }
+
+        public void ReceiveObject(Rigidbody rb, Vector3 putDown)
+        {
+            ReceiveObject(rb, () => putDown);
+        }
+
+        // El jugador se acerca con algo para darle: deja de revolver y se
+        // voltea hacia el (llamar cada cuadro mientras dure).
+        public void AttendPlayer(float seconds = 0.5f)
+        {
+            attendUntil = Mathf.Max(attendUntil, Time.time + seconds);
+        }
+
+        public bool IsReceiving
+        {
+            get { return receiving; }
         }
 
         // ---------------- estados ----------------
@@ -479,7 +503,7 @@ namespace SojaExiles
             switch (Current)
             {
                 case Mode.Cooking:
-                    goal = CookGoal();
+                    goal = FacingPlayer || receiving ? AttendGoal() : CookGoal();
                     break;
                 case Mode.Placed:
                     goal = placedAt;
@@ -563,6 +587,7 @@ namespace SojaExiles
             }
 
             UpdateMode();
+            UpdateFacing();
 
             // Protegiendo la mano, mira al jugador: si no, casi siempre queda
             // de espaldas y no se ve la quemadura.
@@ -733,7 +758,8 @@ namespace SojaExiles
                 return;
             }
 
-            Vector3 look = Time.time < lookAtPlayerUntil && viewer != null ? viewer.position : pot.BottomCenter;
+            bool atPlayer = (Time.time < lookAtPlayerUntil || FacingPlayer) && viewer != null;
+            Vector3 look = atPlayer ? viewer.position : pot.BottomCenter;
             Vector3 toLook = look - body.Head.position;
             Vector3 flat = Vector3.ProjectOnPlane(toLook, Vector3.up);
             float yaw = Mathf.Clamp(Vector3.SignedAngle(PatientBody.Flat(transform.forward), flat, Vector3.up), -60f, 60f);
@@ -745,17 +771,25 @@ namespace SojaExiles
 
         // ---------------- recibir un objeto ----------------
 
-        private IEnumerator Receive(Rigidbody rb, Vector3 putDown)
+        private IEnumerator Receive(Rigidbody rb, System.Func<Vector3> putDownSpot)
         {
             receiving = true;
-            Transform hand = body.HandBone(!rightArm);
+            facingForReceive = true;
             GameObject point = new GameObject("PuntoRecibir");
             point.AddComponent<NoAutoCollider>();
 
-            // Estira la mano libre hacia el costado del objeto (antes iba a su
-            // centro: la mano quedaba metida en la taza) y la cierra como para
-            // sostener una taza.
+            // 1. Se voltea hacia el jugador (la gira UpdateFacing) antes de
+            // estirar la mano.
             float t = 0f;
+            while (t < 1.5f && rb != null && viewer != null && !FacingToward(viewer.position, 25f))
+            {
+                t += Time.deltaTime;
+                yield return null;
+            }
+
+            // 2. Estira la mano libre hacia el costado del objeto (no a su
+            // centro: la mano quedaba metida en la taza) y la cierra.
+            t = 0f;
             SetOtherArm(PatientBody.ArmMode.Reach, point.transform);
             while (t < 0.9f && rb != null)
             {
@@ -769,12 +803,11 @@ namespace SojaExiles
 
             if (rb == null)
             {
-                receiving = false;
-                Destroy(point);
+                EndReceive(point);
                 yield break;
             }
 
-            // Lo toma.
+            // 3. Lo toma.
             SimpleGrab.ForceRelease(rb);
             bool wasKinematic = rb.isKinematic;
             RigidbodyInterpolation interpolation = rb.interpolation;
@@ -783,30 +816,63 @@ namespace SojaExiles
             // le da al Transform.
             rb.interpolation = RigidbodyInterpolation.None;
             Collider[] cols = rb.GetComponentsInChildren<Collider>();
+            Bounds bounds = new Bounds(rb.position, Vector3.zero);
             foreach (Collider c in cols)
             {
+                bounds.Encapsulate(c.bounds);
                 c.enabled = false;
             }
 
-            // La taza va pegada a la palma pero siempre derecha (antes giraba
-            // con la muneca).
-            Vector3 offset = rb.position - hand.position;
+            // El centro del objeto va frente a la palma, tocandola (antes
+            // conservaba la distancia a la que estaba y flotaba al costado de
+            // la mano). Siempre derecho: antes giraba con la muneca.
+            float radius = Mathf.Max(0.02f, Mathf.Min(bounds.extents.x, bounds.extents.z));
+            Vector3 centerOffset = new Vector3(0f, bounds.center.y - rb.position.y, 0f);
             Quaternion upright = Quaternion.Euler(0f, rb.rotation.eulerAngles.y, 0f);
+            Vector3 startPos = rb.position;
+            float held = 0f;
+            const float settle = 0.25f;
 
-            // Lo lleva hasta el meson.
-            Vector3 from = point.transform.position;
-            t = 0f;
-            const float carry = 1.4f;
-            while (t < carry && rb != null)
+            // 4. Vuelve a mirar la cocina con la taza en la mano.
+            facingForReceive = false;
+            Vector3 hold = point.transform.position;
+            float back = 0f;
+            while (back < 2f && rb != null && !FacingToward(transform.position + homeForward, 12f))
             {
-                t += Time.deltaTime;
-                float k = Mathf.SmoothStep(0f, 1f, t / carry);
-                point.transform.position = Vector3.Lerp(from, putDown + Vector3.up * 0.08f, k);
-                rb.transform.SetPositionAndRotation(hand.position + offset, Quaternion.Slerp(upright, Quaternion.identity, k));
+                back += Time.deltaTime;
+                held += Time.deltaTime;
+                Vector3 side = PatientBody.Flat(transform.right).normalized * (rightArm ? -1f : 1f);
+                Vector3 wanted = body.Chest.position + PatientBody.Flat(body.TorsoForward).normalized * 0.28f
+                    + side * 0.12f + Vector3.down * 0.18f;
+                hold = Vector3.Lerp(hold, wanted, 1f - Mathf.Exp(-6f * Time.deltaTime));
+                point.transform.position = hold;
+                HoldInPalm(rb, radius, centerOffset, upright, startPos, Mathf.Clamp01(held / settle));
                 yield return null;
             }
 
-            // Abre la mano al soltar.
+            // 5. Lo lleva hasta el meson (el lugar se pide ya mirando la cocina).
+            Vector3 putDown = putDownSpot != null ? putDownSpot() : (rb != null ? rb.position : transform.position);
+            Vector3 from = point.transform.position;
+            float carryT = 0f;
+            const float carry = 1.2f;
+            while (carryT < carry && rb != null)
+            {
+                carryT += Time.deltaTime;
+                held += Time.deltaTime;
+                float k = Mathf.SmoothStep(0f, 1f, carryT / carry);
+                point.transform.position = Vector3.Lerp(from, putDown + Vector3.up * 0.1f, k);
+                HoldInPalm(rb, radius, centerOffset, upright, startPos, Mathf.Clamp01(held / settle));
+                yield return null;
+            }
+
+            // 6. Lo apoya y abre la mano.
+            if (rb != null)
+            {
+                rb.transform.SetPositionAndRotation(putDown + Vector3.up * 0.003f, upright);
+                rb.position = rb.transform.position;
+                rb.rotation = rb.transform.rotation;
+            }
+
             float release = 0f;
             while (release < 0.35f)
             {
@@ -819,9 +885,6 @@ namespace SojaExiles
 
             if (rb != null)
             {
-                rb.transform.SetPositionAndRotation(putDown + Vector3.up * 0.003f, Quaternion.identity);
-                rb.position = rb.transform.position;
-                rb.rotation = rb.transform.rotation;
                 rb.interpolation = interpolation;
                 foreach (Collider c in cols)
                 {
@@ -841,9 +904,71 @@ namespace SojaExiles
                 }
             }
 
+            EndReceive(point);
+        }
+
+        // El objeto pegado a la palma; los primeros instantes pasa suave desde
+        // donde lo solto el jugador hasta la palma.
+        private void HoldInPalm(Rigidbody rb, float radius, Vector3 centerOffset, Quaternion upright, Vector3 startPos,
+            float blend)
+        {
+            if (rb == null)
+            {
+                return;
+            }
+
+            Vector3 inPalm = body.PalmGripPoint(!rightArm, radius + 0.005f) - centerOffset;
+            rb.transform.SetPositionAndRotation(Vector3.Lerp(startPos, inPalm, blend), upright);
+        }
+
+        private void EndReceive(GameObject point)
+        {
             Destroy(point);
             SetOtherArm(PatientBody.ArmMode.Rest, null);
+            facingForReceive = false;
             receiving = false;
+        }
+
+        // True si mira hacia ese punto (en horizontal) con a lo sumo 'tolerance' grados.
+        private bool FacingToward(Vector3 point, float tolerance)
+        {
+            Vector3 to = PatientBody.Flat(point - transform.position);
+            return to.sqrMagnitude < 1e-4f || Vector3.Angle(PatientBody.Flat(transform.forward), to) <= tolerance;
+        }
+
+        // Mientras cocina, se voltea hacia el jugador si se acerca con algo
+        // para darle (BurnGuide llama a AttendPlayer) o mientras lo recibe;
+        // despues vuelve a mirar la cocina.
+        private bool FacingPlayer
+        {
+            get { return Current == Mode.Cooking && (Time.time < attendUntil || facingForReceive); }
+        }
+
+        private void UpdateFacing()
+        {
+            if (Current != Mode.Cooking || reach == null)
+            {
+                return;
+            }
+
+            if (FacingPlayer && viewer != null)
+            {
+                reach.FaceTo(viewer.position);
+            }
+            else if (!FacingToward(transform.position + homeForward, 8f))
+            {
+                reach.FaceTo(transform.position + homeForward * 2f);
+            }
+        }
+
+        // Mientras atiende al jugador deja de revolver: la mano baja junto al
+        // cuerpo. Cerca del pecho (menos de 15 cm en horizontal) para que
+        // PatientReach no gire el cuerpo hacia ella y la deje voltearse.
+        private Vector3 AttendGoal()
+        {
+            Vector3 fwd = PatientBody.Flat(body.TorsoForward).normalized;
+            Vector3 side = PatientBody.Flat(transform.right).normalized * (rightArm ? 1f : -1f);
+            return body.Chest.position + fwd * 0.04f + side * 0.11f + Vector3.down * 0.4f;
         }
 
         // ---------------- cuchara ----------------
@@ -865,6 +990,17 @@ namespace SojaExiles
         {
             if (spoonRoot == null || Current != Mode.Cooking || pot == null)
             {
+                return;
+            }
+
+            if (FacingPlayer || receiving)
+            {
+                // Atendiendo al jugador: la cuchara queda apoyada en la olla.
+                Vector3 toHer = PatientBody.Flat(transform.position - pot.BottomCenter);
+                toHer = toHer.sqrMagnitude > 1e-4f ? toHer.normalized : -transform.forward;
+                Vector3 tip = pot.BottomCenter + Vector3.up * (pot.Height * 0.45f);
+                Vector3 down = (Vector3.down - toHer * 0.45f).normalized;
+                spoonRoot.SetPositionAndRotation(tip - down * 0.27f, Quaternion.LookRotation(down, toHer));
                 return;
             }
 

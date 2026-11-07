@@ -150,6 +150,7 @@ namespace SojaExiles
 
             standingOnProp = null;
             controller.Move(clipped);
+            PushObjects();
             SlideOffProp();
             KeepHeadOutOfPatient(head);
             GuardAgainstFalling();
@@ -168,6 +169,135 @@ namespace SojaExiles
             if (hit.rigidbody != null && hit.normal.y > 0.3f)
             {
                 standingOnProp = hit.collider;
+            }
+        }
+
+        // Empujar al caminar (p.ej. la olla en el piso tras el accidente). La
+        // capsula del CharacterController no empuja nada y, contra un objeto
+        // bajo, se subia por su borde antes de que el empujon hiciera efecto.
+        // Por eso la capsula no choca con estos objetos y, cada cuadro, el que
+        // queda dentro de su radio se corre hacia afuera en horizontal, a la
+        // velocidad del jugador (entre minPushSpeed y maxPushSpeed). Lo que
+        // esta fijo (kinematico, como la olla antes del accidente) no se mueve.
+        // Son la olla y los objetos del SDK de Meta (no los sueltos de
+        // SimpleGrab, que ya no chocan con el jugador).
+        [Tooltip("Velocidad maxima a la que el jugador empuja un objeto con fisica al caminar contra el (m/s).")]
+        public float maxPushSpeed = 0.8f;
+        [Tooltip("Velocidad minima del empujon, aunque el jugador camine muy lento (m/s).")]
+        public float minPushSpeed = 0.3f;
+
+        private readonly System.Collections.Generic.List<Rigidbody> pushables =
+            new System.Collections.Generic.List<Rigidbody>();
+        private float nextPushScan;
+
+        private void FindPushables()
+        {
+            if (Time.unscaledTime < nextPushScan)
+            {
+                return;
+            }
+
+            nextPushScan = Time.unscaledTime + 1f;
+            pushables.RemoveAll(rb => rb == null);
+            foreach (Rigidbody rb in FindObjectsOfType<Rigidbody>())
+            {
+                // Solo la olla y los objetos que se agarran con el SDK de Meta:
+                // puertas y cajones tambien tienen fisica y deben seguir
+                // frenando al jugador.
+                bool movable = rb.GetComponent<PotAccident>() != null
+                    || rb.GetComponentInChildren<Oculus.Interaction.Grabbable>() != null;
+                if (!movable || rb.GetComponent<Joint>() != null)
+                {
+                    continue;
+                }
+
+                if (pushables.Contains(rb) || rb.GetComponent<Grabbable>() != null
+                    || rb.GetComponentInParent<PatientBody>() != null || rb.GetComponentInParent<VRLocomotion>() != null
+                    || (PatientPhysics.Current != null && rb.transform.IsChildOf(PatientPhysics.Current.transform)))
+                {
+                    continue;
+                }
+
+                bool any = false;
+                foreach (Collider col in rb.GetComponentsInChildren<Collider>())
+                {
+                    if (!col.isTrigger && col.attachedRigidbody == rb)
+                    {
+                        Physics.IgnoreCollision(controller, col, true);
+                        any = true;
+                    }
+                }
+
+                if (any)
+                {
+                    pushables.Add(rb);
+                }
+            }
+        }
+
+        private void PushObjects()
+        {
+            FindPushables();
+            Vector3 feet = transform.position;
+            float top = feet.y + controller.height;
+            Vector3 walking = controller.velocity;
+            walking.y = 0f;
+            float speed = Mathf.Clamp(walking.magnitude, minPushSpeed, maxPushSpeed);
+            foreach (Rigidbody rb in pushables)
+            {
+                if (rb == null || rb.isKinematic || SimpleGrab.IsHeldObject(rb))
+                {
+                    continue;
+                }
+
+                Bounds b = new Bounds(rb.position, Vector3.zero);
+                bool first = true;
+                foreach (Collider col in rb.GetComponentsInChildren<Collider>())
+                {
+                    if (col.isTrigger || col.attachedRigidbody != rb)
+                    {
+                        continue;
+                    }
+
+                    if (first)
+                    {
+                        b = col.bounds;
+                        first = false;
+                    }
+                    else
+                    {
+                        b.Encapsulate(col.bounds);
+                    }
+                }
+
+                if (first || b.max.y < feet.y - 0.05f || b.min.y > top)
+                {
+                    continue;
+                }
+
+                Vector3 closest = b.ClosestPoint(new Vector3(feet.x, Mathf.Clamp(feet.y, b.min.y, b.max.y), feet.z));
+                Vector3 away = closest - feet;
+                away.y = 0f;
+                if (away.magnitude > controller.radius + 0.02f)
+                {
+                    continue;
+                }
+
+                Vector3 dir = new Vector3(b.center.x - feet.x, 0f, b.center.z - feet.z);
+                if (dir.sqrMagnitude < 1e-6f)
+                {
+                    dir = walking.sqrMagnitude > 1e-6f ? walking : transform.forward;
+                    dir.y = 0f;
+                }
+
+                dir.Normalize();
+                Vector3 velocity = rb.velocity;
+                float along = Vector3.Dot(new Vector3(velocity.x, 0f, velocity.z), dir);
+                if (along < speed)
+                {
+                    rb.WakeUp();
+                    rb.velocity = velocity + dir * (speed - along);
+                }
             }
         }
 

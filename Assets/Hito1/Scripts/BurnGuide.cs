@@ -59,6 +59,8 @@ namespace SojaExiles
         public float grabTimeout = 45f;
         public float bringTimeout = 60f;
         public float handOverDistance = 0.4f;
+        [Tooltip("Distancia del jugador (con la taza en la mano) a la que la tia se voltea para recibirla (m).")]
+        public float attendDistance = 2.2f;
         [Tooltip("Segundos entre la entrega de la taza y el accidente.")]
         public float accidentAfterTutorial = 4f;
 
@@ -542,6 +544,14 @@ namespace SojaExiles
                         break;
                     }
 
+                    // Al acercarse con la taza en la mano, ella deja de
+                    // revolver y se voltea para recibirla.
+                    if (arm != null && head != null && patient.Chest != null && SimpleGrab.IsHeldObject(mug)
+                        && PatientBody.Flat(head.position - patient.Chest.position).magnitude < attendDistance)
+                    {
+                        arm.AttendPlayer();
+                    }
+
                     yield return null;
                 }
 
@@ -549,7 +559,8 @@ namespace SojaExiles
                 HideCard();
                 if (delivered && arm != null)
                 {
-                    arm.ReceiveObject(mug, PutDownSpot());
+                    // El lugar se pide cuando ya volvio a mirar la cocina.
+                    arm.ReceiveObject(mug, PutDownSpot);
                 }
 
                 if (delivered && reactions != null)

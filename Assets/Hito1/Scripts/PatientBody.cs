@@ -197,6 +197,17 @@ namespace SojaExiles
             return arm.upperLength + arm.foreLength;
         }
 
+        // Punto frente a la palma donde va el centro de un objeto que sostiene
+        // (a 'distance' de la palma, a la altura de los dedos). Asi el objeto
+        // toca la mano en vez de flotar al costado.
+        public Vector3 PalmGripPoint(bool rightSide, float distance)
+        {
+            Arm arm = rightSide ? right : left;
+            Vector3 fingers = arm.hand.rotation * arm.fingersLocal;
+            Vector3 palm = -(arm.hand.rotation * arm.dorsumLocal);
+            return arm.hand.position + fingers.normalized * 0.045f + palm.normalized * distance;
+        }
+
         // Ultima posicion resuelta de la muneca (sirve para que un "asa" de
         // agarre quede donde esta la mano).
         public Vector3 WristPosition(bool rightSide)

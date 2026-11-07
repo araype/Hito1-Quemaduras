@@ -54,6 +54,13 @@ namespace SojaExiles
         public bool handCollisions = true;
         public float handColliderRadius = 0.03f;
 
+        [Tooltip("Los objetos sueltos (taza, celular, pano...) no chocan con el cuerpo ni con las esferas de las manos "
+            + "del jugador: las manos los hacian saltar en el meson o salir disparados al ir a agarrarlos, y en el piso "
+            + "frenaban al jugador. Se siguen agarrando igual.")]
+        public bool loosePropsIgnorePlayer = true;
+        private readonly HashSet<Collider> looseProps = new HashSet<Collider>();
+        private float nextLooseScan;
+
         private class Hand
         {
             public OVRInput.Controller controller;
@@ -525,6 +532,87 @@ namespace SojaExiles
             UpdateInput(right, left);
             SyncMetaGrab(left);
             SyncMetaGrab(right);
+
+            if (loosePropsIgnorePlayer && Time.unscaledTime >= nextLooseScan)
+            {
+                // Muchos se crean en runtime (BurnSceneProps, la taza, el
+                // celular, las tiras de film): se revisa cada segundo.
+                nextLooseScan = Time.unscaledTime + 1f;
+                IgnoreLooseProps();
+            }
+        }
+
+        private void IgnoreLooseProps()
+        {
+            // Tampoco chocan con el cuerpo de la paciente: al voltearse o mover
+            // los brazos junto al meson lanzaba lo que habia encima. (Agarrar,
+            // cubrir y sacar el anillo no usan esas colisiones.)
+            PatientBody patient = FindObjectOfType<PatientBody>();
+            List<Collider> patientCols = new List<Collider>();
+            if (patient != null)
+            {
+                foreach (Collider c in patient.GetComponentsInChildren<Collider>())
+                {
+                    if (!c.isTrigger)
+                    {
+                        patientCols.Add(c);
+                    }
+                }
+            }
+
+            if (patientCols.Count != patientColliderCount)
+            {
+                patientColliderCount = patientCols.Count;
+                foreach (Collider col in looseProps)
+                {
+                    IgnoreAll(col, patientCols);
+                }
+            }
+
+            PatientReach reach = patient != null ? patient.GetComponent<PatientReach>() : null;
+            Rigidbody patientHand = reach != null ? reach.target : null;
+            foreach (Grabbable g in FindObjectsOfType<Grabbable>())
+            {
+                Rigidbody rb = g.GetComponent<Rigidbody>();
+                // La mano de la paciente (su objetivo, fuera de su jerarquia) y
+                // lo que es parte de ella se siguen tocando (sacar el anillo,
+                // llevarla del brazo).
+                if (rb == null || rb == patientHand || g.GetComponentInParent<PatientBody>() != null)
+                {
+                    continue;
+                }
+
+                foreach (Collider col in CollidersOf(rb))
+                {
+                    if (col == null || col.isTrigger || !looseProps.Add(col))
+                    {
+                        continue;
+                    }
+
+                    IgnoreAll(col, playerColliders);
+                    IgnoreAll(col, patientCols);
+                }
+            }
+
+            looseProps.RemoveWhere(c => c == null);
+        }
+
+        private int patientColliderCount = -1;
+
+        private static void IgnoreAll(Collider col, List<Collider> others)
+        {
+            if (col == null)
+            {
+                return;
+            }
+
+            foreach (Collider other in others)
+            {
+                if (other != null)
+                {
+                    Physics.IgnoreCollision(col, other, true);
+                }
+            }
         }
 
         private void FixedUpdate()
@@ -949,9 +1037,12 @@ namespace SojaExiles
                     continue;
                 }
 
+                // Los objetos sueltos siguen sin chocar con el jugador al
+                // soltarlos (ver loosePropsIgnorePlayer).
+                bool keep = !ignore && looseProps.Contains(col);
                 foreach (Collider player in playerColliders)
                 {
-                    Physics.IgnoreCollision(col, player, ignore);
+                    Physics.IgnoreCollision(col, player, ignore || keep);
                 }
             }
         }
