@@ -272,8 +272,11 @@ namespace SojaExiles
 
             if (marker != null)
             {
-                marker.enabled = active;
-                if (active)
+                // El circulo de progreso sigue en los dos modos: es respuesta
+                // a lo que hace el jugador, no una pista.
+                bool showMarker = active && IndicatorUtil.HintsVisible;
+                marker.enabled = showMarker;
+                if (showMarker)
                 {
                     float pulse = pulling >= 0 ? 1f : 1f + 0.15f * Mathf.Sin(Time.time * 4f);
                     marker.transform.position = ring.position;

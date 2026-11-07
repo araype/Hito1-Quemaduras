@@ -115,7 +115,7 @@ namespace SojaExiles
                 hint = "Antes de que se hinche. Acerca tu mano libre a su anillo y mantén apretado el botón lateral (o junta pulgar e índice) hasta que salga.",
                 clip = "guia_anillo" },
             new StepInfo { id = StepId.LlevarAlAgua, title = "Lleva su mano al chorro",
-                hint = "Tómala del antebrazo, no de la mano quemada. Suéltala cerca del chorro y ella la pondrá bajo el agua.",
+                hint = "Tómala del antebrazo, no de la mano quemada, y llévala al chorro: ella la pondrá bajo el agua.",
                 clip = "guia_llevar" },
             new StepInfo { id = StepId.Abrigar, title = "Abrígala con la chompa",
                 hint = "El agua fría también le enfría el cuerpo. Suelta la chompa sobre sus hombros.", clip = "guia_abrigo" },
@@ -127,8 +127,8 @@ namespace SojaExiles
                 clip = "guia_llamar" },
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
                 hint = "Mantén su mano bajo el agua hasta que el reloj complete las 20 marcas.", clip = "guia_esperar" },
-            new StepInfo { id = StepId.Cubrir, title = "Cubre con una gasa limpia",
-                hint = "Apoya la gasa encima y mantenla 1 segundo. Si no hay gasa, usa film: sostén el rollo, tira de un trozo con la otra mano y apóyalo sin envolver.",
+            new StepInfo { id = StepId.Cubrir, title = "Cubre la quemadura",
+                hint = "Sostén el film con una mano y tira una tira con la otra. Suéltala a lo largo de su mano, sin envolver, hasta cubrirla. También sirve una bolsa plástica limpia.",
                 clip = "guia_cubrir" }
         };
 
@@ -162,7 +162,8 @@ namespace SojaExiles
         private Transform card;
         private TextMesh cardTitle, cardText, cardHint, cardWarning;
         private Vector3 cardVelocity;
-        private bool cardMoving;
+        private Vector3 cardAnchor;
+        private int cardChoice = -1;
         private float warningUntil;
         private Renderer cardBackground, cardAccent;
         private RoundedPanel cardPanel;
@@ -170,6 +171,7 @@ namespace SojaExiles
         private float cardExpandUntil;
         private float cardGazeTime;
         private float cardOpen = 1f;     // 0 compacta, 1 completa (animado)
+        private bool hiddenForDialog;
 
         private readonly List<Renderer> highlights = new List<Renderer>();
         private Material highlightMaterial;
@@ -202,6 +204,20 @@ namespace SojaExiles
         private void Awake()
         {
             Instance = this;
+            PanelPlacement.ExtraFocus.Add(AddHighlightFocus);
+        }
+
+        // La tarjeta no tapa lo que se esta resaltando (los brillos pegados a
+        // un panel no cuentan: se mueven con el).
+        private void AddHighlightFocus(System.Collections.Generic.List<Vector3> points)
+        {
+            foreach (Renderer r in highlights)
+            {
+                if (r != null && r.enabled && r.GetComponentInParent<PanelFollow>() == null)
+                {
+                    points.Add(r.transform.position);
+                }
+            }
         }
 
         // Sin recarga de dominio entre dos Play del editor, el modo pendiente
@@ -214,6 +230,7 @@ namespace SojaExiles
 
         private void OnDestroy()
         {
+            PanelPlacement.ExtraFocus.Remove(AddHighlightFocus);
             if (Instance == this)
             {
                 Instance = null;
@@ -337,7 +354,8 @@ namespace SojaExiles
             // Los dos botones son pildoras del mismo tamano y brillo: ninguna
             // opcion se sugiere sobre la otra.
             const float left = -0.28f;
-            VRPanelKit.CardPanel(root, Vector2.zero, new Vector2(0.62f, 0.4f));
+            Vector2 menuSize = new Vector2(0.62f, 0.4f);
+            VRPanelKit.CardPanel(root, Vector2.zero, menuSize);
             VRPanelKit.Text(root, "Primeros auxilios  ·  Antes de empezar", new Vector2(left, 0.17f), 0.016f,
                 VRPanelKit.CardLabelColor);
             VRPanelKit.BoldText(root, "Quemadura en la cocina", new Vector2(left, 0.145f), 0.034f, Color.white);
@@ -353,7 +371,19 @@ namespace SojaExiles
             VRPanelKit.Text(root, VRPanelKit.Wrap("Guiado: te indica cada paso. Evaluación: lo haces solo y se mide.", 64),
                 new Vector2(left, -0.11f), 0.016f, VRPanelKit.CardHintColor);
 
+
             Say("guia_bienvenida");
+            // De frente, sin inclinarse y sin tapar a la tia. Algo mas chico:
+            // a 60 cm (al alcance de la mano) el tamano completo la tapaba
+            // desde cualquier lado (PanelPlacement, rama corregir-bugs).
+            const float menuScale = 0.8f;
+            root.localScale = Vector3.one * menuScale;
+            PanelFollow.Add(root, 0.6f, 0.08f, menuSize * menuScale);
+
+            // El mismo brillo en las dos opciones: ninguna se sugiere sobre la
+            // otra. Van pegados al panel, que se mueve.
+            Highlight(root.TransformPoint(new Vector3(-0.14f, -0.05f, -0.01f)), 0f).transform.SetParent(root, true);
+            Highlight(root.TransformPoint(new Vector3(0.14f, -0.05f, -0.01f)), 0f).transform.SetParent(root, true);
 
             while (!chosen)
             {
@@ -730,7 +760,30 @@ namespace SojaExiles
             if (step >= 0)
             {
                 UpdateStepHighlight(Steps[step].id);
+
+                // Con cada tira de film, la tarjeta dice cuanto va cubierto.
+                if (Steps[step].id == StepId.Cubrir)
+                {
+                    int cover = CoverPercent();
+                    if (cover != shownCover)
+                    {
+                        shownCover = cover;
+                        if (cover > 0)
+                        {
+                            ShowStep(step, false, false);
+                        }
+                    }
+                }
             }
+        }
+
+        private int shownCover = -1;
+
+        // Porcentaje de la quemadura cubierto con film (-1 si aun no hay tiras).
+        private static int CoverPercent()
+        {
+            FilmCoverage coverage = FindObjectOfType<FilmCoverage>();
+            return coverage != null && coverage.Strips > 0 ? Mathf.RoundToInt(coverage.Coverage * 100f) : -1;
         }
 
         private void ShowStep(int index, bool isReturn, bool speak)
@@ -751,6 +804,13 @@ namespace SojaExiles
 
             string title = isReturn ? "Vuelve a poner su mano bajo el agua" : info.title;
             string hint = isReturn ? "El reloj se pausó. Tómala del antebrazo y llévala al chorro." : info.hint;
+            int cover = CoverPercent();
+            if (!isReturn && info.id == StepId.Cubrir && cover >= 0)
+            {
+                FilmCoverage coverage = FindObjectOfType<FilmCoverage>();
+                hint = $"Cubierto con film: {cover} % (hace falta {Mathf.RoundToInt(coverage.coverageNeeded * 100f)} %). "
+                    + "Pon otra tira al lado, a lo largo de su mano.";
+            }
             ShowCard($"Paso {index + 1} de {Steps.Length}", title, hint);
             if (speak)
             {
@@ -838,6 +898,14 @@ namespace SojaExiles
                         points.Add(rr != null ? rr.bounds.center : item.transform.position);
                     }
 
+                    foreach (FilmRoll roll in FindObjectsOfType<FilmRoll>())
+                    {
+                        if (!roll.GetComponent<Grabbable>().IsHeld)
+                        {
+                            points.Add(roll.transform.TransformPoint(roll.axisCenter));
+                        }
+                    }
+
                     radius = 0.08f;
                     break;
             }
@@ -890,6 +958,15 @@ namespace SojaExiles
             switch (e)
             {
                 case BurnSequenceManager.BurnEvent.HotWaterOn:
+                    // Con la fria abierta, la caliente solo la templa (sale
+                    // tibia): esta bien, no se corrige.
+                    if (coldTap != null && coldTap.IsOpen)
+                    {
+                        break;
+                    }
+
+                    Correct("guia_err_caliente", "Esa es la llave caliente. Ciérrala y usa la del punto azul.");
+                    break;
                 case BurnSequenceManager.BurnEvent.HotWaterOnBurn:
                     Correct("guia_err_caliente", "Esa es la llave caliente. Ciérrala y usa la del punto azul.");
                     break;
@@ -901,13 +978,28 @@ namespace SojaExiles
                     Correct("guia_err_mano", "Sujétala del antebrazo: la mano quemada le duele.");
                     break;
                 case BurnSequenceManager.BurnEvent.ClothOnBurn:
-                    Correct("guia_err_pano", "El paño de cocina suelta pelusa. Usa una gasa limpia o, si no hay, film.");
+                    Correct("guia_err_pano", "El paño de cocina suelta pelusa. Usa film o una bolsa limpia.");
                     break;
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:
                     Correct("guia_err_temprano", "Todavía no: primero termina de enfriar la quemadura.");
                     break;
+                case BurnSequenceManager.BurnEvent.PatientAlarmed:
+                    Correct("guia_err_calma", "Háblale con calma: dile que el agua fría alivia.");
+                    break;
+                case BurnSequenceManager.BurnEvent.BadAdvice:
+                    Correct("guia_err_remedio", "No le pongas nada en la quemadura: solo agua fría corriente.");
+                    break;
+                case BurnSequenceManager.BurnEvent.CoolingGaveUp:
+                    Correct("guia_err_aguantar", "Anímala a aguantar o témplale un poco el agua: hay que completar los 20 minutos.");
+                    break;
+                case BurnSequenceManager.BurnEvent.HotPotTouched:
+                    Correct("guia_err_olla", "No toques la olla: sigue caliente y también te quemarías.");
+                    break;
+                case BurnSequenceManager.BurnEvent.HotSpillStepped:
+                    Correct("guia_err_charco", "El piso mojado resbala: rodea el agua derramada.");
+                    break;
                 case BurnSequenceManager.BurnEvent.FilmWrapped:
-                    Correct("guia_err_envolver", "No la envuelvas: apoya el film encima. La mano se va a hinchar.");
+                    Correct("guia_err_envolver", "No envuelvas su mano: pon las tiras a lo largo, sueltas.");
                     break;
             }
         }
@@ -1126,8 +1218,29 @@ namespace SojaExiles
         // mirada se aleja mucho.
         private void UpdateCard()
         {
-            if (card == null || !card.gameObject.activeSelf)
+            if (card == null)
             {
+                return;
+            }
+
+            // Mientras la paciente pregunta algo (PatientDialog) la tarjeta se
+            // esconde y vuelve al cerrarse el panel.
+            if (hiddenForDialog && !PatientDialog.IsOpen)
+            {
+                hiddenForDialog = false;
+                card.gameObject.SetActive(true);
+                PlaceCard(true);
+            }
+
+            if (!card.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            if (PatientDialog.IsOpen)
+            {
+                hiddenForDialog = true;
+                card.gameObject.SetActive(false);
                 return;
             }
 
@@ -1275,11 +1388,20 @@ namespace SojaExiles
             }
 
             forward.Normalize();
-            Vector3 wanted = head.position + forward * cardDistance + Vector3.down * cardDrop;
-            Vector3 toCard = Vector3.ProjectOnPlane(card.position - head.position, Vector3.up);
-            float angle = toCard.sqrMagnitude > 1e-4f ? Vector3.Angle(toCard, forward) : 180f;
-            float distanceError = Mathf.Abs(toCard.magnitude - cardDistance);
 
+            // La base sigue la mirada sin prisa; sobre ella se elige el lugar
+            // que no tapa a la paciente, el reloj ni el objeto del paso.
+            if (snap || cardAnchor.sqrMagnitude < 0.5f || Vector3.Angle(forward, cardAnchor) > cardFollowAngle)
+            {
+                cardAnchor = forward;
+            }
+
+            Vector2 half = new Vector2(CardWidth, CardHeight) * (cardScale * 0.5f);
+            // Al mirar el meson la tarjeta baja con la vista (antes quedaba
+            // arriba, sobre los gabinetes).
+            float lookDown = Mathf.Clamp(-head.forward.y, 0f, 0.6f);
+            float drop = cardDrop + lookDown * cardDistance * 0.5f;
+            Vector3 wanted = PanelPlacement.Choose(head.position, cardAnchor, cardDistance, drop, half, ref cardChoice);
             if (snap)
             {
                 card.position = wanted;
@@ -1287,34 +1409,10 @@ namespace SojaExiles
             }
             else
             {
-                if (angle > cardFollowAngle || distanceError > 0.3f)
-                {
-                    cardMoving = true;
-                }
-
-                if (cardMoving)
-                {
-                    card.position = Vector3.SmoothDamp(card.position, wanted, ref cardVelocity, 0.35f);
-                    if ((card.position - wanted).sqrMagnitude < 0.0004f)
-                    {
-                        cardMoving = false;
-                    }
-                }
-                else
-                {
-                    // Sigue la altura de la cabeza (si se agacha, por ejemplo).
-                    Vector3 p = card.position;
-                    p.y = Mathf.Lerp(p.y, wanted.y, 1f - Mathf.Exp(-3f * Time.deltaTime));
-                    card.position = p;
-                }
+                card.position = Vector3.SmoothDamp(card.position, wanted, ref cardVelocity, 0.35f);
             }
 
-            Vector3 look = card.position - head.position;
-            look.y *= 0.5f;
-            if (look.sqrMagnitude > 1e-4f)
-            {
-                card.rotation = Quaternion.LookRotation(look.normalized, Vector3.up);
-            }
+            card.rotation = PanelPlacement.Facing(card.position, head.position);
         }
 
         // ---------------- brillo ----------------
@@ -1322,7 +1420,7 @@ namespace SojaExiles
         private Renderer Highlight(Vector3 position, float radius)
         {
             Renderer r = IndicatorUtil.CreateSphere("BrilloGuia", null, position, Mathf.Max(0.02f, radius),
-                highlightMaterial, new Color(0.3f, 0.85f, 1f, 0.4f));
+                highlightMaterial, new Color(0.3f, 0.85f, 1f, 0.2f));
             highlights.Add(r);
             return r;
         }
@@ -1349,7 +1447,7 @@ namespace SojaExiles
         private void UpdateHighlights()
         {
             float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 4.5f);
-            Color color = new Color(0.3f, 0.85f, 1f, Mathf.Lerp(0.18f, 0.5f, pulse));
+            Color color = new Color(0.3f, 0.85f, 1f, Mathf.Lerp(0.06f, 0.24f, pulse));
             foreach (Renderer r in highlights)
             {
                 if (r != null && r.enabled)

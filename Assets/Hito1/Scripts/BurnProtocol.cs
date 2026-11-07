@@ -8,7 +8,7 @@ namespace SojaExiles
     // Lleva la cuenta del protocolo de primeros auxilios ante la quemadura a
     // partir de lo que avisa BurnSequenceManager:
     //   pasos (apagar el fuego, agua fria, enfriar 20 min, anillo, abrigar,
-    //   cubrir, decision medica), errores con su explicacion, tiempo de
+    //   cubrir, decision medica, pedir ayuda), errores con su explicacion, tiempo de
     //   primera accion, tiempo de enfriamiento y puntaje.
     // El enfriamiento de 20 minutos se representa en 'coolingSeconds' reales
     // (el reloj de pared, CoolingClock). Si la mano sale del agua, el reloj se
@@ -50,6 +50,7 @@ namespace SojaExiles
             public BurnSequenceManager.Severity severity;
             public float time;
             public string explanation;
+            public Act act;
         }
 
         public BurnSequenceManager burnSequence;
@@ -74,7 +75,7 @@ namespace SojaExiles
             "Enfriar 20 minutos bajo el agua",
             "Retirar el anillo",
             "Abrigar a la persona",
-            "Cubrir con una gasa limpia (o film si no hay)",
+            "Cubrir sin apretar (film o bolsa)",
             "Llamar al 106 y decidir si necesita atención médica"
         };
 
@@ -92,6 +93,7 @@ namespace SojaExiles
 
         private readonly bool[] done = new bool[System.Enum.GetValues(typeof(Step)).Length];
         private readonly float[] doneTime = new float[System.Enum.GetValues(typeof(Step)).Length];
+        private readonly Act[] doneAct = new Act[System.Enum.GetValues(typeof(Step)).Length];
         private BurnContactDetector coolingDetector;
         private bool ringStuck;
         private bool decisionShown;
@@ -107,6 +109,56 @@ namespace SojaExiles
         public float DoneTime(Step step)
         {
             return doneTime[(int)step];
+        }
+
+        // Pasos hechos y errores de un acto (la barra de actos del resumen).
+        // Un paso que falto cuenta en el acto en que tocaba hacerlo.
+        public void CountAct(Act act, out int hits, out int errors, out int critical)
+        {
+            hits = 0;
+            errors = 0;
+            critical = 0;
+            foreach (Step step in System.Enum.GetValues(typeof(Step)))
+            {
+                if (IsDone(step) && doneAct[(int)step] == act)
+                {
+                    hits++;
+                }
+            }
+
+            foreach (Mistake m in Mistakes)
+            {
+                if (m.act != act)
+                {
+                    continue;
+                }
+
+                if (m.severity == BurnSequenceManager.Severity.Critical)
+                {
+                    critical++;
+                }
+                else
+                {
+                    errors++;
+                }
+            }
+        }
+
+        // Acto en que se espera cada paso.
+        public static Act ExpectedAct(Step step)
+        {
+            switch (step)
+            {
+                case Step.ApagarFuego:
+                case Step.AguaFria:
+                    return Act.Desarrollo;
+                case Step.Enfriar:
+                case Step.Anillo:
+                case Step.Abrigar:
+                    return Act.Climax;
+            }
+
+            return Act.Resolucion;
         }
 
         // 0 a 1: cuanto del enfriamiento se completo.
@@ -246,6 +298,7 @@ namespace SojaExiles
 
             done[(int)step] = true;
             doneTime[(int)step] = SinceBurn();
+            doneAct[(int)step] = CurrentAct;
             Debug.Log($"[BurnProtocol] Paso completado: {StepNames[(int)step]} ({doneTime[(int)step]:F1} s)");
         }
 
@@ -346,7 +399,8 @@ namespace SojaExiles
                     detail = detail,
                     severity = severity,
                     time = SinceBurn(),
-                    explanation = Explain(e, detail)
+                    explanation = Explain(e, detail),
+                    act = MistakeAct(e, detail)
                 });
             }
 
@@ -397,6 +451,22 @@ namespace SojaExiles
             }
         }
 
+        private Act MistakeAct(BurnSequenceManager.BurnEvent e, string detail)
+        {
+            if (e == BurnSequenceManager.BurnEvent.StepMissed && System.Enum.TryParse(detail, out Step step))
+            {
+                return ExpectedAct(step);
+            }
+
+            // La decision medica se toma al final aunque el estado ya cambio.
+            if (e == BurnSequenceManager.BurnEvent.MedicalDecision)
+            {
+                return Act.Resolucion;
+            }
+
+            return CurrentAct;
+        }
+
         private void FirstAction()
         {
             if (FirstActionDelay < 0f && burnSequence.BurnTime > 0f)
@@ -408,7 +478,10 @@ namespace SojaExiles
         private IEnumerator ShowDecision()
         {
             yield return new WaitForSeconds(decisionDelay);
-            MedicalDecisionPanel.Show(this);
+            if (!Finished)
+            {
+                MedicalDecisionPanel.Show(this);
+            }
         }
 
         // La respuesta del panel de decision medica.
@@ -501,9 +574,19 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:
                     return "Primero hay que terminar de enfriar la quemadura; después se cubre.";
                 case BurnSequenceManager.BurnEvent.ClothOnBurn:
-                    return "Un paño de cocina suelta pelusa que se pega a la herida: cubre con una gasa limpia o, si no hay, con film.";
+                    return "Un paño de cocina suelta pelusa que se pega a la herida: cubre con film o una bolsa plástica limpia.";
+                case BurnSequenceManager.BurnEvent.FilmWrapped:
+                    return "No envuelvas la mano con el film: al hincharse aprieta. Pon las tiras a lo largo, sueltas.";
                 case BurnSequenceManager.BurnEvent.BurnedHandGrabbed:
                     return "Sujeta a la persona del antebrazo: agarrar la mano quemada le duele y daña la piel.";
+                case BurnSequenceManager.BurnEvent.HotPotTouched:
+                    return "No toques la olla: sigue caliente y también te quemarías. Primero cuídate tú.";
+                case BurnSequenceManager.BurnEvent.PatientAlarmed:
+                    return "Háblale con calma: dile que el agua fría alivia y ayuda a sanar. El miedo aumenta el dolor.";
+                case BurnSequenceManager.BurnEvent.BadAdvice:
+                    return ExplainRemedy(detail);
+                case BurnSequenceManager.BurnEvent.HotSpillStepped:
+                    return "Rodea el agua derramada: el piso mojado resbala. Tu seguridad va primero.";
                 case BurnSequenceManager.BurnEvent.RemedyNear:
                 case BurnSequenceManager.BurnEvent.RemedyApplied:
                     return ExplainRemedy(detail);

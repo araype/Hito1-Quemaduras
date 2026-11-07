@@ -20,6 +20,8 @@ namespace SojaExiles
         public bool autoStart = true;
         public float tipAngle = 90f;
         public float tipSeconds = 0.55f;
+        [Tooltip("Antes del accidente la olla no se puede agarrar ni empujar. Si se moviera, el accidente pasaria lejos de la cocina.")]
+        public bool lockUntilAccident = true;
 
         [Header("Agua derramada")]
         public float counterPuddleRadius = 0.24f;
@@ -32,21 +34,46 @@ namespace SojaExiles
         private Rigidbody body;
         private ParticleSystem pour;
 
-        // Hasta el accidente la olla esta fija en la hornilla: la tia esta
-        // cocinando. Antes se podia agarrar o empujar y el accidente ocurria
-        // donde estuviera (en medio de la cocina, en el piso).
+        // Momento (Time.time) en que se volco la olla; infinito negativo si
+        // todavia no.
+        public float SpillTime { get; private set; } = float.NegativeInfinity;
+
+        public bool Spilled
+        {
+            get { return SpillTime > float.NegativeInfinity; }
+        }
+
+        // Charco caliente del suelo (PlayerSafety avisa si el jugador lo
+        // pisa). Caliente mientras echa vapor.
+        private Puddle floorPuddle;
+        private float floorPuddleHotUntil;
+
+        public bool TryGetHotFloorPuddle(out Vector3 center, out float radius)
+        {
+            if (floorPuddle == null || Time.time > floorPuddleHotUntil)
+            {
+                center = Vector3.zero;
+                radius = 0f;
+                return false;
+            }
+
+            center = floorPuddle.Point;
+            radius = floorPuddle.CurrentRadius;
+            return radius > 0.01f;
+        }
+
+        // Bloqueo antes del accidente: lugar de la olla sobre el quemador y
+        // agarres de Meta que se apagaron mientras tanto.
         private bool locked;
-        private bool originalKinematic;
         private Vector3 homePosition;
         private Quaternion homeRotation;
-        private float nextLockRefresh;
+        private bool homeKinematic;
         private readonly List<Behaviour> lockedInteractables = new List<Behaviour>();
 
         private void Awake()
         {
             pot = GetComponent<PotFX>();
             body = GetComponent<Rigidbody>();
-            originalKinematic = body != null && body.isKinematic;
 
             // Antes del Start de BurnSequenceManager: la mano se quema con el
             // accidente, no con el retraso fijo.
@@ -64,9 +91,15 @@ namespace SojaExiles
                 burnSequence = FindObjectOfType<BurnSequenceManager>();
             }
 
+            // BurnStaging ya escalo la cocina (corre antes de cualquier Start):
+            // esta es la pose de la olla sobre el quemador.
             homePosition = transform.position;
             homeRotation = transform.rotation;
-            SetLocked(true);
+            homeKinematic = body != null && body.isKinematic;
+            if (lockUntilAccident)
+            {
+                Lock();
+            }
 
             // Con la guia (menu y tutorial), el accidente lo dispara ella.
             bool guideControls = BurnGuide.Instance != null && BurnGuide.Instance.ControlsAccident;
@@ -76,39 +109,37 @@ namespace SojaExiles
             }
         }
 
-        private void Update()
+        private bool started;
+
+        // La olla queda fija sobre el quemador: kinematica (SimpleGrab no
+        // agarra cuerpos kinematicos y nada la empuja) y sin los agarres del
+        // Interaction SDK de Meta.
+        private void Lock()
         {
-            // Los interactables del SDK (HandGrabPoseSetup) se crean en su
-            // Start: se vuelven a apagar un rato despues.
-            if (locked && Time.time >= nextLockRefresh)
+            locked = true;
+            if (body != null)
             {
-                nextLockRefresh = Time.time + 0.5f;
-                SetLocked(true);
+                if (SimpleGrab.IsHeldObject(body))
+                {
+                    SimpleGrab.ForceRelease(body);
+                }
+
+                body.isKinematic = true;
+            }
+
+            foreach (MonoBehaviour mb in GetComponentsInChildren<MonoBehaviour>(true))
+            {
+                if (mb is Oculus.Interaction.IInteractable && mb.enabled)
+                {
+                    mb.enabled = false;
+                    lockedInteractables.Add(mb);
+                }
             }
         }
 
-        private void SetLocked(bool value)
+        private void Unlock()
         {
-            locked = value;
-            if (body != null)
-            {
-                body.isKinematic = value || originalKinematic;
-            }
-
-            if (value)
-            {
-                foreach (Behaviour b in GetComponentsInChildren<Behaviour>(true))
-                {
-                    if (b is Oculus.Interaction.IInteractable && b.enabled)
-                    {
-                        b.enabled = false;
-                        lockedInteractables.Add(b);
-                    }
-                }
-
-                return;
-            }
-
+            locked = false;
             foreach (Behaviour b in lockedInteractables)
             {
                 if (b != null)
@@ -120,7 +151,53 @@ namespace SojaExiles
             lockedInteractables.Clear();
         }
 
-        private bool started;
+        private float nextLockRefresh;
+
+        private void Update()
+        {
+            // Los agarres del SDK (HandGrabPoseSetup) se crean en su Start,
+            // despues de este: se vuelven a apagar un rato despues.
+            if (locked && Time.time >= nextLockRefresh)
+            {
+                nextLockRefresh = Time.time + 0.5f;
+                foreach (MonoBehaviour mb in GetComponentsInChildren<MonoBehaviour>(true))
+                {
+                    if (mb is Oculus.Interaction.IInteractable && mb.enabled)
+                    {
+                        mb.enabled = false;
+                        lockedInteractables.Add(mb);
+                    }
+                }
+            }
+        }
+
+        private void FixedUpdate()
+        {
+            // Si algo la movio igual (otro sistema de agarre), vuelve a su
+            // lugar.
+            if (locked && ((transform.position - homePosition).sqrMagnitude > 1e-6f
+                || Quaternion.Angle(transform.rotation, homeRotation) > 0.5f))
+            {
+                ReturnHome();
+            }
+        }
+
+        private void ReturnHome()
+        {
+            if (body != null)
+            {
+                if (!body.isKinematic)
+                {
+                    body.velocity = Vector3.zero;
+                    body.angularVelocity = Vector3.zero;
+                }
+
+                body.position = homePosition;
+                body.rotation = homeRotation;
+            }
+
+            transform.SetPositionAndRotation(homePosition, homeRotation);
+        }
 
         // Vuelca la olla ahora (o tras 'delay' segundos).
         public void Trigger(float delay = 0f)
@@ -136,28 +213,18 @@ namespace SojaExiles
             started = true;
             yield return new WaitForSeconds(delay);
 
-            // Si el jugador ya tiene la olla en la mano, no se vuelca: la
-            // paciente se quema igual al tocarla.
-            if (body != null && SimpleGrab.IsHeldObject(body))
+            // Bloqueada, se vuelca siempre desde el quemador.
+            if (locked)
             {
-                SetLocked(false);
-                Burn();
-                yield break;
+                ReturnHome();
             }
 
-            // Respaldo: si algo la corrio igual, vuelve a la hornilla antes de
-            // volcarse (el accidente debe ocurrir junto a la tia).
-            if (Vector3.Distance(transform.position, homePosition) > 0.03f
-                || Quaternion.Angle(transform.rotation, homeRotation) > 10f)
+            // Sin bloqueo, si el jugador tiene la olla en la mano no se
+            // vuelca: la paciente se quema igual al tocarla.
+            else if (body != null && SimpleGrab.IsHeldObject(body))
             {
-                transform.SetPositionAndRotation(homePosition, homeRotation);
-                if (body != null)
-                {
-                    body.position = homePosition;
-                    body.rotation = homeRotation;
-                }
-
-                Physics.SyncTransforms();
+                Burn();
+                yield break;
             }
 
             // Se vuelca hacia la paciente (su mano esta junto a la olla).
@@ -170,7 +237,7 @@ namespace SojaExiles
             Vector3 pivot = bottom + dir * pot.Radius;
             Vector3 axis = Vector3.Cross(Vector3.up, dir);
 
-            bool wasKinematic = originalKinematic;
+            bool wasKinematic = locked ? homeKinematic : body != null && body.isKinematic;
             locked = false;
             if (body != null)
             {
@@ -204,6 +271,7 @@ namespace SojaExiles
                 if (!pouring && angle > 45f)
                 {
                     pouring = true;
+                    SpillTime = Time.time;
                     pot.Spill();
                     StartPour(pivot + Vector3.up * pot.Height * 0.9f, dir);
                 }
@@ -222,8 +290,6 @@ namespace SojaExiles
                 Burn();
             }
 
-            // Desde aca se puede agarrar (por ejemplo, levantarla del piso).
-            SetLocked(false);
             if (body != null)
             {
                 body.isKinematic = wasKinematic;
@@ -233,6 +299,9 @@ namespace SojaExiles
                     body.angularVelocity = Vector3.zero;
                 }
             }
+
+            // Ya volcada se puede agarrar (y es un error tocarla caliente).
+            Unlock();
 
             // El golpe de la olla y el grito los pone BurnPatientReactions.
             StartCoroutine(Spread(pivot, dir, hand));
@@ -341,6 +410,9 @@ namespace SojaExiles
                 counter = new Puddle(top.point, top.normal, radius, 1);
             }
 
+            floorPuddle = floor;
+            floorPuddleHotUntil = Time.time + steamSeconds;
+
             float elapsed = 0f;
             while (elapsed < steamSeconds)
             {
@@ -395,6 +467,7 @@ namespace SojaExiles
         private class Puddle
         {
             public Vector3 Point;
+            public float CurrentRadius;
             private readonly Transform transform;
             private readonly ParticleSystem steam;
             private readonly float radius;
@@ -426,6 +499,7 @@ namespace SojaExiles
             public void Update(float grow, float elapsed, float steamSeconds)
             {
                 float r = radius * Mathf.Sqrt(grow);
+                CurrentRadius = r;
                 transform.localScale = new Vector3(r, 1f, r);
                 ParticleSystem.EmissionModule emission = steam.emission;
                 emission.rateOverTime = grow > 0f ? 9f * (1f - elapsed / steamSeconds) : 0f;

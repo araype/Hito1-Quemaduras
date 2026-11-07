@@ -9,9 +9,12 @@ namespace SojaExiles
     //   - encabezado: modo, titulo, grado de la quemadura y el puntaje;
     //   - cuatro indicadores: primera accion, enfriamiento, errores y
     //     errores criticos;
+    //   - la barra de los cuatro actos de la historia, con los aciertos y
+    //     errores de cada uno (E.9);
     //   - dos columnas: los pasos del protocolo (hechos o faltantes) y la
     //     decision medica con que mejorar;
-    //   - boton para repetir la practica.
+    //   - botones para repetir la practica o probar otro caso (el otro grado
+    //     de quemadura, que cambia la decision medica).
     public class BurnSummaryPanel : MonoBehaviour
     {
         private static readonly Color Green = new Color(0.36f, 0.84f, 0.54f);
@@ -22,12 +25,13 @@ namespace SojaExiles
         private static readonly Color Muted = new Color(0.6f, 0.66f, 0.76f);
 
         private const float Width = 1.0f;
-        private const float Height = 0.8f;
+        private const float Height = 0.86f;
         private const float Pad = 0.045f;
 
         public static BurnSummaryPanel Show(BurnProtocol protocol)
         {
             Transform root = VRPanelKit.CreateRoot("PanelResumen", 1.0f, 0.12f);
+            PanelFollow.Add(root, 1.0f, 0.12f, new Vector2(Width, Height));
             BurnSummaryPanel panel = root.gameObject.AddComponent<BurnSummaryPanel>();
             panel.Build(protocol);
             return panel;
@@ -72,7 +76,7 @@ namespace SojaExiles
 
             // ---------------- indicadores ----------------
             float tileTop = top - 0.15f;
-            const float tileH = 0.105f;
+            const float tileH = 0.095f;
             const float gap = 0.02f;
             float tileW = (Width - 2f * Pad - 3f * gap) / 4f;
             bool fullCooling = p.SimulatedCoolingMinutes >= p.simulatedMinutes - 0.5f;
@@ -85,8 +89,13 @@ namespace SojaExiles
             Tile(t, 3, left, tileTop, tileW, tileH, gap, burn.CriticalErrors.ToString(), "Errores críticos",
                 burn.CriticalErrors > 0 ? Red : Green);
 
+            // ---------------- actos ----------------
+            float actTop = tileTop - tileH - 0.016f;
+            const float actH = 0.062f;
+            ActBar(t, p, left, actTop, tileW, actH, gap);
+
             // ---------------- columnas ----------------
-            float colTop = tileTop - tileH - 0.022f;
+            float colTop = actTop - actH - 0.016f;
             float colBottom = -Height / 2f + Pad + 0.105f;
             float colW = (Width - 2f * Pad - gap) / 2f;
             float colH = colTop - colBottom;
@@ -110,7 +119,7 @@ namespace SojaExiles
                     Color.white);
                 VRPanelKit.Text(t, ok ? "Hecho" : "Faltó", new Vector2(left + colW - 0.022f, y - 0.002f), 0.016f, c,
                     TextAnchor.UpperRight, TextAlignment.Right);
-                y -= 0.031f;
+                y -= 0.029f;
             }
 
             // Decision medica y que mejorar.
@@ -132,10 +141,17 @@ namespace SojaExiles
 
             // ---------------- boton ----------------
             float buttonY = -Height / 2f + Pad + 0.045f;
-            VRPanelKit.RoundedButton(t, "Repetir práctica", new Vector2(0f, buttonY), new Vector2(0.34f, 0.075f),
-                new Color(0.22f, 0.48f, 0.95f), Restart);
-            VRPanelKit.Text(t, "Deja la mano sobre el botón para repetir", new Vector2(0f, buttonY - 0.05f), 0.015f,
-                Muted, TextAnchor.UpperCenter, TextAlignment.Center);
+            BurnInjury.BurnDegree same = p.Degree;
+            BurnInjury.BurnDegree other = same == BurnInjury.BurnDegree.Primero
+                ? BurnInjury.BurnDegree.SegundoSuperficial
+                : BurnInjury.BurnDegree.Primero;
+            VRPanelKit.RoundedButton(t, "Repetir práctica", new Vector2(-0.19f, buttonY), new Vector2(0.34f, 0.075f),
+                new Color(0.22f, 0.48f, 0.95f), () => Restart(same));
+            VRPanelKit.RoundedButton(t, "Otro caso", new Vector2(0.19f, buttonY), new Vector2(0.34f, 0.075f),
+                new Color(0.45f, 0.3f, 0.62f), () => Restart(other));
+            string otherName = other == BurnInjury.BurnDegree.Primero ? "primer grado" : "segundo grado";
+            VRPanelKit.Text(t, "Deja la mano sobre un botón. Otro caso: quemadura de " + otherName + ".",
+                new Vector2(0f, buttonY - 0.05f), 0.015f, Muted, TextAnchor.UpperCenter, TextAlignment.Center);
 
             // Credito que pide el plan gratis de ElevenLabs (docs/VOCES.md).
             VRPanelKit.Text(t, "Voces: elevenlabs.io", new Vector2(right, -Height / 2f + 0.03f), 0.012f, Muted,
@@ -155,6 +171,63 @@ namespace SojaExiles
                 TextAnchor.UpperCenter, TextAlignment.Center);
         }
 
+        // Los cuatro actos de la historia en orden, como una linea de tiempo:
+        // cuantos pasos se hicieron y cuantos errores hubo en cada uno. El
+        // borde dice como le fue (verde sin errores, ambar con errores, rojo
+        // con alguno critico).
+        private static readonly string[] ActNames =
+        {
+            "1 · Antes del accidente",
+            "2 · Primeros segundos",
+            "3 · Enfriamiento",
+            "4 · Cierre"
+        };
+
+        private static void ActBar(Transform t, BurnProtocol p, float left, float top, float w, float h, float gap)
+        {
+            foreach (BurnProtocol.Act act in System.Enum.GetValues(typeof(BurnProtocol.Act)))
+            {
+                int i = (int)act;
+                float cx = left + w / 2f + i * (w + gap);
+                p.CountAct(act, out int hits, out int errors, out int critical);
+                Color state = critical > 0 ? Red : errors > 0 ? Amber : Green;
+                RoundedPanel card = RoundedPanel.Create(t, "Acto", new Vector2(cx, top - h / 2f), new Vector2(w, h),
+                    0.001f, 0.018f, 0.0016f, 0.006f);
+                card.top = new Color(0.15f, 0.2f, 0.32f, 0.85f);
+                card.bottom = new Color(0.11f, 0.15f, 0.26f, 0.85f);
+                card.borderLeft = state;
+                card.borderRight = state;
+                card.glowStrength = 0.15f;
+                card.sheen = 0.03f;
+                card.Push();
+
+                VRPanelKit.Text(t, ActNames[i], new Vector2(cx, top - 0.012f), 0.015f, Accent,
+                    TextAnchor.UpperCenter, TextAlignment.Center);
+                string detail;
+                if (act == BurnProtocol.Act.Planteamiento)
+                {
+                    detail = "Tutorial";
+                }
+                else
+                {
+                    string ok = hits == 1 ? "1 paso" : hits + " pasos";
+                    int bad = errors + critical;
+                    string ko = bad == 0 ? "sin errores" : bad == 1 ? "1 error" : bad + " errores";
+                    detail = ok + " · " + ko;
+                }
+
+                VRPanelKit.Text(t, detail, new Vector2(cx, top - 0.036f), 0.016f,
+                    act == BurnProtocol.Act.Planteamiento ? Muted : state, TextAnchor.UpperCenter,
+                    TextAlignment.Center);
+                if (i < 3)
+                {
+                    // Flecha entre actos.
+                    VRPanelKit.Text(t, "›", new Vector2(cx + w / 2f + gap / 2f, top - h / 2f + 0.012f), 0.024f,
+                        Muted, TextAnchor.UpperCenter, TextAlignment.Center);
+                }
+            }
+        }
+
         // Tarjeta interior, un poco mas clara que el fondo y sin brillo.
         private static void Card(Transform t, string name, Vector2 center, Vector2 size)
         {
@@ -167,7 +240,8 @@ namespace SojaExiles
             card.Push();
         }
 
-        // Hasta tres consejos (uno por tipo de error), sin pasar de 6 lineas.
+        // Un consejo por tipo de error, sin pasar de 8 lineas. Si no entran
+        // todos, la ultima linea dice cuantos faltan (estan en el JSON).
         private static string Tips(BurnProtocol p)
         {
             Dictionary<string, int> counts = new Dictionary<string, int>();
@@ -188,15 +262,21 @@ namespace SojaExiles
                 return "Seguiste el protocolo sin errores.\n¡Muy bien!";
             }
 
+            const int maxLines = 8;
             List<string> lines = new List<string>();
             int lineCount = 0;
-            foreach (string explanation in order)
+            for (int i = 0; i < order.Count; i++)
             {
+                string explanation = order[i];
                 string times = counts[explanation] > 1 ? $" (x{counts[explanation]})" : "";
                 string tip = VRPanelKit.Wrap("• " + explanation + times, 44);
                 int n = tip.Split('\n').Length;
-                if (lines.Count >= 3 || lineCount + n > 6)
+                bool last = i == order.Count - 1;
+                // Deja una linea para el aviso de los que no entran.
+                if (lineCount + n > (last ? maxLines : maxLines - 1))
                 {
+                    int left = order.Count - i;
+                    lines.Add(left == 1 ? "• Y 1 error más." : $"• Y {left} errores más.");
                     break;
                 }
 
@@ -212,8 +292,9 @@ namespace SojaExiles
             return s < 0f ? "-" : s.ToString("F1") + " s";
         }
 
-        private static void Restart()
+        private static void Restart(BurnInjury.BurnDegree degree)
         {
+            BurnInjury.NextDegree = degree;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
     }

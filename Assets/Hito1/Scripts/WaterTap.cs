@@ -109,6 +109,8 @@ namespace SojaExiles
                 return;
             }
 
+            marker.enabled = IndicatorUtil.HintsVisible;
+
             // Pulso suave para llamar la atencion mientras esta cerrada.
             float pulse = IsOpen ? 1f : 1f + 0.15f * Mathf.Sin(Time.time * 4f);
             IndicatorUtil.SetWorldDiameter(marker.transform, markerRadius * 2f * pulse);

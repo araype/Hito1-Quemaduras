@@ -93,8 +93,10 @@ namespace SojaExiles
         private void Update()
         {
             UpdateScreen();
+            // Si la tia esta preguntando algo (PatientDialog), la llamada
+            // empieza cuando se le responde: los dos paneles se tapaban.
             if (started || phone == null || burnSequence == null
-                || burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle)
+                || burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle || PatientDialog.IsOpen)
             {
                 return;
             }
@@ -186,7 +188,7 @@ namespace SojaExiles
             if (advisedCenter)
             {
                 yield return Say("op_centro", "Con ampollas en la mano, debe verla un médico. Cuando termine de " +
-                    "enfriarla, cúbrala con una gasa limpia, sin apretar. Si no tiene gasa, sirve film de cocina.");
+                    "enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.");
                 yield return Ask("op_decidir_centro", "¿Puede llevarla al centro de salud?",
                     "Sí, la llevo", "Prefiero cuidarla en casa");
                 goToHealthCenter = answer == 0;

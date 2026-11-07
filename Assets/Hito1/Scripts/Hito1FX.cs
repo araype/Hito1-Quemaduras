@@ -83,6 +83,8 @@ namespace SojaExiles
             go.transform.position = position;
             AudioSource source = CreateSource(go, clipName, volume, false, minDistance, 10f);
             source.pitch = 1f + Random.Range(-pitchJitter, pitchJitter);
+            // En pausa solo suenan los clics del menu.
+            source.ignoreListenerPause = PauseMenu.Paused;
             source.Play();
             Object.Destroy(go, clip.length / Mathf.Max(0.5f, source.pitch) + 0.2f);
         }

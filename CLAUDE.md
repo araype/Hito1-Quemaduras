@@ -8,18 +8,19 @@ historial de git).
 
 ## Antes de empezar
 
-- **Qué falta:** `docs/PENDIENTES.md`. Al terminar un punto, márcalo ahí.
-- **Qué hay y cómo probarlo:** `docs/QUEMADURA_INMERSION.md`. Las secciones 5
-  y 6 cubren la experiencia principal y la secuencia.
-- **Movilidad del jugador:** `docs/MOVILIDAD_MEJORADA.md` explica los cambios y
-  cómo combinar la rama `movilidad-mejorada`.
-- Historia anterior: `docs/HITO2.md` y `docs/AUDITORIA.md`.
+- **Qué falta y en qué orden:** `docs/PENDIENTES.md` (única lista, solo lo
+  que falta). Al terminar un punto, bórralo de ahí y descríbelo en
+  `docs/QUEMADURA_INMERSION.md`. Los bugs vienen de
+  `Bugs_Experiencia_VR_Quemaduras.pdf` (raíz, sin versionar).
+- **Qué hay y cómo probarlo:** `docs/QUEMADURA_INMERSION.md`.
+- Los documentos de etapas anteriores se borraron; siguen en el historial.
 
 ## Ramas
 
-Todo el trabajo de quemadura ya está unido en `main`. Trabaja en
-`secuencia-quemadura` (o en una rama nueva salida de `main`) y une a `main`
-con un pull request.
+`consolidada` une `experiencia-inmersiva` (Araype, con `quemadura-realista`
+y `rediseno-tarjetas`) y `corregir-bugs` (jjosnayo). Las decisiones de la
+unión están en `docs/QUEMADURA_INMERSION.md`, sección 14. Se trabaja desde
+`consolidada` y se une a `main` con un pull request.
 
 ## Cómo está armado
 
@@ -33,9 +34,9 @@ con un pull request.
   directamente al puntaje.
 - `BurnProtocol` arma los pasos, los errores, el puntaje y el resumen a
   partir de esos eventos.
-- Objetos creados por código con `PropKit`; paneles y textos con `VRPanelKit`
-  (TextMesh con la fuente integrada: el proyecto no tiene los recursos de
-  TextMesh Pro); botones táctiles con `TouchButton`.
+- Objetos creados por código con `PropKit`; paneles y textos con `VRPanelKit`,
+  `RoundedPanel` y `PanelText` (TextMesh Pro, desde `rediseno-tarjetas`);
+  botones táctiles con `TouchButton`.
 - Sonidos y materiales se cargan por nombre desde
   `Assets/Hito1/Resources/{Hito1Audio,Hito1FX}` con `Hito1FX.Clip/Mat` o
   `PropKit.Mat`. Los efectos están sintetizados y las voces son TTS.

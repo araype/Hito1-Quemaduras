@@ -1,284 +1,123 @@
-# Pendientes para la versión final
+# Pendientes
 
-Hoja de ruta del proyecto (simulación VR de primeros auxilios ante una
-quemadura doméstica). Actualizada el 2026-10-20 sobre la rama
-`secuencia-quemadura` (commit `8d784f4`).
+Única lista de lo que falta, sobre `consolidada` (une `experiencia-inmersiva`
+y `corregir-bugs`, 2026-11-07; ver `docs/QUEMADURA_INMERSION.md`, sección
+14). **Solo va lo que falta:** al terminar un punto, se borra de aquí y se
+describe en `docs/QUEMADURA_INMERSION.md` (qué hay y cómo probarlo), diciendo
+si se probó en el Quest, en el editor o si solo se compiló.
 
-**Regla:** al terminar un punto, márcalo `[x]` aquí, con la rama y el commit.
+## Cómo retomar
 
-## Estado actual
+- Unity: detener Play **antes** de editar scripts (recompilar en Play hizo
+  caer Unity al salir de Play). El MCP de Unity no se conecta solo: hay que
+  pulsar conectar en la ventana "MCP for Unity".
+- Se prueba en el editor con Quest Link; la prueba con las manos en el Quest
+  queda para el final (último paso del plan).
+- Los valores nuevos de `BurnEvent` y demás enums van **al final**: las
+  escenas guardan el número.
 
-Ya hecho (ver `docs/QUEMADURA_INMERSION.md`):
+## Regla
 
-- [x] Realismo: paciente con texturas, olla, chorro, paño con tela simulada,
-  quemadura sobre la piel, mano mojada, respiración, perilla y sonido
-  (`quemaduras`, `7d1d9e3` y `17410c2`; sección 1 del doc).
-- [x] Experiencia principal: accidente de la olla, hinchazón y ampollas, llave
-  fría y caliente, anillo, chompa, film y gasa, remedios caseros y vibración
-  (`experiencia-quemadura`, `928cce7`; sección 5).
-- [x] Secuencia: protocolo de 7 pasos, reloj de 20 min en 90 s, decisión
-  médica, resumen con puntaje y registro JSON de cada sesión
-  (`secuencia-quemadura`, `8d784f4`; sección 6).
-- [x] Guía y paciente física: escala real de la cocina, menú de modo,
-  tutorial con la taza, narrador con tarjeta y brillo por paso, cuerpo con
-  colliders, brazo agarrable entero, ella pone la mano bajo el chorro,
-  protege la mano y camina con pasos (`guia-y-paciente-fisica`; sección 7).
-  Probado en el editor con Quest Link simulando las acciones; **falta
-  jugarlo con las manos en el visor**.
+Toda mecánica nueva debe estar respaldada por las guías reales (NHS, Cruz
+Roja Británica, guía LSEBN). Lo que no tenga respaldo se anota aquí como "a
+decidir" antes de implementarlo como error. La última revisión (templar el
+agua, charco, gasa) está en `docs/QUEMADURA_INMERSION.md`, sección 12.
 
-## 0. Probar en el visor (urgente)
+## 0. Probar la consolidación (primero)
 
-- [ ] **Nada de lo anterior se ha visto todavía en Unity ni en el Quest.**
-  Todo se verificó solo compilando fuera del editor. Probar con Quest Link en
-  `Escenario_Quemadura` siguiendo las secciones "Probar" del doc.
-- [ ] Revisar primero: ubicación de los objetos sobre el mesón
-  (`BurnSceneProps`), dirección del vuelco de la olla (`PotAccident`),
-  posición de la llave caliente (`LlaveGrifoCaliente`), tamaño del anillo
-  (`PatientRing.innerRadius`), pared del reloj (`CoolingClock`) y lectura de
-  los paneles.
-- [ ] Medir que se mantenga en **72 fps** con agua, vapor, tela y ampollas
-  activos (RNF-01).
+`consolidada` **solo se compiló** (Roslyn fuera de Unity, sin errores). Las
+dos ramas que une se probaron por separado en el editor, pero juntas no.
+Abrirla en Unity, confirmar que la consola no muestra errores ni scripts
+faltantes y recorrer la partida completa en el editor. Con más atención:
 
-### Defectos vistos al recorrer la escena en el editor (2026-10-30, MCP de Unity)
+- **Film en tiras sobre la quemadura de Laura:** `FilmCoverage` ahora mide
+  con el canal rojo de `BurnSkinPattern` (antes, la máscara de la quemadura
+  de `corregir-bugs`, que se descartó). Revisar que 2 o 3 tiras a lo largo
+  lleguen al 80 % y que la tarjeta muestre el porcentaje. Si no llega,
+  bajar `FilmCoverage.burnAlphaMin` o `coverageNeeded`.
+- **Llamada al 106 y diálogos de la tía:** no se abren a la vez. Si la tía
+  pregunta algo, la llamada empieza al responderle; durante la llamada, su
+  pregunta espera. Probar llamar justo en el minuto 3 y en el 9.
+- **Menú de inicio:** estilo de tarjeta de Araype con la ubicación de
+  jjosnayo (`PanelFollow`, escala 0,8 y brillo en los dos botones).
+- **Olla:** fija hasta el accidente con la versión de `corregir-bugs` más el
+  reintento de apagar los agarres de Meta cada 0,5 s.
+- **Agarres:** versión de `corregir-bugs` (sin agarre a distancia, el objeto
+  se acerca a la mano, se suelta si se tira fuerte) más la búsqueda de los
+  agarres de Meta durante los primeros 30 s si el rig aún no estaba.
+- **La tía al quemarse:** se aparta hacia el lavadero (`StepAwayFromStove`
+  de Araype; se quitó `StepBackFromStove`) y luego muestra la mano y pide el
+  anillo. Si tiras fuerte de su mano se suelta y se queja (`OnPulledAway`).
 
-Flujo completo en Play con Quest Link, acciones simuladas por código: 7/7
-pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
+## 1. Voces
 
-- [x] La taza del tutorial salía en el borde del mesón (a 1 cm) y se volcaba
-  al suelo. `PropKit.FindSurfaceSpot` ahora exige mesón alrededor del punto
-  (`guia-y-paciente-fisica`, 2026-10-31).
-- [x] Panel de decisión médica: la tarjeta del narrador se oculta mientras el
-  panel está abierto (`MedicalDecisionPanel.IsOpen`) y las etiquetas largas
-  se parten en dos líneas (`VRPanelKit.FitLabel`) (2026-10-31).
-- [x] Mejoras de interacción pedidas tras jugarlo en el visor (2026-10-31,
-  probado en el editor con Quest Link y manos simuladas por código; **falta
-  probarlo con las manos**):
-  - anillo: se saca acercando la mano libre y manteniendo apretado el botón
-    lateral o la pinza 1,5 s (antes bastaba dejar la mano cerca); el anillo
-    avanza por el dedo, vibra, y vuelve si se suelta. Apretar ahí no agarra la
-    mano (`SimpleGrab.AddGrabBlocker`). Nueva voz `guia_anillo`;
-  - lavadero: bajo el chorro la mano queda plana, dorso arriba
-    (`PatientBody.LayHandFlat`), y la paciente se inclina más si no llega
-    (`PatientReach.reachLeanExtra`). Antes quedaba vertical junto a la boca
-    del grifo y el agua no la tocaba;
-  - botones: todos se presionan dejando la mano 0,6 s hasta llenar una barra
-    (`TouchButton`); en el menú los dos tienen el mismo tamaño y brillo. Nueva
-    voz `guia_bienvenida`.
-- [x] La tarjeta del narrador tapaba el mesón y el lavadero (anillo, papel).
-  Ahora va a la altura de los ojos y a 90 cm (`BurnGuide.cardDistance`,
-  `cardDrop`, `cardScale`) y, cuando calla el narrador, se reduce a una
-  franja translúcida con el paso (`cardCompactDelay`, material
-  `Panel_Fondo_Translucido`); se abre al mirarla o con un aviso
-  (2026-10-31, probado en el editor con Quest Link). Si aún estorba:
-  correrla cuando tape el objeto del paso, o dejar moverla con la mano.
-- [x] Mejoras pedidas tras probarlo (2026-11-05, rama
-  `mejoras-tarjetas-colision-reinicio`; **solo compilado, falta probarlo en
-  el editor y en el visor**):
-  - tarjetas unificadas con el rediseño de Sebastián (rama
-    `rediseno-tarjetas`, unida a esta): el menú de inicio y la decisión
-    médica usan su panel redondeado con borde brillante y botones tipo
-    píldora (`VRPanelKit.CardPanel`, `BoldText`, `RoundedButton`), como la
-    tarjeta del narrador y el resumen;
-  - el jugador ya no atraviesa a la paciente: la cámara se corre fuera de su
-    cuerpo al inclinarse, al caminar en el espacio real o si ella camina
-    hacia él (`VRLocomotion.KeepHeadOutOfPatient`, `headClearance`), y las
-    manos visibles del SDK se quedan en su superficie
-    (`PatientHandLimiter`, mismo mecanismo que el SDK usa en los botones;
-    no actúa mientras la mano sostiene algo). Ambos usan
-    `PatientPhysics.PushOut`;
-  - reinicio: si durante el menú de inicio se mueve o bota un objeto, se abre
-    una llave, se gira la perilla o se vuelca la olla, al elegir el modo se
-    recarga la escena con ese modo y sin volver a preguntar
-    (`BurnGuide.SceneDisturbed`).
-- [x] Auditoría del 2026-11-02 (Quest 2, rama `rediseno-tarjetas`), primer
-  bloque (2026-11-05, rama `mejoras-tarjetas-colision-reinicio`; **solo
-  compilado, falta probarlo en el editor y en el visor**):
-  - la olla queda fija en la hornilla hasta el accidente (kinemática y sin
-    interactables del SDK) y, si igual se movió, vuelve antes de volcarse
-    (`PotAccident.SetLocked`). Capturas 9, 10 y 12;
-  - lo que queda quieto en el piso vuelve a su lugar tras 1,5 s
-    (`FloorRecovery`; la tela del paño se reacomoda con `TowelCloth.Snap`).
-    No toca la olla volcada. Captura 10;
-  - una mano agarra con un solo sistema: si el SDK ya sostiene algo,
-    SimpleGrab no agarra, y mientras SimpleGrab sostiene se apagan los
-    interactores del SDK de esa mano. Captura 5;
-  - agarre a distancia del SDK apagado (`HandsControllersUnifier`): los
-    objetos ya no flotan lejos de la mano. Captura 7;
-  - al quemarse, la tía se aparta de la cocina hacia el lavadero
-    (`PatientBurnArm.StepAwayFromStove`, `PatientReach.WalkTo`) y protege la
-    mano más pegada al pecho. Captura 3;
-  - después del accidente la perilla solo apaga (antes se volvía a prender al
-    pasar la mano y la llama seguía con el paso hecho). Capturas 5 y 7;
-  - las etiquetas de botón se parten en dos líneas parejas ("Ir al centro de
-    salud" quedaba en tres). Captura 8;
-  - la boca de la taza ya no parpadea con "aspas" negras (caras coplanares).
-    Capturas 2 y 3.
-- [ ] Auditoría del 2026-11-02, lo que falta: brazo de la tía en poses
-  antinaturales que atraviesa su cuerpo (capturas 4 y 13), límite del área
-  de juego (captura 11), chompa que atraviesa el cuerpo (capturas 6 y 7),
-  tarjeta que tapa el reloj en el paso 6 y que aparece alta en el tutorial,
-  y los puntos de prioridad baja.
-- [x] La quemadura se veía roja saturada y uniforme, como un guante. Ahora es
-  una mancha irregular en el dorso (`BurnSkinPattern`, shader
-  `Hito1/PielQuemada`): eritema en el borde, rojo intenso con manchas en el
-  centro y, en segundo grado, lecho húmedo y brillante con jirones de piel
-  levantada y relieve. Las ampollas son cúpulas irregulares translúcidas y
-  algunas están rotas (`BurnInjury.BlisterMesh`, `rupturedShare`, material
-  `Ampolla_Rota`). Al enfriar baja el rojo y quedan las ampollas
-  (2026-10-31, probado en el editor en Play con el accidente forzado por
-  código; **falta verlo en el visor**). Si la mancha queda corrida en otro
-  modelo, ajustar `BurnSkinOverlay.burnCenter` y `dorsumDirection`.
-  Unida a `experiencia-inmersiva` el 2026-11-06; reemplaza la versión por
-  zonas del 2026-11-06 (`PaintMask`, `Piel_Quemada_Zonas`), que se borró.
-  Pulido el 2026-11-06 (renderizado en el editor): la mancha y su borde
-  irregular se apagan antes de la muñeca (antes se veía una línea recta) y
-  no tiñen todo el dorso (canal alfa de `BurnSkinPattern` = presencia); el
-  relieve queda solo dentro de la quemadura y en primer grado apenas se
-  marca; las ampollas rotas son translúcidas (`Ampolla_Rota`).
-- [ ] La chompa puesta parece un cilindro rígido (`SweaterItem.BuildDrape`;
-  revisar si `SweaterDrape` de la rama `rediseno-tarjetas` ya lo resolvió).
+- **Regenerar con ElevenLabs las voces que llegaron como TTS** desde
+  `corregir-bugs` (narrador Raúl y tía Sabina), para que no cambie la voz a
+  mitad de la partida, y `op_centro`, que todavía dice "gasa". Lista y
+  textos en `docs/VOCES.md`, sección "Pendientes de regenerar".
+- `guia_anillo` no coincide del todo con el texto de la tarjeta.
 
-## Experiencia menos "básica" (pedido del profesor, 2026-11-06)
+## Plan: orden para lo que falta
 
-- [x] **Llamada al 106 (SAMU)** en lugar del panel de decisión médica
-  (`EmergencyCall`, 2026-11-06, rama `experiencia-inmersiva`; **solo
-  compilado, falta probarla en el editor y en el visor**). Celular en el
-  mesón cerca del lavadero; después del accidente, al llevarlo a la oreja
-  suena el timbre y el operador pregunta qué pasó, si la mano está bajo
-  agua fría y si hay ampollas (describirla mal es error, `WrongCallInfo`);
-  recomienda y el jugador decide (`BurnProtocol.Decide`). La guía lo pide
-  durante el enfriamiento (paso "Llama al 106", después de la chompa), así
-  ya no queda un minuto muerto. La práctica termina con la quemadura
-  cubierta y la llamada hecha; si se cubre sin llamar, la tía lo sugiere
-  y a los 90 s (guiado) o 40 s (evaluación) termina con el paso faltante.
-  Sin celular en la escena se usa el panel anterior. Voces del operador
-  (varón, con filtro telefónico), `guia_llamar` y las dos nuevas de la tía
-  generadas y en el juego (2026-11-06; **falta oírlas en el visor**).
-  Revisión de coherencia (2026-11-06, probado en Play en el editor con
-  acciones simuladas y sin sonido): el operador responde a lo que dice el
-  jugador (decir que la mano está en el agua cuando no lo está es error);
-  la respuesta correcta de las ampollas es lo que se ve
-  (`BurnInjury.BlistersVisible`; salen desde los 2,5 s); la decisión se
-  juzga contra lo que recomendó el operador, sin doble castigo; la pregunta
-  final es "¿Puede llevarla al centro de salud?" o "¿Podrá cuidarla en
-  casa?"; el panel va abajo y al costado contrario a la tía (no tapa la
-  mano); durante la llamada la tía no se queja, no habla encima y no saca
-  la mano del agua; en modo evaluación la pantalla del celular parpadea.
-- [x] **La tía muestra la mano quemada** al jugador tras el sobresalto
-  (`PatientBurnArm.ShowHand`, modo `Show`: a la altura del pecho, dorso a
-  la vista, menos estirada si el jugador está cerca; no si la mano está en
-  el agua o el jugador la sostiene) y otra vez en la llamada, antes de la
-  pregunta de las ampollas. Voces nuevas `voz_mira_mano` y
-  `voz_aqui_mirala` (guion en `docs/VOCES.md`).
-- [x] **Sacar el anillo era difícil y no se entendía cuándo ni cómo** (prueba en
-  el visor, 2026-11-06): se pedía con la mano bajo el chorro, el cómo solo
-  estaba en la tarjeta y tomarle la mano cerca del anillo la agarraba del brazo
-  y la sacaba del agua. Ahora el paso va antes de llevarla al chorro; tras
-  mostrar la mano, la tía pide el anillo (`voz_anillo_pide`)
-  y deja la mano ofrecida 8 s; al acercar la mano libre la vuelve a ofrecer
-  (si no está en el agua) y junto al anillo aparecen "Mantén apretado para
-  sacarlo" y el círculo vacío del progreso; zona de 10 cm y 1 s de sostener
-  (`PatientRing`, `PatientBurnArm`, `BurnGuide`). Si se lo salta, se puede
-  sacar bajo el chorro. **Falta probarlo con las manos en el visor.**
-- [x] **Cubrir la quemadura no tenía una acción natural** (bastaba soltar el film
-  o la gasa cerca y la mano entera quedaba envuelta al instante). Ahora, como en
-  la vida real, se apoya sobre la quemadura sin envolver: al sacarla del agua
-  la tía ofrece la mano; la gasa se mantiene encima 1 s (silueta translúcida,
-  "Mantén encima de la quemadura" y círculo de progreso, `HoldHint`); el film
-  se saca tirando del borde con la otra mano (la lámina se estira y se corta a
-  los 18 cm) y se apoya igual; dar vueltas alrededor de la mano dispara la
-  corrección "No la envuelvas" (`FilmWrapped`, sin restar puntos). Cubre solo
-  la quemadura y un poco alrededor (`HandSkinMesh.CopyWhere`). Voz
-  `guia_err_envolver` importada (2026-11-06; **falta probarlo con las manos**).
-- [x] **La gasa es la opción principal para cubrir** (es lo que recomiendan las
-  guías en español; el film queda como alternativa "si no hay gasa", como en
-  las guías del NHS). Cambiados el título y la pista del paso, la corrección
-  del paño, el paso del resumen y lo que dice el operador del 106. Voces por
-  regenerar con el texto nuevo: `guia_cubrir`, `guia_err_pano` y `op_centro`,
-  ya importadas. `guia_err_envolver` importada
-  (2026-11-06).
-- [ ] Visto en la prueba: después del accidente la olla terminó en el piso
-  (y el charco del piso es grande). Revisar `PotAccident` tras volcarse.
-- [x] **Voces más naturales** de la paciente y el narrador: las 45 frases
-  regeneradas con ElevenLabs (plan gratis, con etiquetas de emoción) y
-  tres quejidos nuevos; guion y detalles en `docs/VOCES.md` (2026-11-06,
-  rama `experiencia-inmersiva`; **falta oírlas en el visor** junto a los
-  efectos). Falta: las del operador del 106. Notas de la investigación:
-  generar los `.wav` fuera de Unity con el mismo nombre (no hace falta
-  cambiar código). Candidatos: ElevenLabs v3 (etiquetas de emoción como
-  `[crying]`, `[whispers]`, `[shouts]`), Azure Neural TTS (voces es-PE
-  Camila y Alex), OpenAI `gpt-4o-mini-tts` (tono por instrucciones) y, sin
-  costo y local, Chatterbox (licencia MIT, clonación en español).
-- [ ] **Variación del caso** y distractores (teléfono que suena, segunda
-  hornilla, la tía que insiste en la mantequilla).
-- [ ] **Línea de tiempo** en el resumen: qué hizo el jugador y cuándo,
-  comparado con lo ideal.
+| # | Pedido | Por qué en este orden | Tamaño |
+|---|---|---|---|
+| 0 | Probar la consolidación en el editor (sección 0) | Sin esto lo demás se construye sobre algo no probado. | Mediano |
+| 1 | Regenerar voces (sección 1) | Se puede hacer en paralelo. | Chico |
+| 2 | Variar el caso (E.1) | Que no se pueda memorizar la secuencia. El tamaño de la quemadura cambia cuánto film hace falta. | Grande |
+| 3 | **Chompa con tela simulada** (D.2) | Hoy se ve aceptable y es lo que más arriesga los 72 fps. Si no hay tiempo, queda como está. | Grande |
+| 4 | Línea de tiempo en el resumen; distractores; práctica de perilla en el tutorial (opcional) | Mejoras de la experiencia. | Variable |
+| 5 | **Validación final en el Quest** con las manos y fps (G); pruebas con usuarios e informe | Al final, con todo estable. | Mediano |
+| — | Manos fantasma (RF-04) | Recortar y quitarlo del informe. | — |
 
-## 1. Flujo de la aplicación (siguiente bloque de código)
+**Riesgos**
 
-- [x] **Menú de inicio** con **modo guiado** y **modo evaluación**; el modo
-  queda en el JSON (`guia-y-paciente-fisica`, `BurnGuide`).
-  - [ ] Falta: en modo evaluación apagar también los puntos dorados
-    (`WaterTap`, `StoveKnob`, `PatientRing`). Ya se apagan la guía, las pistas
-    de voz y el texto del reloj.
-- [x] **Tutorial** antes de la emergencia (agarrar y caminar, dentro de la
-  historia) y aviso de contenido (`guia-y-paciente-fisica`, `BurnGuide`).
-  - [ ] Opcional: practicar también tocar una perilla o una llave antes del
-    accidente.
-- [ ] **Barra de 4 actos** (Planteamiento, Desarrollo, Clímax, Resolución)
-  con el contador de aciertos y errores. Leer `BurnProtocol.CurrentAct`,
-  `BurnSequenceManager.Errors` y `CriticalErrors`.
-- [ ] **Pausa y reiniciar** en cualquier momento (RNF-03).
-- [ ] **Variación del caso** (RF-11): activar `BurnInjury.randomDegree` y
-  variar la extensión de la quemadura.
-- [ ] **Manos fantasma** en modo guiado (RF-04). Es lo primero que se puede
-  recortar si falta tiempo; si se recorta, quitarlo también del informe.
+- Rendimiento: el film en tiras y la chompa con tela son lo único que puede
+  bajar de 72 fps. Medir en la validación final.
 
-## 2. Limpieza del proyecto
+## D. Objetos sobre la paciente
 
-- [x] Borrar las escenas de atragantamiento y cortes, `Hito1_Quemaduras` y
-  `SampleScene`, sus scripts (`Choking*`, `Cut*`, `BleedingEffect`,
-  `PoseAtragantamiento`, `WoundContactDetector`, `ManoHeridaVisibility`,
-  `SceneCycler`), los modelos de `Modelos/Cortes` y los materiales de comida
-  que solo usaban esas escenas. La escena principal pasó a llamarse
-  `Escenario_Quemadura` (mismo GUID) y es la única del build, ahora activada
-  (antes estaba desactivada y la activa era la de atragantamiento)
-  (`secuencia-quemadura`).
-- [ ] Abrir el proyecto en Unity y confirmar que la consola no muestra
-  errores ni scripts faltantes en `Escenario_Quemadura`.
+- **Chompa con tela simulada (D.2):** ya no entra en el cuerpo; falta tela
+  Verlet como `TowelCloth` con las 14 cápsulas de `PatientPhysics`. Se toma de
+  los hombros y se deja caer desde atrás. Si no da 72 fps, copiar la piel de
+  hombros y espalda como `HandSkinMesh`.
+- Cubrir con la bolsa todavía es "soltarla sobre la mano". El film ya se
+  apoya en tiras; si se quiere, la bolsa podría usar el mismo "mantener
+  encima 1 s" con `HoldHint` que tenía la gasa de Araype.
 
-## 3. Contenido
+## E. Arco del juego
 
-- [ ] Grabar también la voz del **narrador** (21 archivos `guia_*.wav`) y las
-  3 frases nuevas de la paciente (`voz_pide_taza`, `voz_gracias_taza`,
-  `voz_mano_no`). Textos en la sección 7 del doc y en `BurnGuide`.
+- **Variar el caso (E.1, RF-11):** grado (`BurnInjury.randomDegree`),
+  extensión, zona y quizá edad. Hoy solo el botón "Otro caso" cambia el grado.
+  Con la llamada al 106 ya hecha, decidir si en los casos leves el operador
+  debe decir que no hacía falta llamar (las guías piden llamar solo en casos
+  graves: quemadura grande, cara, eléctrica).
+- **Distractores:** teléfono que suena, segunda hornilla, la tía que insiste
+  en la mantequilla.
+- **Línea de tiempo** en el resumen: qué hizo el jugador y cuándo, comparado
+  con lo ideal.
+- **Practicar una perilla o una llave en el tutorial (E.11, opcional).**
 
-- [ ] Grabar las **voces reales** de la paciente y reemplazar las de TTS
-  (21 archivos `voz_*.wav` en `Assets/Hito1/Resources/Hito1Audio`, mismo
-  nombre). Guía en la sección 1 del doc.
+## G. Validación, pruebas e informe
 
-## 4. Evaluación e informe
-
-- [ ] **Pruebas con usuarios**, comparando el modo guiado con el modo
-  evaluación. Los JSON quedan en
-  `Application.persistentDataPath/sesiones_quemadura/`.
-- [x] **Actualizar el informe**: hecho en
-  `Informe_Hito_1__Entrenamiento_de_Primeros_Auxilios_ante_Emergencias_Médicas_Domésticas/main.tex`
-  (formato IEEE, `guia-y-paciente-fisica`). Rajan et al. no existe y se
-  reemplazó por Abbas et al. (2023); se quitó el dato del 80 %. Falta: el
-  código de Sebastián (8 dígitos) y capturas nuevas de la escena actual.
-  Puntos originales (para `Informe/`, la versión anterior):
-  - sección 4.3: describir lo implementado y agregar capturas nuevas;
-  - secciones 4.3 a 4.5 y RNF-02: el proyecto usa el **Meta XR Interaction
-    SDK** y `SimpleGrab`, no XR Interaction Toolkit (`XR Grab Interactable`,
-    `Direct Interactor`, `Teleportation Provider`);
-  - la quemadura se cubre con **gasa** (o film si no hay); el paño es un error;
-  - el modelo de la paciente (Mixamo Ch07) **no tiene blendshapes**: quitar
-    la expresión facial y explicar que la hinchazón se hace escalando el
-    hueso de la mano;
-  - Cuadro 4: quitar "latido" y agregar los sonidos sintetizados y las voces
-    TTS creados por el equipo;
-  - Cuadro 5: corregir el cronograma;
-  - verificar que exista la referencia [2] (Rajan et al., IEEE TVCG 2021) y
-    citar o quitar el dato del 80 % de la sección 2.1;
-  - el código de alumno de Sebastián en la portada tiene 8 dígitos.
+- **Probar en el Quest con las manos** todo lo hecho en el editor. Con más
+  atención: brazo de la tía, agarre doble, agarre distante, paño, **tirar
+  el film con las dos manos** (sostener el rollo, tomar el borde con la otra
+  mano, cortar y soltar la tira a lo largo; solo se probó colocando las
+  tiras por código), **templar el agua en el minuto 9** (tocar la llave
+  caliente con la fría abierta; el panel tiene ahora 4 respuestas), pisar el
+  charco (solo aviso; no se probó), gesto de pausa, que los paneles de la
+  tía no estorben mientras se le sostiene el brazo, **la llamada al 106**
+  (llevar el celular a la oreja) y **sacar el anillo** con la mano ofrecida.
+- Medir **72 fps** con agua, vapor, tela y ampollas (RNF-01).
+- Detalles abiertos: la tarjeta puede subir por encima de la cabeza de la
+  tía cuando ella está justo delante; la olla volcada cae al piso y el
+  charco del piso es grande (decidir si se prefiere tumbada sobre la
+  cocina).
+- Movilidad, si hace falta: fundido al girar, giro continuo, `Fixed
+  Timestep` a 1/72 si los objetos tiemblan, cápsula del jugador.
+- **Pruebas con usuarios**, modo guiado contra modo evaluación (JSON en
+  `Application.persistentDataPath/sesiones_quemadura/`).
+- **Informe** (`Informe_Hito_1__.../main.tex`): código de alumno de Sebastián
+  (8 dígitos), capturas nuevas, fuente clínica citable (Cruz Roja, "Cool,
+  Call, Cover"; guía LSEBN), crédito "Voces: elevenlabs.io" y las
+  limitaciones: no tiene expresión facial.

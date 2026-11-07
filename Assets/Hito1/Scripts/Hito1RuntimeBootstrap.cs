@@ -65,6 +65,8 @@ namespace SojaExiles
             // Primero la escala de la cocina y la ubicacion de la paciente y
             // del jugador: lo que se instala despues ya queda a escala.
             BurnStaging.Apply();
+            // Que el jugador no salga de la cocina.
+            PlayArea.FromKitchen();
 
             if (Object.FindObjectOfType<KitchenAmbience>() == null)
             {
@@ -110,6 +112,18 @@ namespace SojaExiles
                 burn.gameObject.AddComponent<EmergencyCall>().burnSequence = burn;
             }
 
+            // Pausa y reinicio en cualquier momento.
+            if (Object.FindObjectOfType<PauseMenu>() == null)
+            {
+                burn.gameObject.AddComponent<PauseMenu>();
+            }
+
+            // Seguridad propia: olla caliente y agua derramada.
+            if (Object.FindObjectOfType<PlayerSafety>() == null)
+            {
+                burn.gameObject.AddComponent<PlayerSafety>().burnSequence = burn;
+            }
+
             InstallHotTap();
 
             foreach (WaterTap tap in Object.FindObjectsOfType<WaterTap>())
@@ -137,8 +151,9 @@ namespace SojaExiles
                 }
             }
 
-            // La quemadura se cubre con film o gasa (CoverItem), no con el
-            // pano de cocina: el detector del pano ya no la da por cubierta.
+            // La quemadura se cubre con film (FilmRoll) o una bolsa
+            // (CoverItem), no con el pano de cocina: el detector del pano ya
+            // no la da por cubierta.
             foreach (BurnContactDetector detector in Object.FindObjectsOfType<BurnContactDetector>())
             {
                 if (detector.requiredItem == FirstAidItem.ItemType.Panuelo)
@@ -206,6 +221,12 @@ namespace SojaExiles
                 if (patient.GetComponent<PatientReach>() != null && patient.GetComponent<PatientBurnArm>() == null)
                 {
                     patient.gameObject.AddComponent<PatientBurnArm>().burnSequence = burn;
+                }
+
+                // Se asusta y quiere sacar la mano del agua: hay que calmarla.
+                if (patient.GetComponent<PatientDialog>() == null)
+                {
+                    patient.gameObject.AddComponent<PatientDialog>().burnSequence = burn;
                 }
             }
 

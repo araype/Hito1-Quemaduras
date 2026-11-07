@@ -82,12 +82,12 @@ en una emergencia).
 | `guia_anillo` | Paso 4 | Quítale el anillo antes de que la mano se hinche. Acerca tu mano libre al punto dorado y mantén apretado el botón lateral, o junta el pulgar y el índice, hasta que el anillo salga. |
 | `guia_abrigo` | Paso 5 | El agua fría también le enfría el cuerpo. Abrígala con la chompa. |
 | `guia_esperar` | Paso 6 | Bien hecho. Ahora espera a que el reloj complete los 20 minutos, sin sacar su mano del agua. |
-| `guia_cubrir` | Paso 7 | Ya está enfriada. Cubre la quemadura con una gasa limpia, sin apretar. Si no hay gasa, usa film. |
+| `guia_cubrir` | Paso 7 | Ya está enfriada. Sostén el film con una mano y tira una tira con la otra. Suéltala a lo largo de su mano, sin envolver, hasta cubrirla. También sirve una bolsa plástica limpia. **(TTS de `corregir-bugs`: regenerar)** |
 | `guia_decidir` | Paso 8 | Por último, decide si necesita atención médica. Mira bien la quemadura. |
 | `guia_volver` | Sacó la mano del agua | Su mano salió del agua y el reloj se pausó. Vuelve a ponerla bajo el chorro. |
 | `guia_err_caliente` | Error: agua caliente | Esa es la llave caliente. Ciérrala y usa la del punto azul. |
 | `guia_err_mano` | Error: la toma de la mano | Sujétala del antebrazo: tocar la quemadura le duele. |
-| `guia_err_pano` | Error: paño de cocina | El paño de cocina suelta pelusa. Usa una gasa limpia o, si no hay, film. |
+| `guia_err_pano` | Error: paño de cocina | El paño de cocina suelta pelusa. Usa film o una bolsa limpia. **(TTS de `corregir-bugs`: regenerar)** |
 | `guia_err_remedio` | Error: remedio casero | No le pongas nada en la quemadura. Solo agua fría corriente. |
 | `guia_err_temprano` | Error: cubre antes de tiempo | Todavía no. Primero termina de enfriar la quemadura. |
 
@@ -112,7 +112,7 @@ Usa `[calm]` en todas; en `op_agua_no`, `[firm]`.
 | `op_agua_si` | Ya está bajo el agua | `[calm] Muy bien. Manténgala bajo el agua unos veinte minutos.` |
 | `op_agua_no` | Todavía no | `[firm] Póngala ya bajo agua fría corriente, sin hielo, y manténgala ahí.` |
 | `op_ampollas` | Pide mirar la quemadura | `[calm] Mire bien la quemadura. ¿Tiene ampollas?` |
-| `op_centro` | Con ampollas | `[calm] Con ampollas en la mano, debe verla un médico. Cuando termine de enfriarla, cúbrala con una gasa limpia, sin apretar. Si no tiene gasa, sirve film de cocina.` |
+| `op_centro` | Con ampollas | `[calm] Con ampollas en la mano, debe verla un médico. Cuando termine de enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.` **(el audio actual todavía dice "gasa": regenerar)** |
 | `op_casa` | Sin ampollas | `[calm] Si solo está roja y es pequeña, puede cuidarla en casa. Si salen ampollas o empeora, llévela al centro de salud.` |
 | `op_decidir_centro` | Tras recomendar el centro de salud | `[calm] ¿Puede llevarla al centro de salud?` |
 | `op_decidir_casa` | Tras recomendar cuidarla en casa | `[calm] ¿Podrá cuidarla en casa?` |
@@ -126,9 +126,31 @@ Tía Rosa (con la misma voz que sus otras frases):
 | `voz_mira_mano` | Tras quemarse, le muestra la mano al jugador | `[crying] ¡Mira, mira cómo se me puso!` |
 | `voz_aqui_mirala` | En la llamada, antes de la pregunta de las ampollas | `[in pain] Aquí, mírala.` |
 | `voz_anillo_pide` | Tras mostrar la mano, pide que le saquen el anillo | `[worried] ¡Mi anillo! Sácamelo antes de que se me hinche.` |
-| `guia_err_envolver` | Narradora: si se envuelve la mano con el film | `[firm] No la envuelvas: apoya el film encima. La mano se va a hinchar.` |
+| `guia_err_envolver` | Narradora: si se envuelve la mano con el film | `[firm] No envuelvas su mano: pon las tiras a lo largo, sueltas.` **(TTS de `corregir-bugs`: regenerar)** |
 
 Las 13 suman unos 800 créditos.
+
+## Pendientes de regenerar (rama `consolidada`, 2026-11-07)
+
+Al unir `corregir-bugs` con `experiencia-inmersiva` quedaron mezcladas dos
+voces: las de `corregir-bugs` son TTS (narrador Raúl, tía Sabina) y el resto
+es ElevenLabs. Hay que regenerar estas con las mismas voces de ElevenLabs
+para que no cambie el narrador ni la tía a mitad de la partida:
+
+| Archivo | Quién | Texto |
+|---|---|---|
+| `op_centro` | Operador | Ver tabla de la llamada (texto nuevo: film o bolsa, sin gasa) |
+| `guia_cubrir` | Narradora | Ver tabla del narrador |
+| `guia_err_pano` | Narradora | `[firm] El paño de cocina suelta pelusa. Usa film o una bolsa limpia.` |
+| `guia_err_envolver` | Narradora | `[firm] No envuelvas su mano: pon las tiras a lo largo, sueltas.` |
+| `guia_err_calma` | Narradora | `[firm] Háblale con calma: dile que el agua fría alivia.` |
+| `guia_err_aguantar` | Narradora | `[calm] Anímala a aguantar o témplale un poco el agua: hay que completar los veinte minutos.` |
+| `guia_err_olla` | Narradora | `[firm] No toques la olla: sigue caliente y también te quemarías.` |
+| `guia_err_charco` | Narradora | `[calm] El piso mojado resbala: rodea el agua derramada.` |
+| `voz_aprieta` | Tía | `[in pain] ¡Ay, me aprieta! No me envuelvas la mano, por favor.` |
+| `voz_templar_pide` | Tía | `[worried] Ya, pero ábrela solo un poquito, que la caliente quema.` |
+| `voz_templada` | Tía | `[relieved] Ay, así está mejor. Aguanto.` |
+| `voz_ansiosa`, `voz_calmada`, `voz_asustada`, `voz_frio`, `voz_aguanto` | Tía | Transcribir del audio TTS actual (los usa `PatientDialog`) |
 
 ## Quejidos adicionales
 

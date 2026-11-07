@@ -65,6 +65,16 @@ namespace SojaExiles
         private float walkGoalSpeed;
         private bool hasWalkGoal;
 
+        private Vector3 facePoint;
+        private float faceUntil;
+
+        // Se gira hacia ese punto durante un rato (si nadie la lleva).
+        public void FaceTo(Vector3 point, float seconds = 0.5f)
+        {
+            facePoint = point;
+            faceUntil = Time.time + seconds;
+        }
+
         // Capsula de piernas y cadera con que se desplaza (la usa
         // PatientPhysics para que sus propios colliders no la frenen).
         public CharacterController Mover
@@ -225,6 +235,19 @@ namespace SojaExiles
                     Vector3 move = fromShoulder.normalized * Mathf.Min(excess, speed * dt);
                     MoveBody(move);
                 }
+
+                if (!led && !hasWalkGoal && Time.time < faceUntil)
+                {
+                    Vector3 toFace = PatientBody.Flat(facePoint - transform.position);
+                    if (toFace.magnitude > 0.2f)
+                    {
+                        float a = Vector3.SignedAngle(PatientBody.Flat(transform.forward), toFace, Vector3.up);
+                        if (Mathf.Abs(a) > 10f)
+                        {
+                            transform.Rotate(0f, Mathf.Sign(a) * Mathf.Min(Mathf.Abs(a), turnSpeed * 0.6f * dt), 0f, Space.World);
+                        }
+                    }
+                }
             }
 
             // Velocidad real del cuerpo, para que las piernas den pasos.
@@ -349,11 +372,11 @@ namespace SojaExiles
         {
             if (mover == null)
             {
-                transform.position += move;
+                transform.position += PlayArea.Clip(transform.position, move);
                 return;
             }
 
-            mover.Move(PatientBody.Flat(move));
+            mover.Move(PlayArea.Clip(mover.transform.position, PatientBody.Flat(move)));
             Vector3 p = mover.transform.position;
             transform.position = new Vector3(p.x, transform.position.y, p.z);
         }

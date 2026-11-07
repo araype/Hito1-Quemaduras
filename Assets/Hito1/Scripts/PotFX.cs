@@ -203,7 +203,7 @@ namespace SojaExiles
             {
                 // Parpadeo suave de la llama.
                 float flicker = 0.85f + 0.15f * Mathf.PerlinNoise(Time.time * 9f, 0.3f);
-                flameBlock.SetColor("_EmissionColor", new Color(0.35f, 0.6f, 2.2f) * flicker);
+                flameBlock.SetColor("_EmissionColor", new Color(0.5f, 0.9f, 3.6f) * flicker);
                 flameRenderer.SetPropertyBlock(flameBlock);
             }
         }
@@ -487,10 +487,10 @@ namespace SojaExiles
                 List<Vector3> path = new List<Vector3>
                 {
                     dir * ring,
-                    dir * (ring + 0.008f) + Vector3.up * 0.006f,
-                    dir * (ring + 0.013f) + Vector3.up * 0.011f
+                    dir * (ring + 0.009f) + Vector3.up * 0.009f,
+                    dir * (ring + 0.014f) + Vector3.up * 0.018f
                 };
-                Tube(path, 0.0028f, false, v, n, tris);
+                Tube(path, 0.004f, false, v, n, tris);
             }
 
             go.AddComponent<MeshFilter>().sharedMesh = Finish("Llama", v, n, tris);

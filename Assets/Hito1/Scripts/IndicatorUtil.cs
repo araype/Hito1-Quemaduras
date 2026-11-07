@@ -11,6 +11,14 @@ namespace SojaExiles
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
 
+        // Los puntos dorados de los objetos (grifo, perilla, anillo) solo se
+        // ven en modo guiado. En modo evaluacion el jugador tiene que saber
+        // solo que tocar. Sin guia en la escena se ven siempre.
+        public static bool HintsVisible
+        {
+            get { return BurnGuide.Instance == null || BurnGuide.Instance.Guided; }
+        }
+
         public static Renderer CreateSphere(string name, Transform parent, Vector3 worldPosition, float radius,
             Material material, Color color)
         {

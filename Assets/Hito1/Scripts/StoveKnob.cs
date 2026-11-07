@@ -24,6 +24,10 @@ namespace SojaExiles
 
         public float toggleCooldown = 0.8f;
         public float rearmSeconds = 0.3f;
+        [Tooltip("Una vez apagada no se vuelve a prender al tocarla de nuevo (antes, un segundo toque la prendia y el paso ya contaba como hecho).")]
+        public bool stayOffOnceOff = true;
+        [Tooltip("Antes del accidente la paciente esta cocinando: tocar la perilla no hace nada.")]
+        public bool onlyAfterBurn = true;
 
         public bool IsOn { get; private set; }
 
@@ -96,6 +100,7 @@ namespace SojaExiles
                 ApplyRotation();
             }
 
+            UpdateMarker();
             if (marker != null && marker.enabled)
             {
                 float pulse = 1f + 0.15f * Mathf.Sin(Time.time * 4f);
@@ -117,12 +122,7 @@ namespace SojaExiles
 
             bool rearmed = Time.time - lastHandInsideTime > rearmSeconds;
             lastHandInsideTime = Time.time;
-
-            // Despues del accidente la perilla solo apaga: antes, al volver a
-            // pasar la mano (por ejemplo, al atender a la paciente junto a la
-            // cocina) se prendia de nuevo y la llama seguia visible con el
-            // paso "apagar" ya hecho.
-            if (!IsOn && BurnHappened())
+            if (!CanToggle())
             {
                 return;
             }
@@ -141,6 +141,31 @@ namespace SojaExiles
                 lastHandInsideTime = Time.time;
             }
         }
+
+        private bool CanToggle()
+        {
+            if (stayOffOnceOff && !IsOn)
+            {
+                return false;
+            }
+
+            if (onlyAfterBurn)
+            {
+                if (burnSequence == null)
+                {
+                    burnSequence = FindObjectOfType<BurnSequenceManager>();
+                }
+
+                if (burnSequence != null && burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private BurnSequenceManager burnSequence;
 
         public void SetOn(bool on)
         {
@@ -161,18 +186,13 @@ namespace SojaExiles
             }
         }
 
-        private static bool BurnHappened()
-        {
-            BurnSequenceManager burn = FindObjectOfType<BurnSequenceManager>();
-            return burn != null && burn.CurrentState != BurnSequenceManager.BurnState.Idle;
-        }
-
-        // El punto dorado solo se ve mientras hay fuego (invita a apagarlo).
+        // El punto dorado solo se ve mientras hay fuego (invita a apagarlo) y
+        // en modo guiado.
         private void UpdateMarker()
         {
             if (marker != null)
             {
-                marker.enabled = IsOn;
+                marker.enabled = IsOn && IndicatorUtil.HintsVisible;
             }
         }
     }

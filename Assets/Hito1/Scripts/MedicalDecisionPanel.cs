@@ -22,6 +22,8 @@ namespace SojaExiles
         public static MedicalDecisionPanel Show(BurnProtocol protocol)
         {
             Transform root = VRPanelKit.CreateRoot("PanelDecisionMedica", 0.55f, 0.25f);
+            // Hay que mirar la mano para decidir: el panel no la tapa.
+            PanelFollow.Add(root, 0.55f, 0.2f, Size);
             MedicalDecisionPanel panel = root.gameObject.AddComponent<MedicalDecisionPanel>();
             panel.protocol = protocol;
             current = panel;
@@ -30,12 +32,14 @@ namespace SojaExiles
             return panel;
         }
 
+        private static readonly Vector2 Size = new Vector2(0.56f, 0.32f);
+
         private void Build()
         {
             Transform t = transform;
             // Mismo estilo que la tarjeta del narrador (VRPanelKit.CardPanel).
             const float left = -0.255f;
-            VRPanelKit.CardPanel(t, Vector2.zero, new Vector2(0.56f, 0.32f));
+            VRPanelKit.CardPanel(t, Vector2.zero, Size);
             VRPanelKit.Text(t, "Paso 8 de 8  ·  Último paso", new Vector2(left, 0.138f), 0.016f,
                 VRPanelKit.CardLabelColor);
             VRPanelKit.BoldText(t, "¿Necesita atención médica?", new Vector2(left, 0.113f), 0.034f, Color.white);
