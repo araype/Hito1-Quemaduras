@@ -13,11 +13,42 @@ namespace SojaExiles
         private static readonly Dictionary<string, AudioClip> Clips = new Dictionary<string, AudioClip>();
         private static readonly Dictionary<string, Material> Materials = new Dictionary<string, Material>();
 
+        // Voces que todavia son TTS (de corregir-bugs) y se oian robotizadas al
+        // lado de las de ElevenLabs. Mientras no se regeneren (docs/VOCES.md),
+        // suena una frase de ElevenLabs que encaja en el mismo momento o, si
+        // no hay ninguna (""), nada: el texto sigue en la tarjeta o el panel.
+        // Al regenerar una voz, se quita de aqui.
+        private static readonly Dictionary<string, string> TtsStandIns = new Dictionary<string, string>
+        {
+            { "voz_ansiosa", "voz_dolor_1" },         // "Me arde... me arde mucho."
+            { "voz_calmada", "voz_alivio_agua" },     // "Ay... el agua fria me alivia."
+            { "voz_asustada", "voz_dolor_2" },        // "Ayudame, por favor!"
+            { "voz_frio", "voz_hielo_duele" },        // "Ay! Esta helado, me duele mas."
+            { "voz_aguanto", "voz_enfriada" },        // "Ya se siente un poco mejor."
+            { "voz_templada", "voz_alivio_agua" },
+            { "voz_aprieta", "voz_remedio_no" },      // "No, eso no me pongas, por favor."
+            { "voz_templar_pide", "" },
+            { "guia_err_calma", "" },
+            { "guia_err_aguantar", "" },
+            { "guia_err_olla", "" },
+            { "guia_err_charco", "" }
+        };
+
         public static AudioClip Clip(string name)
         {
             if (string.IsNullOrEmpty(name))
             {
                 return null;
+            }
+
+            if (TtsStandIns.TryGetValue(name, out string standIn))
+            {
+                if (standIn.Length == 0)
+                {
+                    return null;
+                }
+
+                name = standIn;
             }
 
             if (!Clips.TryGetValue(name, out AudioClip clip))

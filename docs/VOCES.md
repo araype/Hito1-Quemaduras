@@ -137,6 +137,23 @@ voces: las de `corregir-bugs` son TTS (narrador Raúl, tía Sabina) y el resto
 es ElevenLabs. Hay que regenerar estas con las mismas voces de ElevenLabs
 para que no cambie el narrador ni la tía a mitad de la partida:
 
+**Mientras tanto (2026-11-07):** estos audios TTS ya no suenan.
+`Hito1FX.TtsStandIns` hace sonar en su lugar una frase de ElevenLabs que encaja
+en el mismo momento o nada (el texto sigue en la tarjeta o en el panel):
+
+| TTS | Suena en su lugar |
+|---|---|
+| `voz_ansiosa` | `voz_dolor_1` ("Me arde… me arde mucho.") |
+| `voz_calmada`, `voz_templada` | `voz_alivio_agua` ("Ay… el agua fría me alivia.") |
+| `voz_asustada` | `voz_dolor_2` ("¡Ayúdame, por favor!") |
+| `voz_frio` | `voz_hielo_duele` ("¡Ay! Está helado, me duele más.") |
+| `voz_aguanto` | `voz_enfriada` ("Ya se siente un poco mejor.") |
+| `voz_aprieta` | `voz_remedio_no` ("No, eso no me pongas, por favor.") |
+| `voz_templar_pide`, `guia_err_calma`, `guia_err_aguantar`, `guia_err_olla`, `guia_err_charco` | Nada (solo el texto) |
+
+Al regenerar una voz con ElevenLabs, reemplazar el `.wav` y quitar su línea de
+`TtsStandIns`.
+
 | Archivo | Quién | Texto |
 |---|---|---|
 | `guia_err_calma` | Narradora | `[firm] Háblale con calma: dile que el agua fría alivia.` |

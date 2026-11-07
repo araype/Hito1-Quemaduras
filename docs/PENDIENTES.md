@@ -53,7 +53,8 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 
 - Volvió la gasa (sección 16 de `QUEMADURA_INMERSION.md`): `guia_cubrir`,
   `guia_err_pano` y `guia_err_envolver` ya son de ElevenLabs. Quedan 12 voces
-  TTS por regenerar (`docs/VOCES.md`).
+  TTS por regenerar (`docs/VOCES.md`); mientras tanto no suenan: se usa
+  una frase de ElevenLabs que encaja o solo el texto (`Hito1FX.TtsStandIns`).
 
 - **Regenerar con ElevenLabs las voces que llegaron como TTS** desde
   `corregir-bugs` (narrador Raúl y tía Sabina), para que no cambie la voz a
