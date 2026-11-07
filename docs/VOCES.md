@@ -82,7 +82,7 @@ en una emergencia).
 | `guia_anillo` | Paso 4 | Quítale el anillo antes de que la mano se hinche. Acerca tu mano libre al punto dorado y mantén apretado el botón lateral, o junta el pulgar y el índice, hasta que el anillo salga. |
 | `guia_abrigo` | Paso 5 | El agua fría también le enfría el cuerpo. Abrígala con la chompa. |
 | `guia_esperar` | Paso 6 | Bien hecho. Ahora espera a que el reloj complete los 20 minutos, sin sacar su mano del agua. |
-| `guia_cubrir` | Paso 7 | Ya está enfriada. Sostén el film con una mano y tira una tira con la otra. Suéltala a lo largo de su mano, sin envolver, hasta cubrirla. También sirve una bolsa plástica limpia. **(TTS de `corregir-bugs`: regenerar)** |
+| `guia_cubrir` | Paso 7 | Ya está enfriada. Sostén el film con una mano; con la otra toma el borde que brilla y tira hasta que se corte. Suelta la tira a lo largo de su mano, sin envolver, hasta cubrirla. También sirve una bolsa plástica limpia. **(TTS de `corregir-bugs`: regenerar con este texto)** |
 | `guia_decidir` | Paso 8 | Por último, decide si necesita atención médica. Mira bien la quemadura. |
 | `guia_volver` | Sacó la mano del agua | Su mano salió del agua y el reloj se pausó. Vuelve a ponerla bajo el chorro. |
 | `guia_err_caliente` | Error: agua caliente | Esa es la llave caliente. Ciérrala y usa la del punto azul. |

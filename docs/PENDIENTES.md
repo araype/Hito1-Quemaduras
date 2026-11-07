@@ -51,6 +51,9 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 
 ## 1. Voces
 
+- `guia_cubrir` tiene texto nuevo (tomar el borde que brilla): regenerarla con
+  el texto de `docs/VOCES.md`.
+
 - **Regenerar con ElevenLabs las voces que llegaron como TTS** desde
   `corregir-bugs` (narrador Raúl y tía Sabina), para que no cambie la voz a
   mitad de la partida, y `op_centro`, que todavía dice "gasa". Lista y
@@ -100,7 +103,8 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 ## G. Validación, pruebas e informe
 
 - **Probar en el Quest con las manos** todo lo hecho en el editor. Con más
-  atención: brazo de la tía, agarre doble, agarre distante, paño, **tirar
+  atención: los arreglos de `docs/QUEMADURA_INMERSION.md`, sección 15
+  (solapa del film, taza que recibe la tía, olla, llamada en espera), brazo de la tía, agarre doble, agarre distante, paño, **tirar
   el film con las dos manos** (sostener el rollo, tomar el borde con la otra
   mano, cortar y soltar la tira a lo largo; solo se probó colocando las
   tiras por código), **templar el agua en el minuto 9** (tocar la llave

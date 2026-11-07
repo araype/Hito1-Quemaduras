@@ -77,6 +77,17 @@ namespace SojaExiles
 
         private void Check(Rigidbody rb, Tracked t)
         {
+            // Si el objeto tiene Grabbable, su lugar es el de Grabbable: cambia
+            // con SetHome (p.ej. la taza que la tia deja en el meson). Antes se
+            // usaba el primer lugar visto y la taza que se le caia a la tia
+            // volvia a aparecer donde estaba al inicio, como si fuera otra.
+            Grabbable g = rb.GetComponent<Grabbable>();
+            if (g != null)
+            {
+                t.home = g.HomePosition;
+                t.homeRotation = g.HomeRotation;
+            }
+
             bool onFloor = !rb.isKinematic && rb.position.y < t.home.y - dropHeight
                 && rb.velocity.sqrMagnitude < 0.01f && !Held(rb);
             if (!onFloor)

@@ -491,3 +491,18 @@ mientras ella espera una respuesta (`PatientDialog`, `EmergencyCall`).
 
 **Solo compilado** (Roslyn fuera de Unity). Qué probar primero:
 `docs/PENDIENTES.md`, sección 0. Voces por regenerar: `docs/VOCES.md`.
+
+## 15. Arreglos de la prueba en el visor (`mejoras-demo`, 2026-11-07)
+
+Probado **en el editor** (Play en `Prueba_LuzHorneada`, sin visor, con las
+manos simuladas por código). Falta probar con las manos en el Quest
+(`docs/PENDIENTES.md`, sección G).
+
+| Bug | Arreglo | Dónde |
+|---|---|---|
+| "Tazas infinitas": a la tía se le caía la taza y aparecía otra en el mesón | Si no había mesón a su izquierda, la soltaba en el aire a la altura del mesón; la taza caía y `FloorRecovery` la devolvía a donde estaba al inicio, como si fuera otra. Ahora busca mesón hasta 2 m y, si no hay, la deja donde estaba la taza. `FloorRecovery` usa el lugar de `Grabbable` (cambia con `SetHome`), no el primero que vio. | `BurnGuide.PutDownSpot`, `FloorRecovery`, `Grabbable.HomePosition` |
+| La tía recibía la taza con la muñeca doblada | La mano va al costado de la taza, la recibe con la palma hacia arriba y la taza va derecha hasta el mesón; la mano se abre al soltar. | `PatientBody.GripPose`, `PatientBurnArm.Receive` |
+| El jugador quedaba parado encima de la olla | La cápsula se subía a los objetos sueltos (con Rigidbody). Si apoya en uno, se desliza hacia afuera y vuelve al piso; tampoco se guarda ese lugar como "piso firme". | `VRLocomotion.SlideOffProp` |
+| Caer al vacío junto al mesón | El piso y las paredes tienen colisión (revisado con una rejilla de rayos). Red de seguridad: si el jugador cae 0,8 m por debajo del último piso firme, vuelve ahí. | `VRLocomotion.GuardAgainstFalling` |
+| No se podía sacar una tira de film | La lógica funcionaba (al tirar 24 cm se corta y queda otra lista), pero el borde era un collider invisible. Ahora hay una solapa de film visible en el borde, del lado de la mano libre, y en modo guiado brilla. Texto del paso 7 actualizado. | `FilmRoll` (solapa, `EdgeWaiting`), `BurnGuide` |
+| La llamada seguía bajito si se soltaba el celular | Se pone en espera: el operador se pausa, el celular brilla y suena cada 2,5 s, y un aviso "Recoge el celular y llévalo a tu oreja para seguir la llamada" sigue la vista hasta que se vuelve a llevar el celular a la oreja. | `EmergencyCall` (`EnterHold`, `FollowHoldPanel`) |

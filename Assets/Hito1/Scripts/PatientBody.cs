@@ -73,6 +73,11 @@ namespace SojaExiles
         [HideInInspector] public float rightPalmDown;
         [HideInInspector] public float leftPalmDown;
         [HideInInspector] public float palmDownTiltDegrees = 15f;
+        // 0 a 1: mano como sosteniendo una taza (muneca recta, palma hacia
+        // adentro, pulgar arriba). Solo en modo Reach (PatientBurnArm al
+        // recibir un objeto).
+        [HideInInspector] public float rightGrip;
+        [HideInInspector] public float leftGrip;
 
         [Header("Caminar")]
         [Tooltip("Largo de un paso (m). Un ciclo completo son dos pasos.")]
@@ -680,6 +685,12 @@ namespace SojaExiles
                 LayHandFlat(arm, Mathf.Clamp01(palmDown));
             }
 
+            float grip = arm.side > 0f ? rightGrip : leftGrip;
+            if (grip > 0.001f && arm.currentMode == ArmMode.Reach)
+            {
+                GripPose(arm, Mathf.Clamp01(grip), outward);
+            }
+
             // Sacudir la mano (reflejo al quemarse): flexion de la muneca.
             float shake = arm.side > 0f ? rightHandShake : leftHandShake;
             if (Mathf.Abs(shake) > 0.01f)
@@ -786,6 +797,32 @@ namespace SojaExiles
             Vector3 fingers = Quaternion.AngleAxis(palmDownTiltDegrees, side) * along;
             Vector3 dorsum = Vector3.ProjectOnPlane(Vector3.up, fingers).normalized;
             Quaternion wanted = Quaternion.LookRotation(fingers, dorsum)
+                * Quaternion.Inverse(Quaternion.LookRotation(arm.fingersLocal, arm.dorsumLocal));
+            arm.hand.rotation = Quaternion.Slerp(arm.hand.rotation, wanted, weight);
+        }
+
+        // Mano de sostener una taza: los dedos siguen al antebrazo (muneca
+        // recta, apenas hacia arriba), el dorso hacia afuera y la palma hacia
+        // adentro. Antes la mano conservaba el giro de la T-pose y la muneca
+        // se doblaba de forma rara al recibir la taza.
+        private void GripPose(Arm arm, float weight, Vector3 outward)
+        {
+            Vector3 along = arm.hand.position - arm.fore.position;
+            if (along.sqrMagnitude < 1e-6f)
+            {
+                return;
+            }
+
+            along.Normalize();
+            Vector3 side = Vector3.Cross(Vector3.up, along);
+            Vector3 fingers = side.sqrMagnitude > 1e-6f ? Quaternion.AngleAxis(-8f, side.normalized) * along : along;
+            Vector3 dorsum = Vector3.ProjectOnPlane(outward, fingers);
+            if (dorsum.sqrMagnitude < 1e-6f)
+            {
+                return;
+            }
+
+            Quaternion wanted = Quaternion.LookRotation(fingers, dorsum.normalized)
                 * Quaternion.Inverse(Quaternion.LookRotation(arm.fingersLocal, arm.dorsumLocal));
             arm.hand.rotation = Quaternion.Slerp(arm.hand.rotation, wanted, weight);
         }

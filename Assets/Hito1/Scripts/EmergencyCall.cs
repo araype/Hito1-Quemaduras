@@ -55,6 +55,24 @@ namespace SojaExiles
         private Transform panel;
         private int answer = -1;
 
+        // Llamada en espera: si se suelta el celular o se aleja de la oreja,
+        // el operador se pausa (antes seguia hablando desde donde quedo el
+        // celular y apenas se oia) y un aviso pide volver a tomarlo.
+        [Tooltip("Segundos con el celular lejos de la oreja antes de poner la llamada en espera.")]
+        public float holdAfterSeconds = 0.8f;
+        private bool onHold;
+        private float awayTime;
+        private string lastText;
+        private string[] lastOptions;
+        private Renderer holdMarker;
+        private float nextHoldBeep;
+
+        // True mientras la llamada esta en espera.
+        public static bool OnHold
+        {
+            get { return Instance != null && Instance.onHold; }
+        }
+
         private static readonly Color Blue = new Color(0.22f, 0.48f, 0.95f);
         private static readonly Color Green = new Color(0.2f, 0.62f, 0.42f);
 
@@ -93,6 +111,11 @@ namespace SojaExiles
         private void Update()
         {
             UpdateScreen();
+            if (inCall)
+            {
+                UpdateHold();
+            }
+
             // Si la tia esta preguntando algo (PatientDialog), la llamada
             // empieza cuando se le responde: los dos paneles se tapaban.
             if (started || phone == null || burnSequence == null
@@ -124,7 +147,7 @@ namespace SojaExiles
             speaker.clip = Ringback();
             speaker.loop = false;
             speaker.Play();
-            yield return new WaitForSeconds(ringSeconds);
+            yield return WaitCall(ringSeconds);
             speaker.Stop();
 
             BurnProtocol protocol = BurnProtocol.Instance;
@@ -167,7 +190,7 @@ namespace SojaExiles
 
             // Que termine de hablar ella antes de que pregunte el operador.
             AudioClip showLine = Hito1FX.Clip("voz_aqui_mirala");
-            yield return new WaitForSeconds(showLine != null ? showLine.length + 0.2f : 0.6f);
+            yield return WaitCall(showLine != null ? showLine.length + 0.2f : 0.6f);
 
             yield return Ask("op_ampollas", "Mire bien la quemadura. ¿Tiene ampollas?",
                 "Sí, tiene ampollas", "No, solo está roja");
@@ -210,8 +233,169 @@ namespace SojaExiles
             Decided = true;
             yield return Say("op_cierre", "De acuerdo. Si empeora o tiene dudas, vuelva a llamar. Cuídela mucho.");
             ClosePanel();
+            onHold = false;
+            if (holdMarker != null)
+            {
+                Destroy(holdMarker.gameObject);
+                holdMarker = null;
+            }
+
             Hito1FX.PlayAt("perilla_clic", phone.position, 0.5f);
             inCall = false;
+        }
+
+        // ---------------- llamada en espera ----------------
+
+        private bool PhoneAtEar(float distance)
+        {
+            if (head == null)
+            {
+                head = VRPanelKit.Head();
+            }
+
+            return head != null && phone != null && SimpleGrab.IsHeldObject(phone)
+                && Vector3.Distance(phone.worldCenterOfMass, head.position) < distance;
+        }
+
+        private void UpdateHold()
+        {
+            if (!onHold)
+            {
+                // Un poco mas de margen para no cortar al mover la cabeza.
+                awayTime = PhoneAtEar(earDistance * 1.6f) ? 0f : awayTime + Time.deltaTime;
+                if (awayTime > holdAfterSeconds)
+                {
+                    EnterHold();
+                }
+
+                return;
+            }
+
+            if (PhoneAtEar(earDistance))
+            {
+                ExitHold();
+                return;
+            }
+
+            FollowHoldPanel();
+
+            if (holdMarker != null)
+            {
+                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 5f);
+                IndicatorUtil.SetWorldDiameter(holdMarker.transform, Mathf.Lerp(0.12f, 0.17f, pulse));
+                IndicatorUtil.SetColor(holdMarker, new Color(0.3f, 0.85f, 1f, Mathf.Lerp(0.2f, 0.5f, pulse)));
+            }
+
+            // Un tono suave cada tanto desde el celular, para ubicarlo.
+            if (Time.time >= nextHoldBeep && phone != null)
+            {
+                nextHoldBeep = Time.time + 2.5f;
+                Hito1FX.PlayAt("perilla_clic", phone.position, 0.5f, 0.02f);
+            }
+        }
+
+        private void EnterHold()
+        {
+            onHold = true;
+            awayTime = 0f;
+            if (speaker != null)
+            {
+                speaker.Pause();
+            }
+
+            // Aviso al frente (el panel de la llamada queda al costado).
+            ClosePanel();
+            GameObject root = new GameObject("PanelLlamada");
+            root.AddComponent<NoAutoCollider>();
+            HoldPanelPose(out Vector3 position, out Quaternion rotation);
+            root.transform.SetPositionAndRotation(position, rotation);
+            root.AddComponent<OverlayPanel>();
+            panel = root.transform;
+            const float width = 0.5f, height = 0.15f;
+            const float left = -width * 0.5f + 0.025f;
+            VRPanelKit.CardPanel(panel, Vector2.zero, new Vector2(width, height));
+            VRPanelKit.Text(panel, "Llamada al 106  ·  En espera", new Vector2(left, height * 0.5f - 0.025f), 0.016f,
+                VRPanelKit.CardLabelColor);
+            VRPanelKit.BoldText(panel, "Recoge el celular y llévalo\na tu oreja para seguir la llamada",
+                new Vector2(left, height * 0.5f - 0.05f), 0.022f, Color.white);
+
+            if (holdMarker == null && phone != null)
+            {
+                WaterTap tap = FindObjectOfType<WaterTap>();
+                holdMarker = IndicatorUtil.CreateSphere("BrilloCelular", phone.transform, phone.worldCenterOfMass, 0.07f,
+                    tap != null ? tap.indicatorMaterial : null, new Color(0.3f, 0.85f, 1f, 0.35f));
+            }
+
+            nextHoldBeep = Time.time + 0.5f;
+        }
+
+        // El aviso de espera va frente a la vista, un poco abajo.
+        private void HoldPanelPose(out Vector3 position, out Quaternion rotation)
+        {
+            Transform eye = head != null ? head : VRPanelKit.Head();
+            Vector3 eyePos = eye != null ? eye.position : transform.position + Vector3.up * 1.6f;
+            Vector3 forward = eye != null ? Vector3.ProjectOnPlane(eye.forward, Vector3.up) : Vector3.forward;
+            forward = forward.sqrMagnitude > 1e-4f ? forward.normalized : Vector3.forward;
+            position = eyePos + forward * 0.6f + Vector3.down * 0.12f;
+            rotation = Quaternion.LookRotation(position - eyePos, Vector3.up);
+        }
+
+        // Mientras la llamada esta en espera el aviso sigue la vista: si el
+        // celular se cayo y el jugador gira para buscarlo, el aviso quedaba
+        // atras y no se veia.
+        private void FollowHoldPanel()
+        {
+            if (panel == null)
+            {
+                return;
+            }
+
+            HoldPanelPose(out Vector3 position, out Quaternion rotation);
+            float k = 1f - Mathf.Exp(-3f * Time.deltaTime);
+            panel.SetPositionAndRotation(Vector3.Lerp(panel.position, position, k),
+                Quaternion.Slerp(panel.rotation, rotation, k));
+        }
+
+        private void ExitHold()
+        {
+            onHold = false;
+            awayTime = 0f;
+            if (holdMarker != null)
+            {
+                Destroy(holdMarker.gameObject);
+                holdMarker = null;
+            }
+
+            if (speaker != null)
+            {
+                speaker.UnPause();
+            }
+
+            // Vuelve el panel de la llamada tal como estaba (mientras timbra
+            // todavia no hay panel).
+            if (lastText != null)
+            {
+                ShowPanel(lastText, lastOptions);
+            }
+            else
+            {
+                ClosePanel();
+            }
+        }
+
+        // Espera que no corre mientras la llamada esta en espera.
+        private IEnumerator WaitCall(float seconds)
+        {
+            float t = 0f;
+            while (t < seconds)
+            {
+                if (!onHold)
+                {
+                    t += Time.deltaTime;
+                }
+
+                yield return null;
+            }
         }
 
         private bool UnderWater()
@@ -226,7 +410,7 @@ namespace SojaExiles
         {
             ShowPanel(text, null);
             float wait = Speak(clipName, text);
-            yield return new WaitForSeconds(wait);
+            yield return WaitCall(wait);
         }
 
         // Pregunta y espera la respuesta (queda en 'answer').
@@ -241,7 +425,7 @@ namespace SojaExiles
             }
 
             speaker.Stop();
-            yield return new WaitForSeconds(0.4f);
+            yield return WaitCall(0.4f);
         }
 
         private float Speak(string clipName, string text)
@@ -264,6 +448,14 @@ namespace SojaExiles
 
         private void ShowPanel(string text, string[] options)
         {
+            lastText = text;
+            lastOptions = options;
+            if (onHold)
+            {
+                // En espera se queda el aviso; al volver se muestra este panel.
+                return;
+            }
+
             ClosePanel();
             GameObject root = new GameObject("PanelLlamada");
             root.AddComponent<NoAutoCollider>();

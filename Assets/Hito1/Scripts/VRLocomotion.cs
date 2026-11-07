@@ -51,6 +51,14 @@ namespace SojaExiles
         public float headClearance = 0.15f;
 
         private CharacterController controller;
+
+        // Red de seguridad: ultimo lugar con piso firme. Si el jugador cae
+        // muy por debajo (se reporto "caer al vacio" junto al meson), vuelve
+        // ahi en vez de seguir cayendo.
+        [Tooltip("Metros por debajo del ultimo piso firme a partir de los cuales el jugador vuelve a el.")]
+        public float fallRecoverDistance = 0.8f;
+        private Vector3 lastSafePosition;
+        private bool hasSafePosition;
         private OVRCameraRig rig;
         private OVRHand leftHand;
         private OVRHand rightHand;
@@ -140,8 +148,70 @@ namespace SojaExiles
                 horizontalVelocity.z = 0f;
             }
 
+            standingOnProp = null;
             controller.Move(clipped);
+            SlideOffProp();
             KeepHeadOutOfPatient(head);
+            GuardAgainstFalling();
+        }
+
+        // Objetos sueltos (con Rigidbody: la olla, la taza, el pano...) no son
+        // piso: la capsula se subia a la olla al caminar a su alrededor y el
+        // jugador quedaba parado encima. Si la capsula apoya en uno, se corre
+        // hacia afuera de el.
+        [Tooltip("Velocidad con la que el jugador se desliza fuera de un objeto suelto que piso (m/s).")]
+        public float propSlideSpeed = 1.5f;
+        private Collider standingOnProp;
+
+        private void OnControllerColliderHit(ControllerColliderHit hit)
+        {
+            if (hit.rigidbody != null && hit.normal.y > 0.3f)
+            {
+                standingOnProp = hit.collider;
+            }
+        }
+
+        private void SlideOffProp()
+        {
+            if (standingOnProp == null)
+            {
+                return;
+            }
+
+            Vector3 away = transform.position - standingOnProp.bounds.center;
+            away.y = 0f;
+            if (away.sqrMagnitude < 1e-6f)
+            {
+                away = -transform.forward;
+                away.y = 0f;
+            }
+
+            // Hacia afuera y un poco hacia abajo, para volver al piso.
+            Vector3 slide = away.normalized * propSlideSpeed * Time.deltaTime + Vector3.down * 0.02f;
+            controller.Move(slide);
+            verticalVelocity = Mathf.Min(verticalVelocity, -0.5f);
+        }
+
+        private void GuardAgainstFalling()
+        {
+            if (controller.isGrounded && verticalVelocity <= 0f && standingOnProp == null)
+            {
+                lastSafePosition = transform.position;
+                hasSafePosition = true;
+                return;
+            }
+
+            if (hasSafePosition && transform.position.y < lastSafePosition.y - fallRecoverDistance)
+            {
+                Debug.LogWarning("[VRLocomotion] El jugador cayo por debajo del piso; vuelve al ultimo lugar firme " +
+                    lastSafePosition.ToString("F2"));
+                controller.enabled = false;
+                transform.position = lastSafePosition + Vector3.up * 0.05f;
+                controller.enabled = true;
+                verticalVelocity = 0f;
+                horizontalVelocity = Vector3.zero;
+                Physics.SyncTransforms();
+            }
         }
 
         // La camara no entra en el cuerpo de la paciente. La capsula ya se

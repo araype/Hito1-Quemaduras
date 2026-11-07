@@ -699,6 +699,18 @@ namespace SojaExiles
             }
         }
 
+        private void SetOtherGrip(float weight)
+        {
+            if (rightArm)
+            {
+                body.leftGrip = weight;
+            }
+            else
+            {
+                body.rightGrip = weight;
+            }
+        }
+
         private void SetOtherArm(PatientBody.ArmMode mode, Transform t)
         {
             if (rightArm)
@@ -740,13 +752,18 @@ namespace SojaExiles
             GameObject point = new GameObject("PuntoRecibir");
             point.AddComponent<NoAutoCollider>();
 
-            // Estira la mano libre hacia el objeto.
+            // Estira la mano libre hacia el costado del objeto (antes iba a su
+            // centro: la mano quedaba metida en la taza) y la cierra como para
+            // sostener una taza.
             float t = 0f;
             SetOtherArm(PatientBody.ArmMode.Reach, point.transform);
-            while (t < 0.6f && rb != null)
+            while (t < 0.9f && rb != null)
             {
                 t += Time.deltaTime;
-                point.transform.position = rb.worldCenterOfMass;
+                Vector3 toShoulder = PatientBody.Flat(body.ShoulderPosition(!rightArm) - rb.worldCenterOfMass);
+                toShoulder = toShoulder.sqrMagnitude > 1e-6f ? toShoulder.normalized : -PatientBody.Flat(transform.forward).normalized;
+                point.transform.position = rb.worldCenterOfMass + toShoulder * 0.05f;
+                SetOtherGrip(Mathf.SmoothStep(0f, 1f, t / 0.9f));
                 yield return null;
             }
 
@@ -771,20 +788,34 @@ namespace SojaExiles
                 c.enabled = false;
             }
 
-            Vector3 offset = Quaternion.Inverse(hand.rotation) * (rb.position - hand.position);
-            Quaternion rotOffset = Quaternion.Inverse(hand.rotation) * rb.rotation;
+            // La taza va pegada a la palma pero siempre derecha (antes giraba
+            // con la muneca).
+            Vector3 offset = rb.position - hand.position;
+            Quaternion upright = Quaternion.Euler(0f, rb.rotation.eulerAngles.y, 0f);
 
             // Lo lleva hasta el meson.
             Vector3 from = point.transform.position;
             t = 0f;
-            while (t < 1.1f && rb != null)
+            const float carry = 1.4f;
+            while (t < carry && rb != null)
             {
                 t += Time.deltaTime;
-                point.transform.position = Vector3.Lerp(from, putDown + Vector3.up * 0.08f, Mathf.SmoothStep(0f, 1f, t / 1.1f));
-                rb.transform.SetPositionAndRotation(hand.position + hand.rotation * offset,
-                    Quaternion.Slerp(hand.rotation * rotOffset, Quaternion.identity, Mathf.Clamp01(t / 1.1f)));
+                float k = Mathf.SmoothStep(0f, 1f, t / carry);
+                point.transform.position = Vector3.Lerp(from, putDown + Vector3.up * 0.08f, k);
+                rb.transform.SetPositionAndRotation(hand.position + offset, Quaternion.Slerp(upright, Quaternion.identity, k));
                 yield return null;
             }
+
+            // Abre la mano al soltar.
+            float release = 0f;
+            while (release < 0.35f)
+            {
+                release += Time.deltaTime;
+                SetOtherGrip(1f - release / 0.35f);
+                yield return null;
+            }
+
+            SetOtherGrip(0f);
 
             if (rb != null)
             {

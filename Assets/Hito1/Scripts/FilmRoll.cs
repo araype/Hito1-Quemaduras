@@ -29,9 +29,22 @@ namespace SojaExiles
         private FilmStrip strip;
         private bool pulling;
 
+        // Solapa visible del borde que espera en el rollo. Antes el borde era
+        // solo un collider invisible y en el visor no se sabia de donde tirar.
+        private Transform flap;
+
         public Vector3 Axis
         {
             get { return transform.right; }
+        }
+
+        // True (y el punto) si el rollo esta en una mano y el borde de la tira
+        // espera a que la otra mano lo tome (lo usa BurnGuide para el brillo).
+        public bool EdgeWaiting(out Vector3 point)
+        {
+            bool waiting = grabbable != null && grabbable.IsHeld && strip != null && !strip.Torn && !strip.IsHeld;
+            point = waiting ? strip.transform.position : Vector3.zero;
+            return waiting;
         }
 
         private void Start()
@@ -41,6 +54,47 @@ namespace SojaExiles
             ownColliders = GetComponentsInChildren<Collider>();
             redirect = gameObject.AddComponent<GrabRedirect>();
             redirect.target = body;
+            CreateFlap();
+        }
+
+        private void CreateFlap()
+        {
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            go.name = "Film_Solapa";
+            Destroy(go.GetComponent<Collider>());
+            go.AddComponent<NoAutoCollider>();
+            go.transform.SetParent(transform, false);
+            go.transform.localScale = new Vector3(stripWidth, 0.035f, 1f);
+            Renderer r = go.GetComponent<Renderer>();
+            r.sharedMaterial = PropKit.Mat("Film_Tira", new Color(0.9f, 0.95f, 1f, 0.35f));
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            flap = go.transform;
+            flap.gameObject.SetActive(false);
+        }
+
+        // La solapa sale del borde hacia la mano libre, tangente al rollo.
+        private void ShowFlap(Vector3 edge)
+        {
+            if (flap == null)
+            {
+                return;
+            }
+
+            Vector3 center = transform.TransformPoint(axisCenter);
+            Vector3 onAxis = center + Axis * Vector3.Dot(edge - center, Axis);
+            Vector3 radial = (edge - onAxis).normalized;
+            Vector3 tangent = Vector3.Cross(Axis, radial);
+            flap.gameObject.SetActive(true);
+            flap.SetPositionAndRotation(edge + tangent * 0.0175f + radial * 0.002f,
+                Quaternion.LookRotation(-radial, tangent));
+        }
+
+        private void HideFlap()
+        {
+            if (flap != null && flap.gameObject.activeSelf)
+            {
+                flap.gameObject.SetActive(false);
+            }
         }
 
         // Punto del borde del rollo mas cercano a 'point' (de donde sale la tira).
@@ -65,6 +119,7 @@ namespace SojaExiles
             bool held = grabbable != null && grabbable.IsHeld;
             if (!held)
             {
+                HideFlap();
                 redirect.target = body;
                 if (strip != null && !strip.Torn)
                 {
@@ -113,10 +168,12 @@ namespace SojaExiles
                 // mano libre.
                 pulling = false;
                 strip.transform.position = EdgePoint(freeHand);
+                ShowFlap(strip.transform.position);
                 redirect.target = strip.GetComponent<Rigidbody>();
                 return;
             }
 
+            HideFlap();
             redirect.target = body;
             Vector3 edge = EdgePoint(strip.transform.position);
             float pulled = Vector3.Distance(edge, strip.transform.position);

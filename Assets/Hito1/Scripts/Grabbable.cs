@@ -39,6 +39,18 @@ namespace SojaExiles
 
         public bool IsHeld { get; internal set; }
 
+        // Lugar al que vuelve (lo usa tambien FloorRecovery, para que los dos
+        // devuelvan el objeto al mismo sitio).
+        public Vector3 HomePosition
+        {
+            get { return startPosition; }
+        }
+
+        public Quaternion HomeRotation
+        {
+            get { return startRotation; }
+        }
+
         private Rigidbody body;
         private Vector3 startPosition;
         private Quaternion startRotation;

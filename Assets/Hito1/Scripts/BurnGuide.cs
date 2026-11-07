@@ -128,7 +128,7 @@ namespace SojaExiles
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
                 hint = "Mantén su mano bajo el agua hasta que el reloj complete las 20 marcas.", clip = "guia_esperar" },
             new StepInfo { id = StepId.Cubrir, title = "Cubre la quemadura",
-                hint = "Sostén el film con una mano y tira una tira con la otra. Suéltala a lo largo de su mano, sin envolver, hasta cubrirla. También sirve una bolsa plástica limpia.",
+                hint = "Sostén el film con una mano; con la otra toma el borde que brilla y tira hasta que se corte. Suelta la tira a lo largo de su mano, sin envolver, hasta cubrirla. También sirve una bolsa plástica limpia.",
                 clip = "guia_cubrir" }
         };
 
@@ -198,6 +198,10 @@ namespace SojaExiles
         private bool currentIsReturn;
         private float stepShownTime;
         private bool coolingStarted;
+
+        // Donde estaba la taza del tutorial (respaldo para dejarla).
+        private Vector3 mugSpot;
+        private bool hasMugSpot;
         private bool wasInCall;
         private readonly Dictionary<string, float> lastCorrection = new Dictionary<string, float>();
 
@@ -604,6 +608,8 @@ namespace SojaExiles
             PropKit.MeshPart(t, PropKit.Torus("AsaTaza", 0.022f, 0.005f), new Vector3(0.045f, 0.05f, 0f),
                 Quaternion.Euler(90f, 0f, 0f), "Plato", new Color(0.93f, 0.93f, 0.9f));
             mug.GetComponent<Grabbable>().SetHome();
+            mugSpot = spot;
+            hasMugSpot = true;
             Debug.Log("[BurnGuide] Taza del tutorial en " + spot.ToString("F2"));
             return mug.GetComponent<Rigidbody>();
         }
@@ -620,7 +626,16 @@ namespace SojaExiles
                 return spot;
             }
 
-            return new Vector3(left.x, counter, left.z);
+            // Sin meson cerca (ella se movio): antes la soltaba en el aire a la
+            // altura del meson, la taza caia al piso y volvia a su lugar
+            // inicial, como si apareciera otra. Mejor un poco mas lejos o,
+            // si no, donde estaba la taza.
+            if (PropKit.FindSurfaceSpot(her, counter, 0.05f, 2f, 0.06f, null, stove, stoveRadius, out spot))
+            {
+                return spot;
+            }
+
+            return hasMugSpot ? mugSpot : new Vector3(left.x, counter, left.z);
         }
 
         // ---------------- pasos del protocolo ----------------
@@ -913,6 +928,11 @@ namespace SojaExiles
                         if (!roll.GetComponent<Grabbable>().IsHeld)
                         {
                             points.Add(roll.transform.TransformPoint(roll.axisCenter));
+                        }
+                        else if (roll.EdgeWaiting(out Vector3 edge))
+                        {
+                            // Con el rollo en una mano: el borde de donde se tira.
+                            points.Add(edge);
                         }
                     }
 
