@@ -363,7 +363,7 @@ limpia) y la guía LSEBN ("Cover").
 
 | Qué | Cómo funciona | Script |
 |---|---|---|
-| Rollo de film | Se sostiene con una mano. Mientras tanto, el borde de la tira espera en la superficie del rollo, del lado de la otra mano; al agarrar el rollo con esa mano se toma el borde (no se cambia el rollo de mano). Al tirar, la tira se estira desde el rollo y se corta a los 20 cm. Si se suelta el rollo, la tira se corta si ya medía 8 cm. | `FilmRoll`, `FilmStrip` |
+| Rollo de film | Se sostiene con una mano. Mientras tanto, el borde de la tira espera en la superficie del rollo, del lado de la otra mano; al agarrar el rollo con esa mano se toma el borde (no se cambia el rollo de mano). Al tirar, la tira se estira desde el rollo y se corta a los 15 cm (o al soltarla si ya mide 8 cm). Si se suelta el rollo, la tira se corta si ya medía 8 cm. | `FilmRoll`, `FilmStrip` |
 | Poner una tira | Se suelta la tira sobre la mano quemada (a menos de 15 cm). Si va a lo largo (de la muñeca a los dedos) cubre una franja de 6 cm del lado donde se apoyó, como una capa sobre la piel que sigue a la mano. Cada tira queda un poco más afuera que la anterior. | `FilmCoverage`, `HandSkinMesh` (filtro de triángulos), `HandFrame` |
 | Cuánto falta | Se mide sobre la máscara de la quemadura (`BurnSkinOverlay`): con 80 % cubierto pasa a "Covered". En la tarjeta del narrador se ve el porcentaje. Con la quemadura de prueba hacen falta 3 tiras, una al lado de la otra (13 %, 59 %, 84 %). | `FilmCoverage`, `BurnGuide` |
 | Envolver | Dar la vuelta a la mano quemada con la tira en la mano (unos 270° alrededor de su eje largo, a menos de 15 cm) o soltar la tira atravesada la deja **envuelta**: se ve una banda de film alrededor de la mano durante 6 s y se retira. No cuenta para cubrir. La tía dice "me aprieta", el narrador corrige y es error una vez (`BurnEvent.FilmWrapped`, valor nuevo al final). Ver sección 16. | `FilmStrip` (gesto), `FilmCoverage.Wrap`, `BurnPatientReactions`, `BurnProtocol` |
@@ -399,7 +399,7 @@ Quest o con Quest Link).
 
 ### Valores para ajustar
 
-- `FilmRoll > Strip Width / Tear Length / Min Keep Length`.
+- `FilmRoll > Strip Width / Cut Length / Min Keep Length / Regrab Seconds`.
 - `FilmStrip > Attach Distance / Loose Seconds`.
 - `FilmCoverage > Coverage Needed / Lengthwise Min / Length Margin / Burn Alpha Min`.
 - Materiales `Film_Tira` (la tira en la mano del jugador), `Film_Mano`
@@ -553,5 +553,6 @@ manos simuladas por código). Falta probar con las manos en el Quest
 | El jugador quedaba parado encima de la olla | La cápsula se subía a los objetos sueltos (con Rigidbody). Si apoya en uno, se desliza hacia afuera y vuelve al piso; tampoco se guarda ese lugar como "piso firme". | `VRLocomotion.SlideOffProp` |
 | Caer al vacío junto al mesón | El piso y las paredes tienen colisión (revisado con una rejilla de rayos). Red de seguridad: si el jugador cae 0,8 m por debajo del último piso firme, vuelve ahí. | `VRLocomotion.GuardAgainstFalling` |
 | No se podía sacar una tira de film | La lógica funcionaba (al tirar 24 cm se corta y queda otra lista), pero el borde era un collider invisible. Ahora hay una solapa de film visible en el borde, del lado de la mano libre, y en modo guiado brilla. Texto del paso 7 actualizado. | `FilmRoll` (solapa, `EdgeWaiting`), `BurnGuide` |
+| Al estirar el film no se cortaba; además era casi invisible | Si la mano soltaba la tira un instante (con las dos manos juntas el seguimiento de manos pierde la pinza, o al tirar rápido la tira quedaba atrás y se soltaba sola), el borde volvía al rollo y se perdía lo estirado. Ahora, si ya mide 8 cm, se corta y cae (se puede volver a tomar); si es más corta, espera 0,5 s donde quedó. Se corta a los 15 cm (antes 20). Más opaco: tira 60 % (antes 32 %), capa sobre la mano 42 % (antes 16 %). Probado en Play: soltar a 10 cm corta, a 4 cm vuelve al rollo tras 0,5 s, a 16 cm corta en la mano. | `FilmRoll.StripLetGo`, `FilmStrip.LetGo`, `Film_Tira.mat`, `Film_Mano.mat` |
 | El gesto de envolver la mano con el film no hacía nada | Con una tira cortada en la mano, dar unos 270° de vuelta alrededor de la mano quemada (a menos de 15 cm de su eje) la envuelve: banda de film visible alrededor de la mano (6 s), error `FilmWrapped` una vez, queja de la tía y corrección. Soltarla atravesada también la deja envuelta en vez de desaparecer. Probado en Play moviendo la tira por código en 55° por paso. | `FilmStrip.TrackWrapGesture`, `FilmCoverage.Wrap`/`WorldAxis` |
 | La llamada seguía bajito si se soltaba el celular | Se pone en espera: el operador se pausa, el celular brilla y suena cada 2,5 s, y un aviso "Recoge el celular y llévalo a tu oreja para seguir la llamada" sigue la vista hasta que se vuelve a llevar el celular a la oreja. | `EmergencyCall` (`EnterHold`, `FollowHoldPanel`) |

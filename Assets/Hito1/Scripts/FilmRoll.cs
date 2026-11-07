@@ -4,7 +4,7 @@ namespace SojaExiles
 {
     // Rollo de film transparente. Con una mano se sostiene el rollo y con la
     // otra se tira el borde: sale una tira (FilmStrip) que se corta al llegar
-    // a 'tearLength'. Asi se cubre la quemadura: tiras a lo largo, sueltas,
+    // a 'cutLength'. Asi se cubre la quemadura: tiras a lo largo, sueltas,
     // sin envolver (NHS, Cruz Roja, guia LSEBN).
     // Mientras el rollo esta en una mano, agarrar el rollo con la otra toma el
     // borde de la tira (GrabRedirect), no pasa el rollo de mano.
@@ -15,9 +15,12 @@ namespace SojaExiles
     {
         public float stripWidth = 0.06f;
         [Tooltip("Largo al que se corta la tira (m).")]
-        public float tearLength = 0.2f;
-        [Tooltip("Si se suelta el rollo mientras se tira, la tira se corta si ya mide esto (m).")]
+        public float cutLength = 0.15f;
+        [Tooltip("Si se suelta el rollo o la tira mientras se tira, la tira se corta si ya mide esto (m).")]
         public float minKeepLength = 0.08f;
+        [Tooltip("Segundos que la tira corta espera donde quedo si la mano la suelta, antes de volver al rollo.")]
+        public float regrabSeconds = 0.5f;
+        private float stripLostAt = -1f;
         public float radius = 0.026f;
         public float halfLength = 0.15f;
         public Vector3 axisCenter = new Vector3(0f, 0.026f, 0f);
@@ -162,11 +165,17 @@ namespace SojaExiles
                 }
             }
 
+            if (!strip.IsHeld && pulling && StripLetGo())
+            {
+                return;
+            }
+
             if (!strip.IsHeld)
             {
                 // El borde espera en la superficie del rollo, del lado de la
                 // mano libre.
                 pulling = false;
+                stripLostAt = -1f;
                 strip.transform.position = EdgePoint(freeHand);
                 ShowFlap(strip.transform.position);
                 redirect.target = strip.GetComponent<Rigidbody>();
@@ -174,6 +183,7 @@ namespace SojaExiles
             }
 
             HideFlap();
+            stripLostAt = -1f;
             redirect.target = body;
             Vector3 edge = EdgePoint(strip.transform.position);
             float pulled = Vector3.Distance(edge, strip.transform.position);
@@ -183,12 +193,48 @@ namespace SojaExiles
                 Hito1FX.PlayAt("film_estirar", edge, 0.35f);
             }
 
-            if (pulled >= tearLength)
+            if (pulled >= cutLength)
             {
                 strip.Tear(edge, Axis);
                 strip = null;
                 pulling = false;
             }
+        }
+
+        // La mano solto la tira mientras se tiraba. Antes la tira volvia al
+        // rollo y se perdia lo estirado: con las dos manos juntas el
+        // seguimiento de manos pierde la pinza un instante, o la tira se
+        // quedaba atras al tirar rapido y SimpleGrab la soltaba. Ahora, si ya
+        // mide minKeepLength, se corta y cae (se puede volver a tomar); si es
+        // mas corta, espera un momento donde quedo. True si ya se resolvio.
+        private bool StripLetGo()
+        {
+            Vector3 edge = EdgePoint(strip.transform.position);
+            float pulled = Vector3.Distance(edge, strip.transform.position);
+            if (pulled >= minKeepLength)
+            {
+                FilmStrip cut = strip;
+                cut.Tear(edge, Axis);
+                strip = null;
+                pulling = false;
+                stripLostAt = -1f;
+                cut.LetGo();
+                return true;
+            }
+
+            if (stripLostAt < 0f)
+            {
+                stripLostAt = Time.time;
+            }
+
+            if (Time.time - stripLostAt < regrabSeconds)
+            {
+                // Sigue agarrable donde quedo.
+                redirect.target = strip.GetComponent<Rigidbody>();
+                return true;
+            }
+
+            return false;
         }
 
         // La tira se destruyo sin cortarse (por ejemplo, al reiniciar).

@@ -104,7 +104,8 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 
 - **Probar en el Quest con las manos** todo lo hecho en el editor. Con más
   atención: los arreglos de `docs/QUEMADURA_INMERSION.md`, sección 16
-  (solapa del film, gesto de envolver la mano con el film, taza que recibe
+  (solapa del film, cortar la tira con las manos y si se ve bien, gesto
+  de envolver la mano con el film, taza que recibe
   la tía, olla, llamada en espera), brazo de la tía, agarre doble, agarre distante, paño, **tirar
   el film con las dos manos** (sostener el rollo, tomar el borde con la otra
   mano, cortar y soltar la tira a lo largo; solo se probó colocando las

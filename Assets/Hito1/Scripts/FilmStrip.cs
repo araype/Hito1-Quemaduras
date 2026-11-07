@@ -196,6 +196,14 @@ namespace SojaExiles
             mesh.RecalculateBounds();
         }
 
+        // Se corto despues de que la mano la soltara (FilmRoll): se pone si
+        // esta sobre la mano quemada o cae.
+        public void LetGo()
+        {
+            wasHeld = false;
+            Released();
+        }
+
         private void Released()
         {
             if (!TryApply())
