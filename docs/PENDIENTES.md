@@ -151,9 +151,9 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   ya no queda un minuto muerto. La práctica termina con la quemadura
   cubierta y la llamada hecha; si se cubre sin llamar, la tía lo sugiere
   y a los 90 s (guiado) o 40 s (evaluación) termina con el paso faltante.
-  Sin celular en la escena se usa el panel anterior. **Faltan las voces**
-  del operador y `guia_llamar` (guion en `docs/VOCES.md`); mientras tanto
-  se leen en el panel.
+  Sin celular en la escena se usa el panel anterior. Voces del operador
+  (varón, con filtro telefónico), `guia_llamar` y las dos nuevas de la tía
+  generadas y en el juego (2026-11-06; **falta oírlas en el visor**).
   Revisión de coherencia (2026-11-06, probado en Play en el editor con
   acciones simuladas y sin sonido): el operador responde a lo que dice el
   jugador (decir que la mano está en el agua cuando no lo está es error);

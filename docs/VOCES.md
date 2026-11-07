@@ -64,8 +64,8 @@ Mujer adulta (50 a 60 años), voz cálida; con dolor real, no actuado.
 
 ## Narrador (21)
 
-Voz adulta, calmada y clara; ritmo pausado (da instrucciones en una
-emergencia).
+Voz **femenina** adulta, calmada y clara; ritmo pausado (da instrucciones
+en una emergencia).
 
 | Archivo | Cuándo suena | Texto |
 |---|---|---|
@@ -94,11 +94,15 @@ emergencia).
 Para el narrador conviene `[calm]` al inicio de cada frase, y en los
 errores `[firm]` (corrige sin regañar).
 
-## Operador del 106, narrador y tía (llamada, pendientes de generar)
+## Operador del 106, narrador y tía (llamada)
 
-La llamada al 106 (`EmergencyCall`) ya funciona sin estas voces: el texto se
-lee en el panel. Al generarlas, se reproducen solas desde el celular.
-Operador: voz adulta, profesional y calmada (de central de emergencias).
+Generadas con ElevenLabs y pasadas al juego el 2026-11-06. Suenan desde el
+celular; las del operador (`op_*`) llevan además un filtro de banda telefónica
+(300 a 3400 Hz) para que se oigan como al otro lado de la línea. Si falta
+alguna, la llamada igual funciona: el texto se lee en el panel.
+Operador: **voz masculina** adulta, profesional y calmada (de central de
+emergencias). `guia_llamar` es del narrador: **la misma voz femenina** de las
+demás `guia_*`.
 Usa `[calm]` en todas; en `op_agua_no`, `[firm]`.
 
 | Archivo | Cuándo suena | Para ElevenLabs |
