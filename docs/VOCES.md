@@ -82,12 +82,12 @@ en una emergencia).
 | `guia_anillo` | Paso 4 | Quítale el anillo antes de que la mano se hinche. Acerca tu mano libre al punto dorado y mantén apretado el botón lateral, o junta el pulgar y el índice, hasta que el anillo salga. |
 | `guia_abrigo` | Paso 5 | El agua fría también le enfría el cuerpo. Abrígala con la chompa. |
 | `guia_esperar` | Paso 6 | Bien hecho. Ahora espera a que el reloj complete los 20 minutos, sin sacar su mano del agua. |
-| `guia_cubrir` | Paso 7 | Ya está enfriada. Cubre la quemadura con film o con una gasa, sin apretar. |
+| `guia_cubrir` | Paso 7 | Ya está enfriada. Cubre la quemadura con una gasa limpia, sin apretar. Si no hay gasa, usa film. |
 | `guia_decidir` | Paso 8 | Por último, decide si necesita atención médica. Mira bien la quemadura. |
 | `guia_volver` | Sacó la mano del agua | Su mano salió del agua y el reloj se pausó. Vuelve a ponerla bajo el chorro. |
 | `guia_err_caliente` | Error: agua caliente | Esa es la llave caliente. Ciérrala y usa la del punto azul. |
 | `guia_err_mano` | Error: la toma de la mano | Sujétala del antebrazo: tocar la quemadura le duele. |
-| `guia_err_pano` | Error: paño de cocina | El paño de cocina suelta pelusa. Usa film o una gasa. |
+| `guia_err_pano` | Error: paño de cocina | El paño de cocina suelta pelusa. Usa una gasa limpia o, si no hay, film. |
 | `guia_err_remedio` | Error: remedio casero | No le pongas nada en la quemadura. Solo agua fría corriente. |
 | `guia_err_temprano` | Error: cubre antes de tiempo | Todavía no. Primero termina de enfriar la quemadura. |
 
@@ -112,7 +112,7 @@ Usa `[calm]` en todas; en `op_agua_no`, `[firm]`.
 | `op_agua_si` | Ya está bajo el agua | `[calm] Muy bien. Manténgala bajo el agua unos veinte minutos.` |
 | `op_agua_no` | Todavía no | `[firm] Póngala ya bajo agua fría corriente, sin hielo, y manténgala ahí.` |
 | `op_ampollas` | Pide mirar la quemadura | `[calm] Mire bien la quemadura. ¿Tiene ampollas?` |
-| `op_centro` | Con ampollas | `[calm] Con ampollas en la mano, debe verla un médico. Cuando termine de enfriarla, cúbrala con film o una gasa limpia, sin apretar.` |
+| `op_centro` | Con ampollas | `[calm] Con ampollas en la mano, debe verla un médico. Cuando termine de enfriarla, cúbrala con una gasa limpia, sin apretar. Si no tiene gasa, sirve film de cocina.` |
 | `op_casa` | Sin ampollas | `[calm] Si solo está roja y es pequeña, puede cuidarla en casa. Si salen ampollas o empeora, llévela al centro de salud.` |
 | `op_decidir_centro` | Tras recomendar el centro de salud | `[calm] ¿Puede llevarla al centro de salud?` |
 | `op_decidir_casa` | Tras recomendar cuidarla en casa | `[calm] ¿Podrá cuidarla en casa?` |
@@ -126,7 +126,7 @@ Tía Rosa (con la misma voz que sus otras frases):
 | `voz_mira_mano` | Tras quemarse, le muestra la mano al jugador | `[crying] ¡Mira, mira cómo se me puso!` |
 | `voz_aqui_mirala` | En la llamada, antes de la pregunta de las ampollas | `[in pain] Aquí, mírala.` |
 | `voz_anillo_pide` | Tras mostrar la mano, pide que le saquen el anillo | `[worried] ¡Mi anillo! Sácamelo antes de que se me hinche.` |
-| `guia_err_envolver` | Narradora: si se envuelve la mano con el film (pendiente de generar) | `[firm] No la envuelvas: apoya el film encima. La mano se va a hinchar.` |
+| `guia_err_envolver` | Narradora: si se envuelve la mano con el film | `[firm] No la envuelvas: apoya el film encima. La mano se va a hinchar.` |
 
 Las 13 suman unos 800 créditos.
 

@@ -188,8 +188,15 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   se saca tirando del borde con la otra mano (la lámina se estira y se corta a
   los 18 cm) y se apoya igual; dar vueltas alrededor de la mano dispara la
   corrección "No la envuelvas" (`FilmWrapped`, sin restar puntos). Cubre solo
-  la quemadura y un poco alrededor (`HandSkinMesh.CopyWhere`). Voz nueva
-  `guia_err_envolver` pendiente (2026-11-06; **falta probarlo con las manos**).
+  la quemadura y un poco alrededor (`HandSkinMesh.CopyWhere`). Voz
+  `guia_err_envolver` importada (2026-11-06; **falta probarlo con las manos**).
+- [x] **La gasa es la opción principal para cubrir** (es lo que recomiendan las
+  guías en español; el film queda como alternativa "si no hay gasa", como en
+  las guías del NHS). Cambiados el título y la pista del paso, la corrección
+  del paño, el paso del resumen y lo que dice el operador del 106. Voces por
+  regenerar con el texto nuevo: `guia_cubrir`, `guia_err_pano` y `op_centro`,
+  ya importadas. `guia_err_envolver` importada
+  (2026-11-06).
 - [ ] Visto en la prueba: después del accidente la olla terminó en el piso
   (y el charco del piso es grande). Revisar `PotAccident` tras volcarse.
 - [x] **Voces más naturales** de la paciente y el narrador: las 45 frases
@@ -265,7 +272,7 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   - secciones 4.3 a 4.5 y RNF-02: el proyecto usa el **Meta XR Interaction
     SDK** y `SimpleGrab`, no XR Interaction Toolkit (`XR Grab Interactable`,
     `Direct Interactor`, `Teleportation Provider`);
-  - la quemadura se cubre con **film o gasa**; el paño es un error;
+  - la quemadura se cubre con **gasa** (o film si no hay); el paño es un error;
   - el modelo de la paciente (Mixamo Ch07) **no tiene blendshapes**: quitar
     la expresión facial y explicar que la hinchazón se hace escalando el
     hueso de la mano;

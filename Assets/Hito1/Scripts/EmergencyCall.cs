@@ -186,7 +186,7 @@ namespace SojaExiles
             if (advisedCenter)
             {
                 yield return Say("op_centro", "Con ampollas en la mano, debe verla un médico. Cuando termine de " +
-                    "enfriarla, cúbrala con film o una gasa limpia, sin apretar.");
+                    "enfriarla, cúbrala con una gasa limpia, sin apretar. Si no tiene gasa, sirve film de cocina.");
                 yield return Ask("op_decidir_centro", "¿Puede llevarla al centro de salud?",
                     "Sí, la llevo", "Prefiero cuidarla en casa");
                 goToHealthCenter = answer == 0;

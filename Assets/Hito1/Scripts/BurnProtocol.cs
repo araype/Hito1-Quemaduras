@@ -74,7 +74,7 @@ namespace SojaExiles
             "Enfriar 20 minutos bajo el agua",
             "Retirar el anillo",
             "Abrigar a la persona",
-            "Cubrir con film o gasa",
+            "Cubrir con una gasa limpia (o film si no hay)",
             "Llamar al 106 y decidir si necesita atención médica"
         };
 
@@ -501,7 +501,7 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:
                     return "Primero hay que terminar de enfriar la quemadura; después se cubre.";
                 case BurnSequenceManager.BurnEvent.ClothOnBurn:
-                    return "Un paño de cocina suelta pelusa que se pega a la herida: cubre con film o gasa.";
+                    return "Un paño de cocina suelta pelusa que se pega a la herida: cubre con una gasa limpia o, si no hay, con film.";
                 case BurnSequenceManager.BurnEvent.BurnedHandGrabbed:
                     return "Sujeta a la persona del antebrazo: agarrar la mano quemada le duele y daña la piel.";
                 case BurnSequenceManager.BurnEvent.RemedyNear:

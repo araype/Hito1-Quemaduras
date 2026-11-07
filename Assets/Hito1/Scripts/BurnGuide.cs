@@ -127,8 +127,8 @@ namespace SojaExiles
                 clip = "guia_llamar" },
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
                 hint = "Mantén su mano bajo el agua hasta que el reloj complete las 20 marcas.", clip = "guia_esperar" },
-            new StepInfo { id = StepId.Cubrir, title = "Cubre la quemadura",
-                hint = "Apoya la gasa encima y mantenla 1 segundo. Con el film: sostén el rollo, tira de un trozo con la otra mano y apóyalo sin envolver.",
+            new StepInfo { id = StepId.Cubrir, title = "Cubre con una gasa limpia",
+                hint = "Apoya la gasa encima y mantenla 1 segundo. Si no hay gasa, usa film: sostén el rollo, tira de un trozo con la otra mano y apóyalo sin envolver.",
                 clip = "guia_cubrir" }
         };
 
@@ -901,7 +901,7 @@ namespace SojaExiles
                     Correct("guia_err_mano", "Sujétala del antebrazo: la mano quemada le duele.");
                     break;
                 case BurnSequenceManager.BurnEvent.ClothOnBurn:
-                    Correct("guia_err_pano", "El paño de cocina suelta pelusa. Usa film o gasa.");
+                    Correct("guia_err_pano", "El paño de cocina suelta pelusa. Usa una gasa limpia o, si no hay, film.");
                     break;
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:
                     Correct("guia_err_temprano", "Todavía no: primero termina de enfriar la quemadura.");
