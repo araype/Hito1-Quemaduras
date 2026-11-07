@@ -12,14 +12,23 @@ namespace SojaExiles
     // profundidad, en orden del fondo hacia el jugador.
     // Va en la raiz del panel; revisa solo si aparecen piezas nuevas (por
     // ejemplo la barra de llenado de los botones).
+    // Con una mano del jugador cerca del panel se vuelve a usar la prueba de
+    // profundidad: si no, la tarjeta tapaba la mano y no se veia el dedo al
+    // apretar un boton.
     public class OverlayPanel : MonoBehaviour
     {
         private const int BaseQueue = 4000;
 
+        [Tooltip("Distancia de una mano al panel (m) a partir de la cual la mano se dibuja delante de la tarjeta.")]
+        public float handNearDistance = 0.25f;
+
         private static Shader shader;
 
         private readonly HashSet<Renderer> converted = new HashSet<Renderer>();
+        private readonly List<Material> materials = new List<Material>();
+        private Renderer[] renderers = new Renderer[0];
         private int lastCount = -1;
+        private bool handNear;
 
         private void Start()
         {
@@ -33,6 +42,72 @@ namespace SojaExiles
             {
                 Apply();
             }
+
+            bool near = HandNear();
+            if (near != handNear)
+            {
+                handNear = near;
+                SetZTest();
+            }
+        }
+
+        // Alguna mano (la punta del indice o el punto de agarre) cerca de
+        // la caja que ocupa el panel.
+        private bool HandNear()
+        {
+            Bounds bounds = new Bounds();
+            bool any = false;
+            foreach (Renderer r in renderers)
+            {
+                if (r == null || !r.enabled || !r.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                if (any)
+                {
+                    bounds.Encapsulate(r.bounds);
+                }
+                else
+                {
+                    bounds = r.bounds;
+                    any = true;
+                }
+            }
+
+            if (!any)
+            {
+                return false;
+            }
+
+            bounds.Expand(handNearDistance * 2f);
+            for (int h = 0; h < 2; h++)
+            {
+                if (SimpleGrab.TryGetFingertip(h == 0, out Vector3 tip) && bounds.Contains(tip))
+                {
+                    return true;
+                }
+
+                if (SimpleGrab.TryGetHand(h == 0, out Vector3 grab, out bool _) && bounds.Contains(grab))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void SetZTest()
+        {
+            float mode = (float)(handNear ? CompareFunction.LessEqual : CompareFunction.Always);
+            foreach (Material material in materials)
+            {
+                if (material != null)
+                {
+                    material.SetFloat("unity_GUIZTestMode", mode);
+                    material.SetFloat("_ZTest", mode);
+                }
+            }
         }
 
         public void Apply()
@@ -42,8 +117,9 @@ namespace SojaExiles
                 shader = Shader.Find("UI/Default");
             }
 
-            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            renderers = GetComponentsInChildren<Renderer>(true);
             lastCount = renderers.Length;
+            materials.Clear();
             List<Entry> entries = new List<Entry>();
 
             foreach (Renderer r in renderers)
@@ -90,8 +166,7 @@ namespace SojaExiles
                     continue;
                 }
 
-                material.SetFloat("unity_GUIZTestMode", (float)CompareFunction.Always);
-                material.SetFloat("_ZTest", (float)CompareFunction.Always);
+                materials.Add(material);
                 // Frente del panel = -Z local: mas negativo, mas cerca del jugador.
                 float depth = transform.InverseTransformPoint(r.transform.position).z;
                 entries.Add(new Entry { material = material, depth = depth, isText = isText });
@@ -107,6 +182,8 @@ namespace SojaExiles
             {
                 entries[i].material.renderQueue = BaseQueue + i;
             }
+
+            SetZTest();
         }
 
         private struct Entry

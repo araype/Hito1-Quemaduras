@@ -108,6 +108,11 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
   charco (solo aviso; no se probó), gesto de pausa, que los paneles de la
   tía no estorben mientras se le sostiene el brazo, **la llamada al 106**
   (llevar el celular a la oreja) y **sacar el anillo** con la mano ofrecida.
+- **Botones con el dedo y brazo de la tía** (`QUEMADURA_INMERSION.md`,
+  sección 15): con controles y sin ellos, que el círculo del cursor
+  coincida con la punta del índice (si no, ajustar
+  `SimpleGrab.controllerFingertipOffset`), que el dedo se vea delante de
+  la tarjeta y que llevar a la tía del brazo ya no la contorsione.
 - Medir **72 fps** con agua, vapor, tela y ampollas (RNF-01).
 - Detalles abiertos: la tarjeta puede subir por encima de la cabeza de la
   tía cuando ella está justo delante; la olla volcada cae al piso y el

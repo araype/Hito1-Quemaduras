@@ -491,3 +491,41 @@ mientras ella espera una respuesta (`PatientDialog`, `EmergencyCall`).
 
 **Solo compilado** (Roslyn fuera de Unity). Qué probar primero:
 `docs/PENDIENTES.md`, sección 0. Voces por regenerar: `docs/VOCES.md`.
+
+## 15. Botones con el dedo y brazo más natural (`mejoras-demo`, 2026-11-07)
+
+Pedido tras probar `corregir-bugs` en el Quest: costaba apretar los botones
+(sobre todo en el resumen), la mano "se transparentaba" al acercarse a la
+tarjeta y el brazo de la tía se veía rígido y se contorsionaba al llevarla.
+
+| Qué | Cómo funciona | Script |
+|---|---|---|
+| Botones con la punta del índice | El botón cuenta la punta del índice de la mano visible (con manos o con controles, que también dibujan una mano). Antes solo contaba un punto invisible a la altura de la palma, 3 cm delante del control, y la mano dibujada llegaba ~10 cm más adelante. El dedo cuenta desde 3,5 cm delante del botón hasta 3 cm detrás. Sigue valiendo la esfera de la mano. | `SimpleGrab.TryGetFingertip`, `controllerFingertipOffset`, `TouchButton` |
+| Cursor del dedo | Círculo sobre la tarjeta donde apunta el dedo, cuando está a menos de 20 cm de un botón: se achica al acercarse y se pone celeste dentro del botón (mientras se llena la barra). Lo agrega cada botón a su panel. | `PanelFingerCursor` |
+| La tarjeta ya no tapa la mano | Las tarjetas se dibujan encima de todo (para que no las tapen paredes ni la tía) y por eso tapaban también la mano. Con una mano a menos de 25 cm del panel vuelven a usar la profundidad normal: el dedo se ve delante. | `OverlayPanel.handNearDistance` |
+| Mano relajada | Los dedos se doblan un poco (más el meñique que el índice) y la muñeca cede hacia la palma. Antes quedaban rectos, como en la T-pose. Bajo el chorro la mano sigue plana. | `PatientBody.fingerCurlDegrees`, `wristRelaxDegrees`, `RelaxHand` |
+| Menos contorsión | Torso: inclinación máxima 24° (antes 35°) más 10° si no llega (antes 15°), giro 15° (antes 25°). El brazo se estira hasta el 92 % (antes 97 %) y da un paso al 72 % (antes 85 %). Se suelta si se tira a más de 45 cm (antes 60). La mano no sube más de 25 cm sobre el hombro. Los campos tienen nombre nuevo para que no los pisen los valores guardados en la escena: **no volver a los nombres viejos**. | `PatientReach.armReach`, `stepAtFraction`, `leanLimit`, `leanReachExtra`, `twistLimit`; `PatientBody.maxAboveShoulder`; `PatientPhysics` |
+
+Jugar **sin controles** ya era posible: el proyecto acepta manos y
+controles (`OculusProjectConfig`, `handTrackingSupport`). Con las manos se
+agarra con la pinza de pulgar e índice y se camina con la pinza del medio o
+del anular (`VRLocomotion`).
+
+### Probar
+
+1. Menú de inicio: acercar el índice a "Modo guiado". Aparece el círculo,
+   se achica y se pone celeste al tocar; el dedo se ve delante de la tarjeta.
+2. Lo mismo en el resumen ("Repetir práctica", "Otro caso") y en la pausa.
+3. Dejar los controles y repetir con las manos.
+4. Llevar a la tía del brazo: dedos algo doblados, sin doblarse de cintura
+   ni girar el torso de más; da un paso antes de estirar el brazo recto.
+5. Llevarla al chorro: la mano debe seguir llegando bajo el agua.
+
+### Valores para ajustar
+
+- `SimpleGrab > Controller Fingertip Offset` (si con controles el círculo
+  no coincide con la punta del dedo).
+- `PanelFingerCursor > Show Distance / Near Diameter / Far Diameter`.
+- `OverlayPanel > Hand Near Distance`.
+- `PatientBody > Finger Curl Degrees / Wrist Relax Degrees / Max Above Shoulder`.
+- `PatientReach > Arm Reach / Step At Fraction / Lean Limit / Lean Reach Extra / Twist Limit`.

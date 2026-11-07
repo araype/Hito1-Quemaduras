@@ -113,6 +113,9 @@ namespace SojaExiles
         {
             public float side;              // +1 derecha, -1 izquierda
             public Transform shoulder, upper, fore, hand, middle1, thumb1;
+            // Falanges de cada dedo (pulgar, indice, medio, anular, menique),
+            // de la base a la punta; la ultima es el extremo, sin rotar.
+            public Transform[][] fingers;
             public float upperLength, foreLength;
             public Vector3 upperAxisLocal, upperHingeLocal;
             public Vector3 foreAxisLocal, foreHingeLocal;
@@ -229,6 +232,15 @@ namespace SojaExiles
         [Tooltip("Cuanto puede cruzar la mano al otro lado del cuerpo (m), al tirar del brazo.")]
         public float crossBodyLimit = 0.08f;
 
+        [Tooltip("Cuanto puede subir la mano por encima del hombro (m), al tirar del brazo.")]
+        public float maxAboveShoulder = 0.25f;
+
+        [Header("Mano relajada")]
+        [Tooltip("Flexion de los dedos (grados por falange). 0 = dedos rectos, como en la T-pose.")]
+        public float fingerCurlDegrees = 14f;
+        [Tooltip("Flexion de la muneca hacia la palma con el brazo colgando o llevado (grados).")]
+        public float wristRelaxDegrees = 10f;
+
         // Lleva un punto al espacio que la mano puede alcanzar de verdad:
         // dentro del largo del brazo, no detras de la espalda y no dentro del
         // torso. Lo usan los scripts que dejan al jugador arrastrar la mano.
@@ -283,6 +295,12 @@ namespace SojaExiles
                 if (lateral < -crossBodyLimit)
                 {
                     point += ownSide * (-crossBodyLimit - lateral);
+                }
+
+                // Con la mano quemada no la levanta por encima de la cabeza.
+                if (point.y > shoulderPos.y + maxAboveShoulder)
+                {
+                    point.y = shoulderPos.y + maxAboveShoulder;
                 }
             }
 
@@ -375,6 +393,8 @@ namespace SojaExiles
                 middle1 = Get("LeftHandMiddle1"),
                 thumb1 = Get("LeftHandThumb1")
             };
+            right.fingers = FindFingers("Right", Get);
+            left.fingers = FindFingers("Left", Get);
             rightLeg = new Leg
             {
                 upLeg = Get("RightUpLeg"), leg = Get("RightLeg"), foot = Get("RightFoot"), toe = Get("RightToeBase")
@@ -389,6 +409,31 @@ namespace SojaExiles
                 && left.upper != null && left.fore != null && left.hand != null
                 && rightLeg.upLeg != null && rightLeg.leg != null && rightLeg.foot != null
                 && leftLeg.upLeg != null && leftLeg.leg != null && leftLeg.foot != null;
+        }
+
+        private static readonly string[] FingerNames = { "Thumb", "Index", "Middle", "Ring", "Pinky" };
+
+        private static Transform[][] FindFingers(string side, System.Func<string, Transform> get)
+        {
+            Transform[][] result = new Transform[FingerNames.Length][];
+            for (int f = 0; f < FingerNames.Length; f++)
+            {
+                List<Transform> chain = new List<Transform>();
+                for (int i = 1; i <= 4; i++)
+                {
+                    Transform t = get(side + "Hand" + FingerNames[f] + i);
+                    if (t == null)
+                    {
+                        break;
+                    }
+
+                    chain.Add(t);
+                }
+
+                result[f] = chain.ToArray();
+            }
+
+            return result;
         }
 
         // Lee la T-pose de las matrices de bind de la malla. No depende de la
@@ -675,10 +720,18 @@ namespace SojaExiles
             }
 
             float palmDown = arm.side > 0f ? rightPalmDown : leftPalmDown;
-            if (palmDown > 0.001f && arm.currentMode == ArmMode.Reach)
+            float flat = arm.currentMode == ArmMode.Reach ? Mathf.Clamp01(palmDown) : 0f;
+            if (flat > 0.001f)
             {
-                LayHandFlat(arm, Mathf.Clamp01(palmDown));
+                LayHandFlat(arm, flat);
             }
+
+            // Mano relajada: la muneca cede un poco hacia la palma y los dedos
+            // se doblan levemente (en la T-pose quedaban rectos y rigidos).
+            // Bajo el chorro la mano va mas plana; en el cuello, la muneca la
+            // fija AimHandAtNeck.
+            RelaxHand(arm, wristRelaxDegrees * (1f - flat) * (1f - neckWeight),
+                fingerCurlDegrees * (1f - 0.5f * flat));
 
             // Sacudir la mano (reflejo al quemarse): flexion de la muneca.
             float shake = arm.side > 0f ? rightHandShake : leftHandShake;
@@ -788,6 +841,49 @@ namespace SojaExiles
             Quaternion wanted = Quaternion.LookRotation(fingers, dorsum)
                 * Quaternion.Inverse(Quaternion.LookRotation(arm.fingersLocal, arm.dorsumLocal));
             arm.hand.rotation = Quaternion.Slerp(arm.hand.rotation, wanted, weight);
+        }
+
+        // Cuanto se dobla cada dedo (pulgar a menique) y cada falange.
+        private static readonly float[] FingerCurlShare = { 0.35f, 0.8f, 1f, 1.15f, 1.3f };
+        private static readonly float[] PhalanxCurlShare = { 0.8f, 1.2f, 0.8f };
+
+        private void RelaxHand(Arm arm, float wristDegrees, float fingerDegrees)
+        {
+            Vector3 fingersDir = arm.hand.rotation * arm.fingersLocal;
+            Vector3 palm = -(arm.hand.rotation * arm.dorsumLocal);
+            if (Mathf.Abs(wristDegrees) > 0.01f)
+            {
+                Vector3 axis = Vector3.Cross(fingersDir, palm);
+                if (axis.sqrMagnitude > 1e-8f)
+                {
+                    arm.hand.rotation = Quaternion.AngleAxis(wristDegrees, axis.normalized) * arm.hand.rotation;
+                    palm = -(arm.hand.rotation * arm.dorsumLocal);
+                }
+            }
+
+            if (arm.fingers == null || fingerDegrees < 0.01f)
+            {
+                return;
+            }
+
+            for (int f = 0; f < arm.fingers.Length; f++)
+            {
+                Transform[] chain = arm.fingers[f];
+                for (int i = 0; i + 1 < chain.Length && i < PhalanxCurlShare.Length; i++)
+                {
+                    // Gira la falange hacia la palma alrededor de su propia
+                    // bisagra (perpendicular al hueso y a la palma).
+                    Vector3 dir = chain[i + 1].position - chain[i].position;
+                    Vector3 axis = Vector3.Cross(dir, palm);
+                    if (axis.sqrMagnitude < 1e-10f)
+                    {
+                        continue;
+                    }
+
+                    float angle = fingerDegrees * FingerCurlShare[f] * PhalanxCurlShare[i];
+                    chain[i].rotation = Quaternion.AngleAxis(angle, axis.normalized) * chain[i].rotation;
+                }
+            }
         }
 
         private void AimHandAtNeck(Arm arm, Vector3 torsoUp, Vector3 torsoFwd, Vector3 outward, float weight)

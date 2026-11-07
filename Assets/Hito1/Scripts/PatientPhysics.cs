@@ -286,7 +286,9 @@ namespace SojaExiles
                 {
                     // Sigue a la mano del jugador como un resorte y, si se
                     // tira mas lejos que esto, se suelta (y ella se queja).
-                    grabbable.breakDistance = 0.6f;
+                    // 0,45 m: antes (0,6) el brazo y el torso se estiraban
+                    // de forma antinatural antes de soltarse.
+                    grabbable.breakDistance = 0.45f;
                     grabbable.followSharpness = 14f;
                     grabbable.maxFollowSpeed = 1.8f;
                 }
