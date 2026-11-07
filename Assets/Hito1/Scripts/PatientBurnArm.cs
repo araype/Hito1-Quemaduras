@@ -54,6 +54,8 @@ namespace SojaExiles
         public float showSeconds = 3.2f;
         [Tooltip("Cuanto adelanta la mano desde el pecho hacia el jugador (m); menos si esta muy cerca.")]
         public float showDistance = 0.33f;
+        [Tooltip("Segundos que deja la mano ofrecida para que le saquen el anillo.")]
+        public float ringOfferSeconds = 8f;
         [Tooltip("Segundos que deja la mano donde la soltaron antes de volver a protegerla.")]
         public float holdAfterRelease = 2.5f;
 
@@ -261,14 +263,47 @@ namespace SojaExiles
             if (showHandAfterBurn)
             {
                 yield return new WaitForSeconds(Mathf.Max(0f, showAfterBurn - stepAwayDelay));
-                if (ShowHand(showSeconds))
+                // Con el anillo puesto deja la mano a la vista mas tiempo y pide
+                // que se lo saquen: es el momento facil (antes se pedia con la
+                // mano bajo el chorro y costaba mucho). Las frases esperan a que
+                // haya silencio; la mano se ofrece desde ya.
+                BurnPatientReactions reactions = GetComponent<BurnPatientReactions>();
+                PatientRing ring = GetComponent<PatientRing>();
+                bool askRing = ring != null && !ring.Removed && !ring.Stuck;
+                if (ShowHand(askRing ? showSeconds + ringOfferSeconds : showSeconds) && reactions != null)
                 {
-                    BurnPatientReactions reactions = GetComponent<BurnPatientReactions>();
-                    if (reactions != null)
+                    yield return SayWhenQuiet(reactions, "voz_mira_mano", 3f);
+                    if (askRing && !ring.Removed && !ring.Stuck && Current == Mode.Show)
                     {
-                        reactions.Say("voz_mira_mano", true);
+                        yield return SayWhenQuiet(reactions, "voz_anillo_pide", 3f);
                     }
                 }
+            }
+        }
+
+        // Dice la frase cuando ni ella ni el narrador estan hablando (justo
+        // despues del accidente suenan el grito y la narracion), esperando a
+        // lo sumo 'maxWait' segundos.
+        private IEnumerator SayWhenQuiet(BurnPatientReactions reactions, string line, float maxWait)
+        {
+            float limit = Time.time + maxWait;
+            while (Time.time < limit && (reactions.IsSpeaking
+                || (BurnGuide.Instance != null && BurnGuide.Instance.Speaking)))
+            {
+                yield return null;
+            }
+
+            reactions.Say(line, true);
+            AudioClip clip = Hito1FX.Clip(line);
+            yield return new WaitForSeconds(clip != null ? clip.length : 0.5f);
+        }
+
+        // Deja de mostrar la mano en un momento (al sacarle el anillo).
+        public void EndShow()
+        {
+            if (Current == Mode.Show)
+            {
+                showUntil = Mathf.Min(showUntil, Time.time + 0.6f);
             }
         }
 

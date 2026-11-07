@@ -108,12 +108,15 @@ namespace SojaExiles
                 hint = "Toca la perilla que brilla. Así nadie más se quema.", clip = "guia_apagar" },
             new StepInfo { id = StepId.AbrirAgua, title = "Abre el agua fría",
                 hint = "Es la llave del punto azul. Tócala con la mano.", clip = "guia_agua" },
+            // El anillo va antes del chorro: ella ofrece la mano a la altura del
+            // pecho y se alcanza facil (bajo el agua costaba mucho). Si se lo
+            // salta, se puede sacar despues, tambien bajo el chorro.
+            new StepInfo { id = StepId.Anillo, title = "Quítale el anillo",
+                hint = "Antes de que se hinche. Acerca tu mano libre a su anillo y mantén apretado el botón lateral (o junta pulgar e índice) hasta que salga.",
+                clip = "guia_anillo" },
             new StepInfo { id = StepId.LlevarAlAgua, title = "Lleva su mano al chorro",
                 hint = "Tómala del antebrazo, no de la mano quemada. Suéltala cerca del chorro y ella la pondrá bajo el agua.",
                 clip = "guia_llevar" },
-            new StepInfo { id = StepId.Anillo, title = "Quítale el anillo",
-                hint = "Antes de que se hinche. Acerca tu mano libre al punto dorado y mantén apretado el botón lateral (o junta pulgar e índice) hasta que salga.",
-                clip = "guia_anillo" },
             new StepInfo { id = StepId.Abrigar, title = "Abrígala con la chompa",
                 hint = "El agua fría también le enfría el cuerpo. Suelta la chompa sobre sus hombros.", clip = "guia_abrigo" },
             // Mientras se enfria (antes ese minuto quedaba sin nada que hacer).
@@ -643,7 +646,6 @@ namespace SojaExiles
             BurnSequenceManager.BurnState s = burnSequence.CurrentState;
             switch (id)
             {
-                case StepId.Anillo:
                 case StepId.Abrigar:
                 case StepId.Esperar:
                     return coolingStarted;
@@ -797,13 +799,8 @@ namespace SojaExiles
 
                     break;
                 case StepId.Anillo:
-                    Transform r = ring != null ? FindRing() : null;
-                    if (r != null)
-                    {
-                        points.Add(r.position);
-                        radius = 0.03f;
-                    }
-
+                    // Sin brillo propio: el anillo ya tiene su punto dorado, y la
+                    // esfera de la guia tapaba el anillo y su indicacion.
                     break;
                 case StepId.Abrigar:
                     SweaterItem sweater = FindObjectOfType<SweaterItem>();

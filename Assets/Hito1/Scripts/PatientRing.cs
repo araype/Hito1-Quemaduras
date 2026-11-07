@@ -8,7 +8,12 @@ namespace SojaExiles
     // anillo (un punto dorado marca donde) y manteniendo apretado el boton
     // lateral o la pinza, como al agarrar. Mientras se aprieta el anillo
     // avanza por el dedo y el control vibra; si se suelta antes, vuelve.
-    // Apretar ahi no agarra la mano de la paciente (SimpleGrab.AddGrabBlocker).
+    // Antes costaba entender cuando y como: ahora, al acercar la mano libre,
+    // ella ofrece la mano (PatientBurnArm.ShowHand, si no esta bajo el agua)
+    // y junto al anillo aparecen "Manten apretado para sacarlo" y el circulo
+    // vacio del progreso. La zona alcanza casi toda la mano: apretar ahi
+    // nunca agarra la mano de la paciente ni la saca del agua
+    // (SimpleGrab.AddGrabBlocker).
     // Si la mano ya se hincho demasiado (BurnInjury), el anillo no sale.
     // Al salir queda como objeto suelto que se puede agarrar.
     // Va en el paciente (el objeto con PatientBody).
@@ -26,9 +31,11 @@ namespace SojaExiles
 
         [Header("Sacarlo")]
         [Tooltip("Segundos que hay que mantener apretado junto al anillo.")]
-        public float holdSeconds = 1.5f;
+        public float holdSeconds = 1f;
         [Tooltip("Distancia del punto de agarre al anillo para tirar de el (m).")]
-        public float grabZone = 0.08f;
+        public float grabZone = 0.1f;
+        [Tooltip("Distancia de la mano libre al anillo a la que ella ofrece la mano y aparece la indicacion (m).")]
+        public float offerDistance = 0.35f;
         [Tooltip("Cuanto avanza el anillo por el dedo mientras se tira (m).")]
         public float pullPreview = 0.012f;
         [Tooltip("Con la mano hinchada por encima de esto (0 a 1), ya no sale.")]
@@ -55,6 +62,8 @@ namespace SojaExiles
         private BurnHaptics haptics;
         private LineRenderer progressTrack, progressArc;
         private Transform head;
+        private Transform hintLabel;
+        private PatientBurnArm arm;
 
         private void Awake()
         {
@@ -89,6 +98,53 @@ namespace SojaExiles
 
             progressTrack = CreateArc("ProgresoAnilloFondo", new Color(1f, 1f, 1f, 0.3f), 0.004f);
             progressArc = CreateArc("ProgresoAnillo", pullColor, 0.007f);
+            hintLabel = CreateHint();
+            arm = GetComponent<PatientBurnArm>();
+        }
+
+        // Indicacion junto al anillo (dibujada encima de todo, como los paneles).
+        private Transform CreateHint()
+        {
+            GameObject go = new GameObject("IndicacionAnillo");
+            go.AddComponent<NoAutoCollider>();
+            go.AddComponent<OverlayPanel>();
+            VRPanelKit.CardPanel(go.transform, Vector2.zero, new Vector2(0.15f, 0.056f));
+            VRPanelKit.Text(go.transform, "Mantén apretado\npara sacarlo", new Vector2(0f, 0.017f), 0.017f,
+                Color.white, TextAnchor.UpperCenter, TextAlignment.Center);
+            go.SetActive(false);
+            return go.transform;
+        }
+
+        // La indicacion queda sobre el anillo, mirando al jugador.
+        private void UpdateHint(bool show)
+        {
+            if (hintLabel == null)
+            {
+                return;
+            }
+
+            if (hintLabel.gameObject.activeSelf != show)
+            {
+                hintLabel.gameObject.SetActive(show);
+            }
+
+            if (!show)
+            {
+                return;
+            }
+
+            if (head == null)
+            {
+                head = VRPanelKit.Head();
+            }
+
+            Vector3 toHead = head != null ? head.position - ring.position : Vector3.up;
+            Vector3 pos = ring.position + Vector3.up * 0.09f + toHead.normalized * 0.03f;
+            hintLabel.position = pos;
+            if (head != null)
+            {
+                hintLabel.rotation = Quaternion.LookRotation(pos - head.position, Vector3.up);
+            }
         }
 
         private static Transform FindBone(Transform hand, string suffix)
@@ -162,6 +218,7 @@ namespace SojaExiles
             bool active = Active;
             int pulling = -1;
             bool hovering = false;
+            bool near = false;
             if (active)
             {
                 for (int h = 0; h < 2; h++)
@@ -173,6 +230,7 @@ namespace SojaExiles
                     }
 
                     float distance = Vector3.Distance(point, ring.position);
+                    near |= distance < offerDistance;
                     if (pressed && distance < grabZone)
                     {
                         pulling = h;
@@ -226,7 +284,15 @@ namespace SojaExiles
                 }
             }
 
-            UpdateProgress(active && (pulling >= 0 || held > 0.02f));
+            // Al acercar la mano libre: ella la ofrece (si no esta bajo el
+            // agua) y se ve como sacarlo, antes de empezar a apretar.
+            if (active && near && arm != null && arm.Current != PatientBurnArm.Mode.InWater)
+            {
+                arm.ShowHand(1.5f);
+            }
+
+            UpdateHint(active && near);
+            UpdateProgress(active && (near || pulling >= 0 || held > 0.02f));
 
             if (!active || pulling < 0)
             {
@@ -340,6 +406,13 @@ namespace SojaExiles
             if (marker != null)
             {
                 Destroy(marker.gameObject);
+            }
+
+            UpdateHint(false);
+            UpdateProgress(false);
+            if (arm != null)
+            {
+                arm.EndShow();
             }
 
             // Queda como objeto suelto: cae y se puede recoger.

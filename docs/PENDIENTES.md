@@ -170,6 +170,16 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   el agua o el jugador la sostiene) y otra vez en la llamada, antes de la
   pregunta de las ampollas. Voces nuevas `voz_mira_mano` y
   `voz_aqui_mirala` (guion en `docs/VOCES.md`).
+- [x] **Sacar el anillo era difícil y no se entendía cuándo ni cómo** (prueba en
+  el visor, 2026-11-06): se pedía con la mano bajo el chorro, el cómo solo
+  estaba en la tarjeta y tomarle la mano cerca del anillo la agarraba del brazo
+  y la sacaba del agua. Ahora el paso va antes de llevarla al chorro; tras
+  mostrar la mano, la tía pide el anillo (`voz_anillo_pide`, falta generarla)
+  y deja la mano ofrecida 8 s; al acercar la mano libre la vuelve a ofrecer
+  (si no está en el agua) y junto al anillo aparecen "Mantén apretado para
+  sacarlo" y el círculo vacío del progreso; zona de 10 cm y 1 s de sostener
+  (`PatientRing`, `PatientBurnArm`, `BurnGuide`). Si se lo salta, se puede
+  sacar bajo el chorro. **Falta probarlo con las manos en el visor.**
 - [ ] Visto en la prueba: después del accidente la olla terminó en el piso
   (y el charco del piso es grande). Revisar `PotAccident` tras volcarse.
 - [x] **Voces más naturales** de la paciente y el narrador: las 45 frases
