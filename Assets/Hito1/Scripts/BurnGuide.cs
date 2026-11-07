@@ -128,7 +128,8 @@ namespace SojaExiles
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
                 hint = "Mantén su mano bajo el agua hasta que el reloj complete las 20 marcas.", clip = "guia_esperar" },
             new StepInfo { id = StepId.Cubrir, title = "Cubre la quemadura",
-                hint = "Con film o una gasa, sin apretar. Suéltalo sobre su mano.", clip = "guia_cubrir" }
+                hint = "Apoya la gasa encima y mantenla 1 segundo. Con el film: sostén el rollo, tira de un trozo con la otra mano y apóyalo sin envolver.",
+                clip = "guia_cubrir" }
         };
 
         // Paso de decision sin celular (panel de decision medica al final).
@@ -904,6 +905,9 @@ namespace SojaExiles
                     break;
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:
                     Correct("guia_err_temprano", "Todavía no: primero termina de enfriar la quemadura.");
+                    break;
+                case BurnSequenceManager.BurnEvent.FilmWrapped:
+                    Correct("guia_err_envolver", "No la envuelvas: apoya el film encima. La mano se va a hinchar.");
                     break;
             }
         }

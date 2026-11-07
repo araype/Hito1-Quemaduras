@@ -560,7 +560,10 @@ namespace SojaExiles
                     // en la mano y ella hablaria encima del operador).
                     if (cooledTime >= 0f && Time.time - cooledTime > withdrawAfterCooled && !EmergencyCall.InCall)
                     {
+                        // Ya enfriada: la saca del agua y la ofrece para que se la
+                        // cubran (protegida contra el pecho costaba alcanzarla).
                         Current = Mode.Guard;
+                        ShowHand(6f);
                     }
 
                     break;

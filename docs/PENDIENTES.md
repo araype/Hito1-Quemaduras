@@ -180,6 +180,16 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   sacarlo" y el círculo vacío del progreso; zona de 10 cm y 1 s de sostener
   (`PatientRing`, `PatientBurnArm`, `BurnGuide`). Si se lo salta, se puede
   sacar bajo el chorro. **Falta probarlo con las manos en el visor.**
+- [x] **Cubrir la quemadura no tenía una acción natural** (bastaba soltar el film
+  o la gasa cerca y la mano entera quedaba envuelta al instante). Ahora, como en
+  la vida real, se apoya sobre la quemadura sin envolver: al sacarla del agua
+  la tía ofrece la mano; la gasa se mantiene encima 1 s (silueta translúcida,
+  "Mantén encima de la quemadura" y círculo de progreso, `HoldHint`); el film
+  se saca tirando del borde con la otra mano (la lámina se estira y se corta a
+  los 18 cm) y se apoya igual; dar vueltas alrededor de la mano dispara la
+  corrección "No la envuelvas" (`FilmWrapped`, sin restar puntos). Cubre solo
+  la quemadura y un poco alrededor (`HandSkinMesh.CopyWhere`). Voz nueva
+  `guia_err_envolver` pendiente (2026-11-06; **falta probarlo con las manos**).
 - [ ] Visto en la prueba: después del accidente la olla terminó en el piso
   (y el charco del piso es grande). Revisar `PotAccident` tras volcarse.
 - [x] **Voces más naturales** de la paciente y el narrador: las 45 frases

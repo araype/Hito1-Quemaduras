@@ -53,7 +53,8 @@ namespace SojaExiles
             StepMissed,         // al terminar, falto un paso del protocolo (detalle: el paso)
             BurnedHandGrabbed,  // se la tomo de la mano quemada en vez del antebrazo
             EmergencyCalled,    // se llamo al 106 (EmergencyCall)
-            WrongCallInfo       // al 106 se le describio mal la quemadura (detalle: TieneAmpollas o SinAmpollas)
+            WrongCallInfo,      // al 106 se le describio mal la quemadura (detalle: TieneAmpollas o SinAmpollas)
+            FilmWrapped         // se dio vueltas al film alrededor de la mano en vez de apoyarlo (CoverItem)
         }
 
         public enum Severity
