@@ -511,6 +511,16 @@ controles (`OculusProjectConfig`, `handTrackingSupport`). Con las manos se
 agarra con la pinza de pulgar e índice y se camina con la pinza del medio o
 del anular (`VRLocomotion`).
 
+**Probado en el editor** (Play con Quest Link, 2026-11-07): con la punta del
+dedo simulada por código delante de "Modo guiado", a 8 cm aparece el
+círculo, a 2 cm se pone celeste y se llena la barra, y al completarse elige
+el modo guiado; con las manos reales (seguimiento de manos por Quest Link)
+el círculo sigue a la punta del dedo. Con el accidente forzado y la llave
+fría abierta, la tía sigue llegando al chorro (estado `Cooling`, torso a
+34°) con la mano plana y los dedos algo doblados. **Falta en el Quest:**
+ver el dedo delante de la tarjeta, apretar con controles y llevarla del
+brazo con las manos.
+
 ### Probar
 
 1. Menú de inicio: acercar el índice a "Modo guiado". Aparece el círculo,
