@@ -13,10 +13,14 @@ namespace SojaExiles
     // El enfriamiento de 20 minutos se representa en 'coolingSeconds' reales
     // (el reloj de pared, CoolingClock). Si la mano sale del agua, el reloj se
     // pausa y cuenta como error.
-    // Al cubrir la quemadura pregunta si hay que ir al centro de salud
-    // (MedicalDecisionPanel); con esa respuesta revisa los pasos que
-    // faltaron, termina (Success), muestra el resumen (BurnSummaryPanel) y
-    // guarda la sesion en un JSON.
+    // La decision de ir al centro de salud se toma en la llamada al 106
+    // (EmergencyCall), en cualquier momento despues del accidente. La
+    // practica termina cuando la quemadura esta cubierta y ya se llamo: revisa
+    // los pasos que faltaron, termina (Success), muestra el resumen
+    // (BurnSummaryPanel) y guarda la sesion en un JSON. Si se cubre sin haber
+    // llamado, espera la llamada un rato ('callGraceSeconds') y, si no llega,
+    // termina con ese paso faltante. Sin celular en la escena, al cubrir
+    // pregunta con el panel de antes (MedicalDecisionPanel).
     // Va en el objeto de BurnSequenceManager.
     public class BurnProtocol : MonoBehaviour
     {
@@ -52,8 +56,11 @@ namespace SojaExiles
         [Tooltip("Segundos reales que representan los 20 minutos de enfriamiento.")]
         public float coolingSeconds = 90f;
         public float simulatedMinutes = 20f;
-        [Tooltip("Segundos despues de cubrir hasta que aparece la pregunta del centro de salud.")]
+        [Tooltip("Segundos de cierre (la tia agradece) entre completar todo y el resumen.")]
         public float decisionDelay = 5f;
+        [Tooltip("Si se cubre sin haber llamado al 106: segundos que espera la llamada (modo guiado y evaluacion).")]
+        public float callGraceSecondsGuided = 90f;
+        public float callGraceSeconds = 40f;
         public bool saveSessionLog = true;
 
         [Header("Puntaje")]
@@ -68,7 +75,7 @@ namespace SojaExiles
             "Retirar el anillo",
             "Abrigar a la persona",
             "Cubrir con film o gasa",
-            "Decidir si necesita atención médica"
+            "Llamar al 106 y decidir si necesita atención médica"
         };
 
         public bool Finished { get; private set; }
@@ -88,6 +95,8 @@ namespace SojaExiles
         private BurnContactDetector coolingDetector;
         private bool ringStuck;
         private bool decisionShown;
+        private string pendingDecision;
+        private bool finishing;
 
         public bool IsDone(Step step)
         {
@@ -257,10 +266,21 @@ namespace SojaExiles
                     break;
                 case BurnSequenceManager.BurnState.Covered:
                     Mark(Step.Cubrir);
-                    if (!decisionShown)
+                    if (pendingDecision != null)
                     {
-                        decisionShown = true;
-                        StartCoroutine(ShowDecision());
+                        StartCoroutine(FinishSoon(pendingDecision));
+                    }
+                    else if (EmergencyCall.Instance == null)
+                    {
+                        if (!decisionShown)
+                        {
+                            decisionShown = true;
+                            StartCoroutine(ShowDecision());
+                        }
+                    }
+                    else
+                    {
+                        StartCoroutine(WaitForCall());
                     }
 
                     break;
@@ -329,9 +349,50 @@ namespace SojaExiles
                 });
             }
 
-            if (e == BurnSequenceManager.BurnEvent.MedicalDecision)
+            if (e == BurnSequenceManager.BurnEvent.MedicalDecision && pendingDecision == null)
             {
-                Finish(detail);
+                // Con la llamada al 106 se decide antes de cubrir: se termina
+                // recien cuando la quemadura este cubierta.
+                pendingDecision = detail;
+                if (burnSequence.CurrentState == BurnSequenceManager.BurnState.Covered)
+                {
+                    StartCoroutine(FinishSoon(detail));
+                }
+            }
+        }
+
+        // Todo listo: un momento de cierre (la tia agradece) y el resumen.
+        private IEnumerator FinishSoon(string decision)
+        {
+            if (finishing)
+            {
+                yield break;
+            }
+
+            finishing = true;
+            while (EmergencyCall.InCall)
+            {
+                yield return null;
+            }
+
+            yield return new WaitForSeconds(decisionDelay);
+            Finish(decision);
+        }
+
+        // Se cubrio sin haber llamado al 106: se espera la llamada un rato.
+        private IEnumerator WaitForCall()
+        {
+            bool guided = BurnGuide.Instance == null || BurnGuide.Instance.Guided;
+            float limit = Time.time + (guided ? callGraceSecondsGuided : callGraceSeconds);
+            while (pendingDecision == null && (Time.time < limit || EmergencyCall.InCall))
+            {
+                yield return null;
+            }
+
+            if (pendingDecision == null && !finishing)
+            {
+                finishing = true;
+                Finish(null);
             }
         }
 
@@ -365,8 +426,18 @@ namespace SojaExiles
 
         private void Finish(string decision)
         {
+            if (Finished)
+            {
+                return;
+            }
+
             Decision = decision;
-            DecisionCorrect = (decision == "CentroDeSalud") == NeedsMedicalCare;
+            DecisionCorrect = decision != null && (decision == "CentroDeSalud") == NeedsMedicalCare;
+            if (decision == null)
+            {
+                // Nunca llamo al 106.
+                Missed(Step.DecisionMedica);
+            }
             if (DecisionCorrect)
             {
                 Mark(Step.DecisionMedica);
@@ -443,9 +514,15 @@ namespace SojaExiles
                             return "Retira anillos y pulseras antes de que la mano se hinche.";
                         case "Abrigar":
                             return "Abriga a la persona para que no se enfríe mientras enfrías la quemadura.";
+                        case "DecisionMedica":
+                            return "Pide ayuda: llama al 106 mientras enfrías la quemadura.";
                     }
 
                     break;
+                case BurnSequenceManager.BurnEvent.WrongCallInfo:
+                    return detail == "TieneAmpollas"
+                        ? "Mira bien la quemadura antes de describirla: tenía ampollas (segundo grado)."
+                        : "Mira bien la quemadura antes de describirla: no tenía ampollas.";
             }
 
             return e.ToString();

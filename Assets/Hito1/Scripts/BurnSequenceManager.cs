@@ -9,7 +9,8 @@ namespace SojaExiles
     //   accidente se dispara tras un retraso) -> Cooling (la mano esta bajo
     //   el chorro de agua fria) -> Cooled (se mantuvo bajo el agua el tiempo
     //   necesario) -> Covered (se cubrio con film o gasa, CoverItem) ->
-    //   Success (se decidio si va al centro de salud, MedicalDecisionPanel).
+    //   Success (se llamo al 106 y se decidio si va al centro de salud,
+    //   EmergencyCall; sin celular, MedicalDecisionPanel).
     // Los cambios Cooling/Cooled los hacen los BurnContactDetector del
     // trigger de la quemadura. Si se saca la mano del agua antes de tiempo,
     // vuelve a Burned y el enfriamiento empieza de cero.
@@ -50,7 +51,9 @@ namespace SojaExiles
             CoolingInterrupted, // se saco la mano del agua antes de terminar de enfriar
             MedicalDecision,    // se decidio si va al centro de salud (detalle: CentroDeSalud o Casa)
             StepMissed,         // al terminar, falto un paso del protocolo (detalle: el paso)
-            BurnedHandGrabbed   // se la tomo de la mano quemada en vez del antebrazo
+            BurnedHandGrabbed,  // se la tomo de la mano quemada en vez del antebrazo
+            EmergencyCalled,    // se llamo al 106 (EmergencyCall)
+            WrongCallInfo       // al 106 se le describio mal la quemadura (detalle: TieneAmpollas o SinAmpollas)
         }
 
         public enum Severity

@@ -94,6 +94,28 @@ emergencia).
 Para el narrador conviene `[calm]` al inicio de cada frase, y en los
 errores `[firm]` (corrige sin regañar).
 
+## Operador del 106 y narrador (llamada, pendientes de generar)
+
+La llamada al 106 (`EmergencyCall`) ya funciona sin estas voces: el texto se
+lee en el panel. Al generarlas, se reproducen solas desde el celular.
+Operador: voz adulta, profesional y calmada (de central de emergencias).
+Usa `[calm]` en todas; en `op_agua_no`, `[firm]`.
+
+| Archivo | Cuándo suena | Para ElevenLabs |
+|---|---|---|
+| `op_saludo` | Contesta | `[calm] SAMU, ciento seis. ¿Cuál es su emergencia?` |
+| `op_agua` | Pregunta por el agua | `[calm] Entiendo. ¿Ya tiene la mano bajo agua fría corriente?` |
+| `op_agua_si` | Ya está bajo el agua | `[calm] Muy bien. Manténgala bajo el agua unos veinte minutos.` |
+| `op_agua_no` | Todavía no | `[firm] Póngala ya bajo agua fría corriente, sin hielo, y manténgala ahí.` |
+| `op_ampollas` | Pide mirar la quemadura | `[calm] Mire bien la quemadura. ¿Tiene ampollas?` |
+| `op_centro` | Con ampollas | `[calm] Con ampollas en la mano, debe verla un médico. Cuando termine de enfriarla, cúbrala con film o una gasa limpia, sin apretar.` |
+| `op_casa` | Sin ampollas | `[calm] Si solo está roja y es pequeña, puede cuidarla en casa. Si salen ampollas o empeora, llévela al centro de salud.` |
+| `op_decidir` | Pregunta qué harán | `[calm] ¿Qué van a hacer?` |
+| `op_cierre` | Antes de colgar | `[warmly] De acuerdo. Si empeora o tiene dudas, vuelva a llamar. Cuídela mucho.` |
+| `guia_llamar` | Narrador: paso "Llama al 106" | `[calm] Mientras se enfría, pide ayuda. Toma el celular del mesón, llévalo a tu oreja y responde lo que te pregunten.` |
+
+Las 10 suman unos 700 créditos.
+
 ## Quejidos adicionales
 
 Ya generadas y en uso: `PainLines` de `BurnPatientReactions` alterna seis

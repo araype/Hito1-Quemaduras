@@ -116,11 +116,12 @@ namespace SojaExiles
             // Decision medica y que mejorar.
             float rx = right - colW + 0.022f;
             y = colTop - 0.022f;
-            VRPanelKit.Text(t, "<b>DECISIÓN MÉDICA</b>", new Vector2(rx, y), 0.016f, Accent);
+            VRPanelKit.Text(t, "<b>LLAMADA AL 106 Y DECISIÓN</b>", new Vector2(rx, y), 0.016f, Accent);
             y -= 0.036f;
-            string decision = p.Decision == "CentroDeSalud" ? "Ir al centro de salud" : "Cuidarla en casa";
+            string decision = p.Decision == null ? "No se llamó al 106"
+                : p.Decision == "CentroDeSalud" ? "Ir al centro de salud" : "Cuidarla en casa";
             VRPanelKit.Text(t, decision, new Vector2(rx, y), 0.021f, Color.white);
-            VRPanelKit.Text(t, p.DecisionCorrect ? "Correcta" : "Incorrecta",
+            VRPanelKit.Text(t, p.Decision == null ? "Faltó" : p.DecisionCorrect ? "Correcta" : "Incorrecta",
                 new Vector2(right - 0.022f, y - 0.002f), 0.016f, p.DecisionCorrect ? Green : Red,
                 TextAnchor.UpperRight, TextAlignment.Right);
             y -= 0.05f;

@@ -89,9 +89,9 @@ namespace SojaExiles
             LlevarAlAgua,
             Anillo,
             Abrigar,
+            Llamar,
             Esperar,
-            Cubrir,
-            Decidir
+            Cubrir
         }
 
         private class StepInfo
@@ -116,13 +116,29 @@ namespace SojaExiles
                 clip = "guia_anillo" },
             new StepInfo { id = StepId.Abrigar, title = "Abrígala con la chompa",
                 hint = "El agua fría también le enfría el cuerpo. Suelta la chompa sobre sus hombros.", clip = "guia_abrigo" },
+            // Mientras se enfria (antes ese minuto quedaba sin nada que hacer).
+            // Sin celular en la escena se decide al final con el panel
+            // (ver ShowStep).
+            new StepInfo { id = StepId.Llamar, title = "Llama al 106",
+                hint = "Mientras se enfría, toma el celular del mesón y llévalo a tu oreja. Responde lo que te pregunten.",
+                clip = "guia_llamar" },
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
                 hint = "Mantén su mano bajo el agua hasta que el reloj complete las 20 marcas.", clip = "guia_esperar" },
             new StepInfo { id = StepId.Cubrir, title = "Cubre la quemadura",
-                hint = "Con film o una gasa, sin apretar. Suéltalo sobre su mano.", clip = "guia_cubrir" },
-            new StepInfo { id = StepId.Decidir, title = "¿Necesita atención médica?",
-                hint = "Mira la quemadura: si tiene ampollas, debe verla un médico.", clip = "guia_decidir" }
+                hint = "Con film o una gasa, sin apretar. Suéltalo sobre su mano.", clip = "guia_cubrir" }
         };
+
+        // Paso de decision sin celular (panel de decision medica al final).
+        private static readonly StepInfo DecideWithoutPhone = new StepInfo { id = StepId.Llamar,
+            title = "¿Necesita atención médica?",
+            hint = "Mira la quemadura: si tiene ampollas, debe verla un médico.", clip = "guia_decidir" };
+
+        // La tarjeta se oculta mientras hay un panel con la pregunta (la
+        // tapaba) o durante la llamada al 106.
+        private static bool PanelOpen
+        {
+            get { return MedicalDecisionPanel.IsOpen || EmergencyCall.InCall; }
+        }
 
         private BurnProtocol protocol;
         private PatientBody patient;
@@ -176,6 +192,7 @@ namespace SojaExiles
         private bool currentIsReturn;
         private float stepShownTime;
         private bool coolingStarted;
+        private bool wasInCall;
         private readonly Dictionary<string, float> lastCorrection = new Dictionary<string, float>();
 
         private void Awake()
@@ -612,8 +629,10 @@ namespace SojaExiles
                     return cooled;
                 case StepId.Cubrir:
                     return s == BurnSequenceManager.BurnState.Covered || s == BurnSequenceManager.BurnState.Success;
-                case StepId.Decidir:
-                    return protocol == null || protocol.Finished;
+                case StepId.Llamar:
+                    return EmergencyCall.Instance != null
+                        ? EmergencyCall.Instance.Decided
+                        : protocol == null || protocol.Finished;
             }
 
             return true;
@@ -630,8 +649,8 @@ namespace SojaExiles
                     return coolingStarted;
                 case StepId.Cubrir:
                     return IsDone(StepId.Esperar);
-                case StepId.Decidir:
-                    return IsDone(StepId.Cubrir);
+                case StepId.Llamar:
+                    return EmergencyCall.Instance != null ? coolingStarted : IsDone(StepId.Cubrir);
             }
 
             return s != BurnSequenceManager.BurnState.Idle;
@@ -671,6 +690,26 @@ namespace SojaExiles
                 ring = patient.GetComponent<PatientRing>();
             }
 
+            // Durante la llamada habla el operador: el narrador calla y no
+            // recuerda pasos. Al colgar se muestra el paso que sigue.
+            if (EmergencyCall.InCall)
+            {
+                if (!wasInCall)
+                {
+                    wasInCall = true;
+                    StopNarration();
+                    ClearHighlights();
+                }
+
+                return;
+            }
+
+            if (wasInCall)
+            {
+                wasInCall = false;
+                currentStep = -2;
+            }
+
             int step = PickStep();
             bool isReturn = step >= 0 && Steps[step].id == StepId.LlevarAlAgua && coolingStarted;
             if (step != currentStep || isReturn != currentIsReturn)
@@ -702,6 +741,11 @@ namespace SojaExiles
             }
 
             StepInfo info = Steps[index];
+            if (info.id == StepId.Llamar && EmergencyCall.Instance == null)
+            {
+                info = DecideWithoutPhone;
+            }
+
             string title = isReturn ? "Vuelve a poner su mano bajo el agua" : info.title;
             string hint = isReturn ? "El reloj se pausó. Tómala del antebrazo y llévala al chorro." : info.hint;
             ShowCard($"Paso {index + 1} de {Steps.Length}", title, hint);
@@ -768,6 +812,15 @@ namespace SojaExiles
                         Renderer rr = sweater.GetComponentInChildren<Renderer>();
                         points.Add(rr != null ? rr.bounds.center : sweater.transform.position);
                         radius = 0.12f;
+                    }
+
+                    break;
+                case StepId.Llamar:
+                    Transform phone = EmergencyCall.Instance != null ? EmergencyCall.Instance.Phone : null;
+                    if (phone != null && !SimpleGrab.IsHeldObject(phone.GetComponent<Rigidbody>()))
+                    {
+                        points.Add(phone.position + Vector3.up * 0.01f);
+                        radius = 0.06f;
                     }
 
                     break;
@@ -1042,7 +1095,7 @@ namespace SojaExiles
             cardText.text = VRPanelKit.Wrap(text ?? "", 28);
             cardHint.text = VRPanelKit.Wrap(hint ?? "", 44);
             LayoutCard();
-            if (MedicalDecisionPanel.IsOpen)
+            if (PanelOpen)
             {
                 // El panel de decision ya trae la pregunta: la tarjeta lo tapaba.
                 card.gameObject.SetActive(false);
@@ -1077,7 +1130,7 @@ namespace SojaExiles
                 return;
             }
 
-            if (MedicalDecisionPanel.IsOpen)
+            if (PanelOpen)
             {
                 card.gameObject.SetActive(false);
                 return;

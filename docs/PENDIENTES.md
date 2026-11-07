@@ -140,11 +140,20 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
 
 ## Experiencia menos "básica" (pedido del profesor, 2026-11-06)
 
-- [ ] **Llamada al 106 (SAMU)** en lugar del panel de decisión médica: un
-  celular en el mesón; al llevarlo a la oreja, el operador pregunta y el
-  jugador responde con opciones cerca del teléfono ("¿Tiene ampollas?",
-  "¿Qué tan grande es?"). La respuesta lleva a `BurnProtocol.Decide`. Voces
-  del operador con la herramienta de voz elegida (ver abajo).
+- [x] **Llamada al 106 (SAMU)** en lugar del panel de decisión médica
+  (`EmergencyCall`, 2026-11-06, rama `experiencia-inmersiva`; **solo
+  compilado, falta probarla en el editor y en el visor**). Celular en el
+  mesón cerca del lavadero; después del accidente, al llevarlo a la oreja
+  suena el timbre y el operador pregunta qué pasó, si la mano está bajo
+  agua fría y si hay ampollas (describirla mal es error, `WrongCallInfo`);
+  recomienda y el jugador decide (`BurnProtocol.Decide`). La guía lo pide
+  durante el enfriamiento (paso "Llama al 106", después de la chompa), así
+  ya no queda un minuto muerto. La práctica termina con la quemadura
+  cubierta y la llamada hecha; si se cubre sin llamar, la tía lo sugiere
+  y a los 90 s (guiado) o 40 s (evaluación) termina con el paso faltante.
+  Sin celular en la escena se usa el panel anterior. **Faltan las voces**
+  del operador y `guia_llamar` (guion en `docs/VOCES.md`); mientras tanto
+  se leen en el panel.
 - [x] **Voces más naturales** de la paciente y el narrador: las 45 frases
   regeneradas con ElevenLabs (plan gratis, con etiquetas de emoción) y
   tres quejidos nuevos; guion y detalles en `docs/VOCES.md` (2026-11-06,

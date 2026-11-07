@@ -291,7 +291,11 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnState.Covered:
                     Hito1FX.PlayAt("logro_paso", hand, 0.6f, 0f);
                     SayLater("voz_exito", 0.9f);
-                    SayLater("voz_pregunta_medico", 0.6f);
+                    // Si todavia nadie llamo al 106, ella lo sugiere.
+                    if (EmergencyCall.Instance == null || !EmergencyCall.Instance.Decided)
+                    {
+                        SayLater("voz_pregunta_medico", 0.6f);
+                    }
                     break;
 
                 case BurnSequenceManager.BurnState.Success:

@@ -1,0 +1,338 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace SojaExiles
+{
+    // Llamada al 106 (SAMU) con un celular que esta en el meson. Reemplaza al
+    // panel de decision medica: en vez de dos botones al final, el jugador
+    // pide ayuda como en la vida real, idealmente mientras la mano se enfria
+    // (antes ese minuto quedaba sin nada que hacer).
+    //   1. Despues del accidente, tomar el celular y llevarlo a la oreja: suena
+    //      el timbre y contesta el operador (su voz sale del celular).
+    //   2. El operador pregunta que paso, si la mano ya esta bajo agua fria y
+    //      si la quemadura tiene ampollas. Las respuestas son botones frente al
+    //      jugador (se tocan con la mano libre). Para contestar bien hay que
+    //      mirar la quemadura: describirla mal cuenta como error.
+    //   3. Recomienda segun lo que le dijeron y el jugador decide si la lleva
+    //      al centro de salud o la cuida en casa (BurnProtocol.Decide).
+    // Las frases del operador son op_*.wav de Resources/Hito1Audio; si falta
+    // alguna, igual se lee en el panel (subtitulo).
+    // Va en el objeto de BurnSequenceManager (lo instala Hito1RuntimeBootstrap).
+    public class EmergencyCall : MonoBehaviour
+    {
+        public BurnSequenceManager burnSequence;
+        [Tooltip("Distancia del celular a la cabeza para que cuente como llevado a la oreja (m).")]
+        public float earDistance = 0.25f;
+        public float operatorVolume = 1f;
+        [Tooltip("Segundos de timbre antes de que conteste el operador.")]
+        public float ringSeconds = 3.5f;
+
+        public static EmergencyCall Instance { get; private set; }
+
+        // True mientras dura la llamada (la guia oculta su tarjeta y calla).
+        public static bool InCall
+        {
+            get { return Instance != null && Instance.inCall; }
+        }
+
+        public Transform Phone
+        {
+            get { return phone != null ? phone.transform : null; }
+        }
+
+        // Ya llamo y decidio que hacer.
+        public bool Decided { get; private set; }
+
+        private Rigidbody phone;
+        private AudioSource speaker;
+        private Transform head;
+        private bool started;
+        private bool inCall;
+        private Transform panel;
+        private int answer = -1;
+
+        private static readonly Color Blue = new Color(0.22f, 0.48f, 0.95f);
+        private static readonly Color Green = new Color(0.2f, 0.62f, 0.42f);
+
+        private void Awake()
+        {
+            Instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+        }
+
+        private IEnumerator Start()
+        {
+            if (burnSequence == null)
+            {
+                burnSequence = GetComponent<BurnSequenceManager>();
+            }
+
+            // Despues de BurnSceneProps (que ubica los objetos en su Start).
+            yield return null;
+            yield return null;
+            phone = BuildPhone();
+            if (phone == null)
+            {
+                Debug.LogWarning("[EmergencyCall] No hay lugar para el celular: se usa el panel de decision medica.");
+                enabled = false;
+                Instance = null;
+            }
+        }
+
+        private void Update()
+        {
+            if (started || phone == null || burnSequence == null
+                || burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle)
+            {
+                return;
+            }
+
+            if (head == null)
+            {
+                head = VRPanelKit.Head();
+            }
+
+            if (head != null && SimpleGrab.IsHeldObject(phone)
+                && Vector3.Distance(phone.worldCenterOfMass, head.position) < earDistance)
+            {
+                started = true;
+                StartCoroutine(Call());
+            }
+        }
+
+        // ---------------- llamada ----------------
+
+        private IEnumerator Call()
+        {
+            inCall = true;
+            burnSequence.Report(BurnSequenceManager.BurnEvent.EmergencyCalled);
+            speaker.clip = Ringback();
+            speaker.loop = false;
+            speaker.Play();
+            yield return new WaitForSeconds(ringSeconds);
+            speaker.Stop();
+
+            BurnProtocol protocol = BurnProtocol.Instance;
+            yield return Ask("op_saludo", "SAMU, 106. ¿Cuál es su emergencia?",
+                "Mi tía se quemó la mano con agua hirviendo");
+
+            yield return Ask("op_agua", "Entiendo. ¿Ya tiene la mano bajo agua fría corriente?",
+                "Sí, está bajo el chorro", "Todavía no");
+            bool saysWater = answer == 0;
+            if (!saysWater || !UnderWater())
+            {
+                yield return Say("op_agua_no", "Póngala ya bajo agua fría corriente, sin hielo, y manténgala ahí.");
+            }
+            else
+            {
+                yield return Say("op_agua_si", "Muy bien. Manténgala bajo el agua unos veinte minutos.");
+            }
+
+            yield return Ask("op_ampollas", "Mire bien la quemadura. ¿Tiene ampollas?",
+                "Sí, tiene ampollas", "No, solo está roja");
+            bool saysBlisters = answer == 0;
+            bool hasBlisters = protocol == null || protocol.NeedsMedicalCare;
+            if (saysBlisters != hasBlisters)
+            {
+                burnSequence.Report(BurnSequenceManager.BurnEvent.WrongCallInfo,
+                    hasBlisters ? "TieneAmpollas" : "SinAmpollas", BurnSequenceManager.Severity.Error);
+            }
+
+            if (saysBlisters)
+            {
+                yield return Say("op_centro", "Con ampollas en la mano, debe verla un médico. Cuando termine de " +
+                    "enfriarla, cúbrala con film o una gasa limpia, sin apretar.");
+            }
+            else
+            {
+                yield return Say("op_casa", "Si solo está roja y es pequeña, puede cuidarla en casa. Si salen " +
+                    "ampollas o empeora, llévela al centro de salud.");
+            }
+
+            yield return Ask("op_decidir", "¿Qué van a hacer?", "La llevaré al centro de salud",
+                "La cuidaré en casa");
+            bool goToHealthCenter = answer == 0;
+            if (protocol != null)
+            {
+                protocol.Decide(goToHealthCenter);
+            }
+
+            Decided = true;
+            yield return Say("op_cierre", "De acuerdo. Si empeora o tiene dudas, vuelva a llamar. Cuídela mucho.");
+            ClosePanel();
+            Hito1FX.PlayAt("perilla_clic", phone.position, 0.5f);
+            inCall = false;
+        }
+
+        private bool UnderWater()
+        {
+            BurnSequenceManager.BurnState s = burnSequence.CurrentState;
+            return s == BurnSequenceManager.BurnState.Cooling || s == BurnSequenceManager.BurnState.Cooled
+                || s == BurnSequenceManager.BurnState.Covered;
+        }
+
+        // El operador habla y espera a que termine (o un tiempo de lectura).
+        private IEnumerator Say(string clipName, string text)
+        {
+            ShowPanel(text, null);
+            float wait = Speak(clipName, text);
+            yield return new WaitForSeconds(wait);
+        }
+
+        // Pregunta y espera la respuesta (queda en 'answer').
+        private IEnumerator Ask(string clipName, string text, params string[] options)
+        {
+            answer = -1;
+            ShowPanel(text, options);
+            Speak(clipName, text);
+            while (answer < 0)
+            {
+                yield return null;
+            }
+
+            speaker.Stop();
+            yield return new WaitForSeconds(0.4f);
+        }
+
+        private float Speak(string clipName, string text)
+        {
+            AudioClip clip = Hito1FX.Clip(clipName);
+            if (clip == null)
+            {
+                // Sin la voz grabada: tiempo para leer el subtitulo.
+                return Mathf.Max(2.5f, text.Length * 0.06f);
+            }
+
+            speaker.Stop();
+            speaker.loop = false;
+            speaker.clip = clip;
+            speaker.Play();
+            return clip.length + 0.3f;
+        }
+
+        // ---------------- panel ----------------
+
+        private void ShowPanel(string text, string[] options)
+        {
+            ClosePanel();
+            panel = VRPanelKit.CreateRoot("PanelLlamada", 0.5f, 0.12f);
+            int lines = VRPanelKit.Wrap(text, 38).Split('\n').Length;
+            float height = 0.1f + lines * 0.03f + (options != null ? 0.1f : 0f);
+            float top = height * 0.5f;
+            const float width = 0.56f;
+            const float left = -width * 0.5f + 0.025f;
+            VRPanelKit.CardPanel(panel, Vector2.zero, new Vector2(width, height));
+            VRPanelKit.Text(panel, "Llamada al 106  ·  SAMU", new Vector2(left, top - 0.025f), 0.016f,
+                VRPanelKit.CardLabelColor);
+            VRPanelKit.BoldText(panel, VRPanelKit.Wrap(text, 38), new Vector2(left, top - 0.05f), 0.024f, Color.white);
+
+            if (options == null)
+            {
+                return;
+            }
+
+            float y = -height * 0.5f + 0.06f;
+            if (options.Length == 1)
+            {
+                VRPanelKit.RoundedButton(panel, options[0], new Vector2(0f, y), new Vector2(0.5f, 0.075f), Blue,
+                    () => answer = 0);
+                return;
+            }
+
+            for (int i = 0; i < options.Length; i++)
+            {
+                int index = i;
+                float x = (i == 0 ? -1f : 1f) * 0.13f;
+                VRPanelKit.RoundedButton(panel, options[i], new Vector2(x, y), new Vector2(0.245f, 0.08f),
+                    i == 0 ? Blue : Green, () => answer = index);
+            }
+        }
+
+        private void ClosePanel()
+        {
+            if (panel != null)
+            {
+                Destroy(panel.gameObject);
+                panel = null;
+            }
+        }
+
+        // ---------------- celular ----------------
+
+        private Rigidbody BuildPhone()
+        {
+            WaterTap tap = FindObjectOfType<WaterTap>();
+            if (tap == null)
+            {
+                return null;
+            }
+
+            // En el meson, cerca del lavadero y lejos de la cocina.
+            float counter = BurnStaging.MeasureCounter(tap);
+            BurnStaging.StoveArea(out Vector3 stove, out float stoveRadius);
+            List<Vector3> taken = new List<Vector3>();
+            foreach (Rigidbody rb in FindObjectsOfType<Rigidbody>())
+            {
+                taken.Add(rb.position);
+            }
+
+            if (!PropKit.FindSurfaceSpot(tap.transform.position, counter, 0.35f, 1.1f, 0.09f, taken, stove,
+                stoveRadius, out Vector3 spot))
+            {
+                return null;
+            }
+
+            GameObject go = PropKit.Grabbable("Celular", spot + Vector3.up * 0.002f,
+                Quaternion.Euler(0f, Random.Range(0f, 360f), 0f), new Vector3(0.075f, 0.012f, 0.155f), 0.2f);
+            Transform t = go.transform;
+            PropKit.Part(t, PrimitiveType.Cube, new Vector3(0f, 0.006f, 0f), new Vector3(0.075f, 0.011f, 0.155f),
+                "Mango", new Color(0.06f, 0.06f, 0.065f));
+            PropKit.Part(t, PrimitiveType.Cube, new Vector3(0f, 0.0118f, 0f), new Vector3(0.066f, 0.001f, 0.14f),
+                "Panel_Boton", new Color(0.16f, 0.42f, 0.78f));
+            go.GetComponent<Grabbable>().SetHome();
+
+            speaker = go.AddComponent<AudioSource>();
+            speaker.playOnAwake = false;
+            speaker.spatialBlend = 0.85f;
+            speaker.minDistance = 0.3f;
+            speaker.volume = operatorVolume;
+            Debug.Log("[EmergencyCall] Celular en " + spot.ToString("F2"));
+            return go.GetComponent<Rigidbody>();
+        }
+
+        // Tono de llamada (425 Hz, como en Peru): 1 s sonando y 1,5 s en
+        // silencio, sintetizado aqui (no hay archivo).
+        private static AudioClip ringback;
+
+        private static AudioClip Ringback()
+        {
+            if (ringback != null)
+            {
+                return ringback;
+            }
+
+            const int rate = 22050;
+            int length = rate * 5;
+            float[] data = new float[length];
+            for (int i = 0; i < length; i++)
+            {
+                float time = (float)i / rate;
+                float inCycle = time % 2.5f;
+                float envelope = inCycle < 1f ? Mathf.Clamp01(Mathf.Min(inCycle, 1f - inCycle) / 0.02f) : 0f;
+                data[i] = Mathf.Sin(2f * Mathf.PI * 425f * time) * 0.25f * envelope;
+            }
+
+            ringback = AudioClip.Create("timbre_106", length, 1, rate, false);
+            ringback.SetData(data, 0);
+            return ringback;
+        }
+    }
+}

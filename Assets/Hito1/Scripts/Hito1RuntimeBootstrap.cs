@@ -104,6 +104,12 @@ namespace SojaExiles
                 burn.gameObject.AddComponent<CoolingClock>();
             }
 
+            // Llamada al 106 con el celular del meson (decision medica).
+            if (Object.FindObjectOfType<EmergencyCall>() == null)
+            {
+                burn.gameObject.AddComponent<EmergencyCall>().burnSequence = burn;
+            }
+
             InstallHotTap();
 
             foreach (WaterTap tap in Object.FindObjectsOfType<WaterTap>())
