@@ -174,7 +174,7 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   el visor, 2026-11-06): se pedía con la mano bajo el chorro, el cómo solo
   estaba en la tarjeta y tomarle la mano cerca del anillo la agarraba del brazo
   y la sacaba del agua. Ahora el paso va antes de llevarla al chorro; tras
-  mostrar la mano, la tía pide el anillo (`voz_anillo_pide`, falta generarla)
+  mostrar la mano, la tía pide el anillo (`voz_anillo_pide`)
   y deja la mano ofrecida 8 s; al acercar la mano libre la vuelve a ofrecer
   (si no está en el agua) y junto al anillo aparecen "Mantén apretado para
   sacarlo" y el círculo vacío del progreso; zona de 10 cm y 1 s de sostener

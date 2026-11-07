@@ -125,7 +125,7 @@ Tía Rosa (con la misma voz que sus otras frases):
 |---|---|---|
 | `voz_mira_mano` | Tras quemarse, le muestra la mano al jugador | `[crying] ¡Mira, mira cómo se me puso!` |
 | `voz_aqui_mirala` | En la llamada, antes de la pregunta de las ampollas | `[in pain] Aquí, mírala.` |
-| `voz_anillo_pide` | Tras mostrar la mano, pide que le saquen el anillo (pendiente de generar) | `[worried] ¡Mi anillo! Sácamelo antes de que se me hinche.` |
+| `voz_anillo_pide` | Tras mostrar la mano, pide que le saquen el anillo | `[worried] ¡Mi anillo! Sácamelo antes de que se me hinche.` |
 
 Las 13 suman unos 800 créditos.
 
