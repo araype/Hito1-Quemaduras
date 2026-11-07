@@ -390,7 +390,25 @@ namespace SojaExiles
             Vector3 dir = distance > 0.05f ? toViewer / distance : PatientBody.Flat(body.TorsoForward).normalized;
             float reach = Mathf.Min(showDistance, Mathf.Max(0.12f, distance - 0.35f));
             Vector3 side = PatientBody.Flat(transform.right).normalized * (rightArm ? 1f : -1f);
-            return chest + dir * reach + side * 0.06f + Vector3.down * 0.1f;
+            return WithinStep(chest + dir * reach + side * 0.06f + Vector3.down * 0.1f);
+        }
+
+        // Deja un objetivo de la mano dentro de lo que alcanza sin dar un paso
+        // (PatientReach camina si la mano pasa de stepAtFraction del brazo).
+        // Al ofrecer la mano el objetivo se mueve con ella: si quedaba fuera,
+        // daba un paso, la mano se adelantaba otra vez y seguia al jugador
+        // aunque este retrocediera.
+        private Vector3 WithinStep(Vector3 goal)
+        {
+            if (reach == null)
+            {
+                return goal;
+            }
+
+            Vector3 shoulder = body.ShoulderPosition(rightArm);
+            Vector3 flat = PatientBody.Flat(goal - shoulder);
+            float max = body.ArmLength(rightArm) * reach.stepAtFraction * 0.9f;
+            return flat.magnitude > max ? goal - flat + flat.normalized * max : goal;
         }
 
         // El jugador tiro demasiado fuerte de su mano y se solto: le duele.

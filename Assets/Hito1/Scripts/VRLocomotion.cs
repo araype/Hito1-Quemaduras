@@ -198,6 +198,7 @@ namespace SojaExiles
             }
 
             nextPushScan = Time.unscaledTime + 1f;
+            IgnorePatientBody();
             pushables.RemoveAll(rb => rb == null);
             foreach (Rigidbody rb in FindObjectsOfType<Rigidbody>())
             {
@@ -231,6 +232,37 @@ namespace SojaExiles
                 if (any)
                 {
                     pushables.Add(rb);
+                }
+            }
+        }
+
+        // La capsula no choca con el cuerpo de la paciente: sus 14 capsulas
+        // (piernas hasta 0,65 m, muslos hasta 1,1 m) son redondeadas y la del
+        // jugador se subia por ellas como por una rampa y de ahi al meson (pasaba
+        // al ponerle la chompa, pegado a ella). KeepHeadOutOfPatient sigue
+        // evitando que la cabeza entre en su cuerpo.
+        private int patientCollidersIgnored = -1;
+
+        private void IgnorePatientBody()
+        {
+            PatientBody patient = FindObjectOfType<PatientBody>();
+            if (patient == null)
+            {
+                return;
+            }
+
+            Collider[] cols = patient.GetComponentsInChildren<Collider>(true);
+            if (cols.Length == patientCollidersIgnored)
+            {
+                return;
+            }
+
+            patientCollidersIgnored = cols.Length;
+            foreach (Collider col in cols)
+            {
+                if (col != null && col != controller && !col.isTrigger)
+                {
+                    Physics.IgnoreCollision(controller, col, true);
                 }
             }
         }
@@ -324,7 +356,27 @@ namespace SojaExiles
 
         private void GuardAgainstFalling()
         {
-            if (controller.isGrounded && verticalVelocity <= 0f && standingOnProp == null)
+            bool grounded = controller.isGrounded && verticalVelocity <= 0f && standingOnProp == null;
+            if (grounded && (!hasFloor || transform.position.y < floorY - maxStandAboveFloor))
+            {
+                // El primer apoyo es el piso de la cocina (BurnStaging deja ahi
+                // al jugador al empezar); si despues apoya bastante mas abajo,
+                // ese era el piso.
+                floorY = transform.position.y;
+                hasFloor = true;
+            }
+
+            // Parado sobre un mueble (el meson, la cocina): no es piso. Vuelve
+            // al ultimo lugar firme en el piso.
+            if (grounded && hasFloor && hasSafePosition && transform.position.y > floorY + maxStandAboveFloor)
+            {
+                Debug.LogWarning("[VRLocomotion] El jugador quedo parado sobre un mueble (" +
+                    transform.position.ToString("F2") + "); vuelve al piso " + lastSafePosition.ToString("F2"));
+                ReturnToSafePosition();
+                return;
+            }
+
+            if (grounded && (!hasFloor || transform.position.y <= floorY + maxStandAboveFloor))
             {
                 lastSafePosition = transform.position;
                 hasSafePosition = true;
@@ -335,13 +387,23 @@ namespace SojaExiles
             {
                 Debug.LogWarning("[VRLocomotion] El jugador cayo por debajo del piso; vuelve al ultimo lugar firme " +
                     lastSafePosition.ToString("F2"));
-                controller.enabled = false;
-                transform.position = lastSafePosition + Vector3.up * 0.05f;
-                controller.enabled = true;
-                verticalVelocity = 0f;
-                horizontalVelocity = Vector3.zero;
-                Physics.SyncTransforms();
+                ReturnToSafePosition();
             }
+        }
+
+        [Tooltip("Altura sobre el piso a partir de la cual estar parado cuenta como subido a un mueble (m).")]
+        public float maxStandAboveFloor = 0.3f;
+        private float floorY;
+        private bool hasFloor;
+
+        private void ReturnToSafePosition()
+        {
+            controller.enabled = false;
+            transform.position = lastSafePosition + Vector3.up * 0.05f;
+            controller.enabled = true;
+            verticalVelocity = 0f;
+            horizontalVelocity = Vector3.zero;
+            Physics.SyncTransforms();
         }
 
         // La camara no entra en el cuerpo de la paciente. La capsula ya se
