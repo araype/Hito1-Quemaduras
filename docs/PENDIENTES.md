@@ -118,14 +118,18 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   de juego (captura 11), chompa que atraviesa el cuerpo (capturas 6 y 7),
   tarjeta que tapa el reloj en el paso 6 y que aparece alta en el tutorial,
   y los puntos de prioridad baja.
-- [x] La quemadura se veía roja saturada y uniforme, como un guante
-  (`BurnSkinOverlay`). Ahora una máscara por vértice la concentra en el
-  dorso de la mano, donde cae el agua, con bordes irregulares y la piel
-  visible debajo; se extiende y el centro se oscurece mientras no se enfría
-  (`BurnSkinOverlay.PaintMask`, shader `Hito1/PielQuemada`, material
-  `Piel_Quemada_Zonas`). Las ampollas salen en el centro de la quemadura
-  (2026-11-06, rama `experiencia-inmersiva`; probado renderizando la mano
-  en el editor, **falta verlo en el visor**).
+- [x] La quemadura se veía roja saturada y uniforme, como un guante. Ahora es
+  una mancha irregular en el dorso (`BurnSkinPattern`, shader
+  `Hito1/PielQuemada`): eritema en el borde, rojo intenso con manchas en el
+  centro y, en segundo grado, lecho húmedo y brillante con jirones de piel
+  levantada y relieve. Las ampollas son cúpulas irregulares translúcidas y
+  algunas están rotas (`BurnInjury.BlisterMesh`, `rupturedShare`, material
+  `Ampolla_Rota`). Al enfriar baja el rojo y quedan las ampollas
+  (2026-10-31, probado en el editor en Play con el accidente forzado por
+  código; **falta verlo en el visor**). Si la mancha queda corrida en otro
+  modelo, ajustar `BurnSkinOverlay.burnCenter` y `dorsumDirection`.
+  Unida a `experiencia-inmersiva` el 2026-11-06; reemplaza la versión por
+  zonas del 2026-11-06 (`PaintMask`, `Piel_Quemada_Zonas`), que se borró.
 - [ ] La chompa puesta parece un cilindro rígido (`SweaterItem.BuildDrape`;
   revisar si `SweaterDrape` de la rama `rediseno-tarjetas` ya lo resolvió).
 
