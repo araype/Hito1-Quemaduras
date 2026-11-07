@@ -112,7 +112,7 @@ namespace SojaExiles
             // pecho y se alcanza facil (bajo el agua costaba mucho). Si se lo
             // salta, se puede sacar despues, tambien bajo el chorro.
             new StepInfo { id = StepId.Anillo, title = "Quítale el anillo",
-                hint = "Antes de que se hinche. Acerca tu mano libre a su anillo y mantén apretado el botón lateral (o junta pulgar e índice) hasta que salga.",
+                hint = "Antes de que se hinche. Mantén el agarre junto a su anillo hasta que salga.",
                 clip = "guia_anillo" },
             new StepInfo { id = StepId.LlevarAlAgua, title = "Lleva su mano al chorro",
                 hint = "Tómala del antebrazo, no de la mano quemada, y llévala al chorro: ella la pondrá bajo el agua.",
@@ -710,6 +710,16 @@ namespace SojaExiles
 
             if (!stepsActive)
             {
+                return;
+            }
+
+            // Termino la practica (aunque falten pasos): sale el resumen y la
+            // tarjeta del paso no debe quedar encima de el.
+            if (protocol != null && protocol.Finished)
+            {
+                stepsActive = false;
+                ClearHighlights();
+                HideCard();
                 return;
             }
 

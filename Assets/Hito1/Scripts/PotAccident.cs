@@ -305,6 +305,76 @@ namespace SojaExiles
 
             // El golpe de la olla y el grito los pone BurnPatientReactions.
             StartCoroutine(Spread(pivot, dir, hand));
+            StartCoroutine(LayOnSide(axis));
+        }
+
+        // Al caer, la olla solia aterrizar parada en el piso: parecia que no
+        // se habia volcado. Cuando queda quieta y derecha, se acuesta de lado
+        // (se ve vacia y volcada). Si el jugador la agarra antes, no se toca.
+        private IEnumerator LayOnSide(Vector3 axis)
+        {
+            if (body == null)
+            {
+                yield break;
+            }
+
+            float still = 0f;
+            float limit = Time.time + 8f;
+            yield return new WaitForSeconds(0.6f);
+            while (Time.time < limit && still < 0.35f)
+            {
+                if (SimpleGrab.IsHeldObject(body))
+                {
+                    yield break;
+                }
+
+                bool resting = body.isKinematic
+                    || (body.velocity.sqrMagnitude < 0.0025f && body.angularVelocity.sqrMagnitude < 0.04f);
+                still = resting ? still + Time.deltaTime : 0f;
+                yield return null;
+            }
+
+            if (Vector3.Angle(transform.up, Vector3.up) > 50f || SimpleGrab.IsHeldObject(body))
+            {
+                yield break;
+            }
+
+            if (axis.sqrMagnitude < 1e-4f)
+            {
+                axis = Vector3.right;
+            }
+
+            bool wasKinematic = body.isKinematic;
+            body.isKinematic = true;
+            Quaternion fromRotation = transform.rotation;
+            Quaternion toRotation = Quaternion.AngleAxis(90f, axis.normalized) * fromRotation;
+            Vector3 center = pot.BottomCenter + transform.up * (pot.Height * 0.5f);
+            float floorY = pot.BottomCenter.y;
+            Vector3 toCenter = new Vector3(center.x, floorY + pot.Radius, center.z);
+            Vector3 offset = transform.position - center;
+            Vector3 fromPosition = transform.position;
+            Vector3 toPosition = toCenter + (toRotation * Quaternion.Inverse(fromRotation)) * offset;
+
+            float t = 0f;
+            const float seconds = 0.35f;
+            while (t < seconds)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.SmoothStep(0f, 1f, t / seconds);
+                body.MovePosition(Vector3.Lerp(fromPosition, toPosition, k));
+                body.MoveRotation(Quaternion.Slerp(fromRotation, toRotation, k));
+                yield return null;
+            }
+
+            Hito1FX.PlayAt("olla_golpe", toCenter, 0.35f, 0.05f);
+            body.isKinematic = wasKinematic;
+            if (!body.isKinematic)
+            {
+                body.velocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+                // Acostada no debe rodar sola por el piso.
+                body.angularDrag = Mathf.Max(body.angularDrag, 6f);
+            }
         }
 
         private void Burn()
@@ -472,6 +542,42 @@ namespace SojaExiles
             private readonly ParticleSystem steam;
             private readonly float radius;
 
+            private static Material puddleMaterial;
+
+            // Agua derramada en el piso: casi transparente, apenas oscurece la
+            // madera y brilla mucho (antes era una mancha menta opaca).
+            private static Material PuddleMaterial()
+            {
+                if (puddleMaterial != null)
+                {
+                    return puddleMaterial;
+                }
+
+                Material source = Hito1FX.Mat("Agua_Superficie");
+                if (source == null)
+                {
+                    return null;
+                }
+
+                puddleMaterial = new Material(source) { name = "Agua_Charco" };
+                if (puddleMaterial.HasProperty("_Color"))
+                {
+                    puddleMaterial.color = new Color(0.32f, 0.36f, 0.38f, 0.32f);
+                }
+
+                if (puddleMaterial.HasProperty("_Glossiness"))
+                {
+                    puddleMaterial.SetFloat("_Glossiness", 1f);
+                }
+
+                if (puddleMaterial.HasProperty("_Metallic"))
+                {
+                    puddleMaterial.SetFloat("_Metallic", 0.15f);
+                }
+
+                return puddleMaterial;
+            }
+
             public Puddle(Vector3 point, Vector3 normal, float radius, int seed)
             {
                 Point = point;
@@ -486,7 +592,7 @@ namespace SojaExiles
                 go.AddComponent<MeshFilter>().sharedMesh = Hito1FX.PuddleMesh(seed);
                 MeshRenderer renderer = go.AddComponent<MeshRenderer>();
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                Material material = Hito1FX.Mat("Agua_Superficie");
+                Material material = PuddleMaterial();
                 if (material != null)
                 {
                     renderer.sharedMaterial = material;

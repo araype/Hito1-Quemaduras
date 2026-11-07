@@ -115,7 +115,7 @@ namespace SojaExiles
                     Vector2.one * 0.012f, -0.0005f, 0.006f, 0f, 0.005f);
                 dot.sheen = 0f;
                 dot.SetSolid(c, 0.4f);
-                VRPanelKit.Text(t, BurnProtocol.StepNames[(int)step], new Vector2(cx + 0.024f, y), 0.019f,
+                VRPanelKit.Text(t, ShortStepName(step), new Vector2(cx + 0.024f, y), 0.019f,
                     Color.white);
                 VRPanelKit.Text(t, ok ? "Hecho" : "Faltó", new Vector2(left + colW - 0.022f, y - 0.002f), 0.016f, c,
                     TextAnchor.UpperRight, TextAlignment.Right);
@@ -150,12 +150,11 @@ namespace SojaExiles
             VRPanelKit.RoundedButton(t, "Otro caso", new Vector2(0.19f, buttonY), new Vector2(0.34f, 0.075f),
                 new Color(0.45f, 0.3f, 0.62f), () => Restart(other));
             string otherName = other == BurnInjury.BurnDegree.Primero ? "primer grado" : "segundo grado";
-            VRPanelKit.Text(t, "Deja la mano sobre un botón. Otro caso: quemadura de " + otherName + ".",
+            VRPanelKit.Text(t, "Deja la mano sobre un botón. Otro caso: quemadura de " + otherName + ".  ·  Voces: elevenlabs.io",
                 new Vector2(0f, buttonY - 0.05f), 0.015f, Muted, TextAnchor.UpperCenter, TextAlignment.Center);
 
-            // Credito que pide el plan gratis de ElevenLabs (docs/VOCES.md).
-            VRPanelKit.Text(t, "Voces: elevenlabs.io", new Vector2(right, -Height / 2f + 0.03f), 0.012f, Muted,
-                TextAnchor.UpperRight, TextAlignment.Right);
+            // El credito que pide el plan gratis de ElevenLabs (docs/VOCES.md)
+            // va en la linea de ayuda: en la esquina lo cortaba el borde.
         }
 
         // Indicador: valor grande arriba y etiqueta chica abajo.
@@ -242,6 +241,24 @@ namespace SojaExiles
 
         // Un consejo por tipo de error, sin pasar de 8 lineas. Si no entran
         // todos, la ultima linea dice cuantos faltan (estan en el JSON).
+        // Nombre corto de cada paso para el resumen: caben en una linea sin
+        // montarse con "Hecho" / "Faltó" (BurnProtocol.StepNames queda para
+        // el registro).
+        private static string ShortStepName(BurnProtocol.Step step)
+        {
+            switch (step)
+            {
+                case BurnProtocol.Step.ApagarFuego: return "Apagar el fuego";
+                case BurnProtocol.Step.AguaFria: return "Abrir el agua fría";
+                case BurnProtocol.Step.Enfriar: return "Enfriar 20 minutos";
+                case BurnProtocol.Step.Anillo: return "Retirar el anillo";
+                case BurnProtocol.Step.Abrigar: return "Abrigar a la persona";
+                case BurnProtocol.Step.Cubrir: return "Cubrir sin apretar";
+                case BurnProtocol.Step.DecisionMedica: return "Llamar al 106 y decidir";
+                default: return BurnProtocol.StepNames[(int)step];
+            }
+        }
+
         private static string Tips(BurnProtocol p)
         {
             Dictionary<string, int> counts = new Dictionary<string, int>();
@@ -257,9 +274,38 @@ namespace SojaExiles
                 counts[m.explanation]++;
             }
 
+            // Sin errores no basta: si faltaron pasos, se dice cuales.
+            List<string> missing = new List<string>();
+            foreach (BurnProtocol.Step step in System.Enum.GetValues(typeof(BurnProtocol.Step)))
+            {
+                if (!p.IsDone(step))
+                {
+                    missing.Add(ShortStepName(step));
+                }
+            }
+
             if (order.Count == 0)
             {
-                return "Seguiste el protocolo sin errores.\n¡Muy bien!";
+                if (missing.Count == 0)
+                {
+                    return "Seguiste el protocolo completo y sin errores.\n¡Muy bien!";
+                }
+
+                List<string> todo = new List<string>
+                {
+                    missing.Count == 1 ? "No cometiste errores, pero faltó un paso:" : "No cometiste errores, pero faltaron " + missing.Count + " pasos:"
+                };
+                for (int i = 0; i < missing.Count && i < 5; i++)
+                {
+                    todo.Add("• " + missing[i]);
+                }
+
+                if (missing.Count > 5)
+                {
+                    todo.Add("• Y " + (missing.Count - 5) + " más.");
+                }
+
+                return VRPanelKit.Join(todo);
             }
 
             const int maxLines = 8;

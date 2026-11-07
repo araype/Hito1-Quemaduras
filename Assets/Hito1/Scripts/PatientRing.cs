@@ -43,8 +43,8 @@ namespace SojaExiles
 
         [Header("Indicador")]
         public Material indicatorMaterial;
-        public float markerRadius = 0.014f;
-        public Color markerColor = new Color(1f, 0.78f, 0.15f, 0.65f);
+        public float markerRadius = 0.0105f;
+        public Color markerColor = new Color(1f, 0.82f, 0.3f, 0.32f);
         public Color pullColor = new Color(0.35f, 0.95f, 0.45f, 0.8f);
         [Tooltip("Radio del circulo que se llena mientras se tira del anillo (m).")]
         public float progressRadius = 0.045f;
@@ -280,7 +280,7 @@ namespace SojaExiles
                 {
                     float pulse = pulling >= 0 ? 1f : 1f + 0.15f * Mathf.Sin(Time.time * 4f);
                     marker.transform.position = ring.position;
-                    IndicatorUtil.SetWorldDiameter(marker.transform, markerRadius * 2f * (pulse + Progress * 0.6f));
+                    IndicatorUtil.SetWorldDiameter(marker.transform, markerRadius * 2f * (pulse + Progress * 0.3f));
                     Color c = pulling >= 0 ? Color.Lerp(markerColor, pullColor, 0.4f + 0.6f * Progress)
                         : hovering ? Color.Lerp(markerColor, Color.white, 0.35f) : markerColor;
                     IndicatorUtil.SetColor(marker, c);
