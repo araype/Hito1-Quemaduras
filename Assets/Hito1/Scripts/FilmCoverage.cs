@@ -29,6 +29,9 @@ namespace SojaExiles
         // Ya se conto el error de envolver la mano (se cuenta una vez).
         public bool WrapReported { get; set; }
 
+        [Tooltip("Segundos que se ve el film envuelto alrededor de la mano antes de retirarse.")]
+        public float wrapVisibleSeconds = 6f;
+
         private HandFrame frame;
         private PatientBody patient;
         private readonly List<GameObject> layers = new List<GameObject>();
@@ -140,6 +143,72 @@ namespace SojaExiles
             Measure();
             Debug.Log($"[FilmCoverage] Tira {Strips}: cubierto {Coverage:P0}");
             return true;
+        }
+
+        // Centro y eje largo de la mano en el mundo (para medir el gesto de
+        // envolver). False si la mano aun no esta lista.
+        public bool WorldAxis(out Vector3 center, out Vector3 longAxis, out float halfLength)
+        {
+            center = Vector3.zero;
+            longAxis = Vector3.forward;
+            halfLength = 0f;
+            if (!Ready())
+            {
+                return false;
+            }
+
+            Matrix4x4 toWorld = frame.WorldToBind.inverse;
+            center = toWorld.MultiplyPoint3x4(frame.Center);
+            longAxis = toWorld.MultiplyVector(frame.Long).normalized;
+            halfLength = frame.HalfLength / frame.UnitsPerMeter;
+            return true;
+        }
+
+        // Film envuelto alrededor de la mano: una banda de 'width' que da la
+        // vuelta completa (dorso y palma) a la altura de 'worldPoint'. No
+        // cuenta para cubrir (es el error de envolver); se ve unos segundos y
+        // se retira, como si el jugador lo quitara tras la correccion.
+        public bool Wrap(Vector3 worldPoint, float width)
+        {
+            if (!Ready())
+            {
+                return false;
+            }
+
+            float units = frame.UnitsPerMeter;
+            Vector3 hc = frame.Center;
+            Vector3 longAxis = frame.Long;
+            float longAt = Mathf.Clamp(Vector3.Dot(frame.ToBind(worldPoint) - hc, longAxis),
+                -frame.HalfLength * 0.8f, frame.HalfLength * 0.8f);
+            float halfWidth = width * 0.5f * units;
+            System.Func<Vector3, Vector3, bool> inBand = (p, n) =>
+                Mathf.Abs(Vector3.Dot(p - hc, longAxis) - longAt) <= halfWidth;
+
+            // Un poco mas afuera que las tiras, para que se vea por encima.
+            SkinnedMeshRenderer band = HandSkinMesh.Build(Patient, true, 0.45f, 0.006f, "Body", "FilmEnvuelto",
+                "Film_Mano", inBand);
+            if (band == null)
+            {
+                return false;
+            }
+
+            StartCoroutine(RemoveAfter(band, wrapVisibleSeconds));
+            Debug.Log("[FilmCoverage] Film envuelto alrededor de la mano (error).");
+            return true;
+        }
+
+        private System.Collections.IEnumerator RemoveAfter(SkinnedMeshRenderer band, float seconds)
+        {
+            yield return new WaitForSeconds(seconds);
+            if (band != null)
+            {
+                if (band.sharedMesh != null)
+                {
+                    Destroy(band.sharedMesh);
+                }
+
+                Destroy(band.gameObject);
+            }
         }
 
         // Parte de la quemadura (capa de BurnSkinOverlay, en el mismo espacio

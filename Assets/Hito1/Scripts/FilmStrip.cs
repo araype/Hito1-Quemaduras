@@ -6,8 +6,9 @@ namespace SojaExiles
     // lo sostiene; la otra mano la toma y tira: la tira se estira desde el
     // rollo hasta la mano y, al llegar a su largo, se corta y queda colgando
     // de la mano. Se suelta sobre la mano quemada, a lo largo (de la muneca a
-    // los dedos), y FilmCoverage la pone sobre la piel. Atravesada (como
-    // envolviendo la mano) es un error: ella se queja y la tira se descarta.
+    // los dedos), y FilmCoverage la pone sobre la piel. Envolver la mano es un
+    // error: soltarla atravesada o dar la vuelta a la mano con la tira la deja
+    // envuelta (se ve unos segundos), ella se queja y el narrador corrige.
     [RequireComponent(typeof(Rigidbody))]
     public class FilmStrip : MonoBehaviour
     {
@@ -28,6 +29,17 @@ namespace SojaExiles
         private Vector3 localWide;
         private bool wasHeld;
         private float looseSince = -1f;
+
+        // Gesto de envolver: con la tira en la mano, dar la vuelta alrededor
+        // de la mano quemada. Se mide el giro de la mano del jugador alrededor
+        // del eje largo de esa mano.
+        [Tooltip("Grados de vuelta alrededor de la mano quemada para que el film se envuelva.")]
+        public float wrapGestureDegrees = 270f;
+        [Tooltip("Distancia maxima de la mano del jugador al eje de la mano quemada durante el gesto (m).")]
+        public float wrapGestureRadius = 0.15f;
+        private float wrapAngle;
+        private Vector3 lastRadial;
+        private bool trackingWrap;
 
         public bool IsHeld
         {
@@ -106,6 +118,11 @@ namespace SojaExiles
             }
 
             wasHeld = held;
+
+            if (Torn && held && TrackWrapGesture())
+            {
+                return;
+            }
 
             if (Torn && !held)
             {
@@ -227,13 +244,8 @@ namespace SojaExiles
                     return false;
                 }
 
-                // Envolver la mano: el error se cuenta una vez; despues solo
-                // se queja y avisa.
-                burnSequence.Report(BurnSequenceManager.BurnEvent.FilmWrapped, null,
-                    coverage.WrapReported ? BurnSequenceManager.Severity.None : BurnSequenceManager.Severity.Error);
-                coverage.WrapReported = true;
-                Hito1FX.PlayAt("tela_roce_1", hand.position, 0.5f);
-                Destroy(gameObject);
+                // Soltada atravesada: queda envuelta (y es el error).
+                WrapAround(coverage, burnSequence, (a + b) * 0.5f);
                 return true;
             }
 
@@ -246,6 +258,65 @@ namespace SojaExiles
 
             Destroy(gameObject);
             return true;
+        }
+
+        // True si el gesto de envolver termino (la tira ya se uso).
+        private bool TrackWrapGesture()
+        {
+            BurnSequenceManager burnSequence = FindObjectOfType<BurnSequenceManager>();
+            if (burnSequence == null || burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle)
+            {
+                return false;
+            }
+
+            FilmCoverage coverage = FilmCoverage.For(FindObjectOfType<PatientBody>());
+            if (coverage == null || !coverage.WorldAxis(out Vector3 center, out Vector3 axis, out float halfLength))
+            {
+                trackingWrap = false;
+                return false;
+            }
+
+            Vector3 offset = transform.position - center;
+            float along = Vector3.Dot(offset, axis);
+            Vector3 radial = offset - axis * along;
+            bool near = radial.magnitude < wrapGestureRadius && Mathf.Abs(along) < halfLength + 0.05f;
+            if (!near || radial.sqrMagnitude < 1e-6f)
+            {
+                // Fuera de la mano: el gesto empieza de nuevo.
+                trackingWrap = false;
+                wrapAngle = 0f;
+                return false;
+            }
+
+            if (trackingWrap)
+            {
+                wrapAngle += Vector3.SignedAngle(lastRadial, radial, axis);
+            }
+
+            trackingWrap = true;
+            lastRadial = radial;
+            if (Mathf.Abs(wrapAngle) < wrapGestureDegrees)
+            {
+                return false;
+            }
+
+            SimpleGrab.ForceRelease(body);
+            WrapAround(coverage, burnSequence, center + axis * along);
+            return true;
+        }
+
+        // El film queda envuelto alrededor de la mano: se ve unos segundos,
+        // ella se queja ("me aprieta") y el narrador corrige. El error se
+        // cuenta una vez; despues solo se queja y avisa.
+        private void WrapAround(FilmCoverage coverage, BurnSequenceManager burnSequence, Vector3 point)
+        {
+            coverage.Wrap(point, width);
+            burnSequence.Report(BurnSequenceManager.BurnEvent.FilmWrapped, null,
+                coverage.WrapReported ? BurnSequenceManager.Severity.None : BurnSequenceManager.Severity.Error);
+            coverage.WrapReported = true;
+            Hito1FX.PlayAt("film_estirar", point, 0.6f);
+            Hito1FX.PlayAt("tela_roce_1", point, 0.5f);
+            Destroy(gameObject);
         }
 
         private void OnDestroy()
