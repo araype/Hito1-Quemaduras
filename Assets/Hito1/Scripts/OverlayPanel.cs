@@ -43,7 +43,10 @@ namespace SojaExiles
                 Apply();
             }
 
-            bool near = HandNear();
+            // Solo si la escena no la tapa: si la tarjeta quedo en parte dentro
+            // del meson o de un gabinete, con la prueba de profundidad el
+            // mueble la tapaba entera y "desaparecia" al acercarse a leerla.
+            bool near = HandNear() && !BlockedFromEye();
             if (near != handNear)
             {
                 handNear = near;
@@ -91,6 +94,60 @@ namespace SojaExiles
                 if (SimpleGrab.TryGetHand(h == 0, out Vector3 grab, out bool _) && bounds.Contains(grab))
                 {
                     return true;
+                }
+            }
+
+            return false;
+        }
+
+        // True si algo de la escena (no la propia tarjeta ni las manos) queda
+        // entre los ojos y el centro o alguna esquina de la tarjeta.
+        private bool BlockedFromEye()
+        {
+            Transform eye = VRPanelKit.Head();
+            if (eye == null)
+            {
+                return false;
+            }
+
+            Bounds bounds = new Bounds();
+            bool any = false;
+            foreach (Renderer r in renderers)
+            {
+                if (r == null || !r.enabled || !r.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                if (any)
+                {
+                    bounds.Encapsulate(r.bounds);
+                }
+                else
+                {
+                    bounds = r.bounds;
+                    any = true;
+                }
+            }
+
+            if (!any)
+            {
+                return false;
+            }
+
+            Vector3 c = bounds.center;
+            Vector3 right = transform.right * (bounds.extents.magnitude * 0.6f);
+            Vector3 up = transform.up * (bounds.extents.magnitude * 0.45f);
+            Vector3[] points = { c, c + right + up, c - right + up, c + right - up, c - right - up };
+            foreach (Vector3 p in points)
+            {
+                foreach (RaycastHit hit in Physics.RaycastAll(eye.position, p - eye.position,
+                    Vector3.Distance(eye.position, p), ~0, QueryTriggerInteraction.Ignore))
+                {
+                    if (!hit.collider.transform.IsChildOf(transform) && !SimpleGrab.IsHandCollider(hit.collider))
+                    {
+                        return true;
+                    }
                 }
             }
 

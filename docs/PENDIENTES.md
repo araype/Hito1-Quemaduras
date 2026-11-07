@@ -108,8 +108,9 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
   de envolver la mano con el film, la tía que se voltea para recibir
   la taza y la deja en el mesón, llevarla del brazo (que camine mirando
   hacia donde va), agarrar el celular, caminar entre
-  objetos en el piso, empujar la olla volcada al caminar, llamada en
-  espera), brazo de la tía, agarre doble, agarre distante, paño, **tirar
+  objetos en el piso, empujar la olla volcada al caminar, que lo agarrado
+  quede en los dedos que se ven (manos y controles), tarjetas junto al
+  meson al acercarse, llamada en espera), brazo de la tía, agarre doble, agarre distante, paño, **tirar
   el film con las dos manos** (sostener el rollo, tomar el borde con la otra
   mano, cortar y soltar la tira a lo largo; solo se probó colocando las
   tiras por código), **templar el agua en el minuto 9** (tocar la llave
@@ -123,7 +124,9 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
   `SimpleGrab.controllerFingertipOffset`), que el dedo se vea delante de
   la tarjeta y que llevar a la tía del brazo ya no la contorsione.
 - Medir **72 fps** con agua, vapor, tela y ampollas (RNF-01).
-- Detalles abiertos: la tarjeta puede subir por encima de la cabeza de la
+- Detalles abiertos: algunas tarjetas quedan en parte dentro del meson
+  (`PanelPlacement`); ya no desaparecen, pero convendria ubicarlas fuera.
+  La tarjeta puede subir por encima de la cabeza de la
   tía cuando ella está justo delante; la olla volcada cae al piso y el
   charco del piso es grande (decidir si se prefiere tumbada sobre la
   cocina).

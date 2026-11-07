@@ -663,6 +663,21 @@ namespace SojaExiles
 
             hand.rotation = hand.anchor.rotation;
 
+            // La mano que se ve (HandVisual del SDK de Meta, con manos o con
+            // controles): se agarra en la pinza de sus dedos. Antes el punto
+            // salia de OVRSkeleton o de un desfase fijo del control y no
+            // coincidia con la mano dibujada: el objeto quedaba flotando a
+            // varios centimetros de los dedos.
+            bool usable = (hand.trackedHand != null && hand.trackedHand.IsTracked)
+                || OVRInput.IsControllerConnected(hand.controller);
+            if (usable && TryVisiblePinch(hand == left, out Vector3 visiblePinch, out Vector3 visibleTip))
+            {
+                hand.position = visiblePinch;
+                hand.fingertip = visibleTip;
+                hand.poseValid = true;
+                return;
+            }
+
             if (hand.trackedHand != null && hand.trackedHand.IsTracked)
             {
                 // Con hand tracking el agarre ocurre en la pinza: punto medio
@@ -681,6 +696,50 @@ namespace SojaExiles
                 hand.fingertip = hand.anchor.TransformPoint(controllerFingertipOffset);
                 hand.poseValid = true;
             }
+        }
+
+        private static Oculus.Interaction.HandVisual[] handVisuals = new Oculus.Interaction.HandVisual[0];
+        private static float nextVisualLookup;
+
+        // Pinza (punto medio entre las puntas del pulgar y del indice) y punta
+        // del indice de la mano visible de ese lado, si se esta dibujando.
+        private static bool TryVisiblePinch(bool leftHand, out Vector3 pinch, out Vector3 indexTip)
+        {
+            pinch = Vector3.zero;
+            indexTip = Vector3.zero;
+            if (Time.unscaledTime >= nextVisualLookup)
+            {
+                // El rig se arma en runtime: se buscan cada 2 s.
+                nextVisualLookup = Time.unscaledTime + 2f;
+                handVisuals = FindObjectsOfType<Oculus.Interaction.HandVisual>();
+            }
+
+            Oculus.Interaction.Input.Handedness side = leftHand
+                ? Oculus.Interaction.Input.Handedness.Left
+                : Oculus.Interaction.Input.Handedness.Right;
+            foreach (Oculus.Interaction.HandVisual visual in handVisuals)
+            {
+                if (visual == null || !visual.isActiveAndEnabled || !visual.IsVisible)
+                {
+                    continue;
+                }
+
+                Oculus.Interaction.Input.IHand h = visual.Hand;
+                if (h == null || !h.IsTrackedDataValid || h.Handedness != side)
+                {
+                    continue;
+                }
+
+                if (h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandThumbTip, out Pose thumb)
+                    && h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandIndexTip, out Pose index))
+                {
+                    pinch = (thumb.position + index.position) * 0.5f;
+                    indexTip = index.position;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool TryGetPinchPoint(Hand hand, out Vector3 point)
