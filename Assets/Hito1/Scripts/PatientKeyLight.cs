@@ -31,7 +31,6 @@ namespace SojaExiles
             Light light = GetComponent<Light>();
             light.cullingMask = 1 << layer;
             light.shadows = LightShadows.None;
-            light.lightmapBakeType = LightmapBakeType.Realtime;
             light.renderMode = LightRenderMode.ForcePixel;
         }
 
