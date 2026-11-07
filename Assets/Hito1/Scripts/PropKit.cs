@@ -49,6 +49,8 @@ namespace SojaExiles
             go.transform.localPosition = localPosition;
             go.transform.localRotation = localRotation;
             go.transform.localScale = localScale;
+            // Bordes redondeados en vez de las aristas filosas de las primitivas.
+            RoundedMeshes.Apply(go, type, localScale);
             Renderer renderer = go.GetComponent<Renderer>();
             renderer.sharedMaterial = Mat(materialName, fallback);
             return renderer;
