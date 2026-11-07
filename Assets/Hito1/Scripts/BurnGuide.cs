@@ -129,8 +129,8 @@ namespace SojaExiles
                 clip = "guia_llamar" },
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
                 hint = "Mantén su mano bajo el agua hasta que el reloj complete las 20 marcas.", clip = "guia_esperar" },
-            new StepInfo { id = StepId.Cubrir, title = "Cubre la quemadura",
-                hint = "Sostén el film con una mano; con la otra toma el borde que brilla y tira hasta que se corte. Suelta la tira a lo largo de su mano, sin envolver, hasta cubrirla. También sirve una bolsa plástica limpia.",
+            new StepInfo { id = StepId.Cubrir, title = "Cubre con una gasa limpia",
+                hint = "Apoya la gasa sobre la quemadura y mantenla 1 segundo, sin apretar. Si no hay gasa, usa film: sostén el rollo, toma el borde que brilla con la otra mano y pon las tiras a lo largo de su mano.",
                 clip = "guia_cubrir" }
         };
 
@@ -1019,7 +1019,7 @@ namespace SojaExiles
                     Correct("guia_err_mano", "Sujétala del antebrazo: la mano quemada le duele.");
                     break;
                 case BurnSequenceManager.BurnEvent.ClothOnBurn:
-                    Correct("guia_err_pano", "El paño de cocina suelta pelusa. Usa film o una bolsa limpia.");
+                    Correct("guia_err_pano", "El paño de cocina suelta pelusa. Usa una gasa limpia o, si no hay, film.");
                     break;
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:
                     Correct("guia_err_temprano", "Todavía no: primero termina de enfriar la quemadura.");
@@ -1040,7 +1040,7 @@ namespace SojaExiles
                     Correct("guia_err_charco", "El piso mojado resbala: rodea el agua derramada.");
                     break;
                 case BurnSequenceManager.BurnEvent.FilmWrapped:
-                    Correct("guia_err_envolver", "No envuelvas su mano: pon las tiras a lo largo, sueltas.");
+                    Correct("guia_err_envolver", "No la envuelvas: apoya el film encima. La mano se va a hinchar.");
                     break;
             }
         }

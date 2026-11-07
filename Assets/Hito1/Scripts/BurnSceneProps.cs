@@ -6,9 +6,9 @@ namespace SojaExiles
 {
     // Pone en la cocina los objetos del protocolo y los distractores, sin
     // tocar la escena:
-    //   - junto al lavadero: film transparente y bolsa plastica (para
-    //     cubrir; la gasa se quito: una gasa seca se pega a la herida y las
-    //     guias prefieren film o bolsa);
+    //   - junto al lavadero: gasa esteril (la opcion principal para
+    //     cubrir: un aposito esteril que no suelta pelusa, Cruz Roja
+    //     Britanica), film transparente y bolsa plastica (si no hay gasa);
     //   - en la silla mas cercana a la paciente: una chompa (para abrigarla);
     //   - en el meson, cerca de la cocina: mantequilla, pasta dental, aceite
     //     y algodon; el hielo, cerca del refrigerador.
@@ -67,6 +67,7 @@ namespace SojaExiles
             {
                 WaterTap tap = FindObjectOfType<WaterTap>();
                 Vector3 sink = tap != null ? tap.transform.position : stove;
+                Place(BuildGauze(), sink, counter, 0.3f, 0.9f, 0.08f, avoid);
                 Place(BuildFilm(), sink, counter, 0.3f, 0.9f, 0.09f, avoid);
                 Place(BuildBag(), sink, counter, 0.3f, 0.9f, 0.09f, avoid);
             }
@@ -184,7 +185,7 @@ namespace SojaExiles
 
         private static readonly Quaternion Lying = Quaternion.Euler(0f, 0f, 90f);
 
-        // Film y bolsa en amarillo: en blanco se perdian sobre el meson.
+        // Gasa, film y bolsa en amarillo: en blanco se perdian sobre el meson.
         private static readonly Color Yellow = new Color(1f, 0.82f, 0.1f);
 
         private static void Amarillo(GameObject root, string part, float alpha)
@@ -217,6 +218,21 @@ namespace SojaExiles
             // Se sostiene con una mano y se tiran tiras con la otra.
             root.AddComponent<FilmRoll>();
             Amarillo(root, "Film_Rollo", 0.9f);
+            return root;
+        }
+
+        // Paquete de gasa esteril: se apoya sobre la quemadura ya enfriada y
+        // se mantiene encima 1 s (CoverItem). Es la opcion principal.
+        private static GameObject BuildGauze()
+        {
+            GameObject root = PropKit.Grabbable("GasaEsteril", Vector3.zero, Quaternion.identity,
+                new Vector3(0.1f, 0.014f, 0.08f), 0.03f);
+            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.007f, 0f),
+                new Vector3(0.1f, 0.012f, 0.08f), "Gasa_Paquete", new Color(0.96f, 0.96f, 0.94f));
+            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.0135f, 0.022f),
+                new Vector3(0.1f, 0.002f, 0.016f), "Plastico_Azul", new Color(0.2f, 0.45f, 0.85f));
+            root.AddComponent<CoverItem>().kind = CoverItem.Kind.Gasa;
+            Amarillo(root, "Gasa_Paquete", 1f);
             return root;
         }
 

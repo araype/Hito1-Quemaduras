@@ -51,8 +51,9 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 
 ## 1. Voces
 
-- `guia_cubrir` tiene texto nuevo (tomar el borde que brilla): regenerarla con
-  el texto de `docs/VOCES.md`.
+- Volvió la gasa (sección 16 de `QUEMADURA_INMERSION.md`): `guia_cubrir`,
+  `guia_err_pano` y `guia_err_envolver` ya son de ElevenLabs. Quedan 12 voces
+  TTS por regenerar (`docs/VOCES.md`).
 
 - **Regenerar con ElevenLabs las voces que llegaron como TTS** desde
   `corregir-bugs` (narrador Raúl y tía Sabina), para que no cambie la voz a
@@ -104,7 +105,7 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 
 - **Probar en el Quest con las manos** todo lo hecho en el editor. Con más
   atención: los arreglos de `docs/QUEMADURA_INMERSION.md`, sección 16
-  (solapa del film, cortar la tira con las manos y si se ve bien, gesto
+  (cubrir con la gasa manteniéndola 1 s encima, solapa del film, cortar la tira con las manos y si se ve bien, gesto
   de envolver la mano con el film, la tía que se voltea para recibir
   la taza y la deja en el mesón, llevarla del brazo (que camine mirando
   hacia donde va), agarrar el celular, caminar entre
