@@ -86,7 +86,15 @@ namespace SojaExiles
                     zone = Smooth(0.4f, 0.9f, mask + 0.35f * (Noise(p * 55f + offset * 2f) - 0.5f));
                 }
 
-                colors[v] = new Color(mask, zone, Hash(v + seed), 1f);
+                // Presencia (alfa): hasta donde puede llegar el borde ruidoso
+                // del shader. Sin esto, el ruido pintaba eritema y relieve en
+                // todo el dorso y la capa se cortaba en seco en la muneca.
+                // Un poco mas ancha que la mancha y apagada antes del borde de
+                // la capa en la muneca (el eje Y del hueso va hacia los dedos).
+                float wide = Smooth(0f, 1f, 1.5f - dist) * facing;
+                float wrist = Smooth(0.004f, 0.03f, p.y);
+                float presence = Smooth(0f, 0.35f, wide) * wrist;
+                colors[v] = new Color(mask * wrist, zone * wrist, Hash(v + seed), presence);
                 uv[v] = new Vector2(p.x, p.y) / 0.035f;
             }
 

@@ -4,6 +4,8 @@
 //   r: intensidad (1 en el centro, donde cayo el agua; 0 fuera)
 //   g: zona de segundo grado (piel levantada, humeda y brillante)
 //   b: valor al azar por vertice (manchas)
+//   a: presencia (hasta donde llega el borde irregular; 0 lejos de la
+//      mancha y en el borde de la capa en la muneca)
 // Las texturas de ruido (_NoiseTex) y de relieve (_NormalTex) tambien se
 // generan por codigo. El script cambia _Heat (rojo vivo -> rosado al
 // enfriar), _Degree (0 primer grado, 1 segundo) y _Alpha.
@@ -68,7 +70,7 @@ Shader "Hito1/PielQuemada"
 
             // Borde irregular: el ruido grande corre el limite de la mancha.
             half mask = saturate(IN.burn.r + (big.r - 0.5) * _EdgeNoise);
-            half edge = smoothstep(0.08, 0.42, mask);
+            half edge = smoothstep(0.08, 0.42, mask) * IN.burn.a;
             half core = smoothstep(0.45, 0.95, mask);
 
             // Primer grado: rojo que se intensifica hacia el centro, con
@@ -90,11 +92,13 @@ Shader "Hito1/PielQuemada"
 
             o.Albedo = col;
 
-            // Relieve: arrugas finas en toda la quemadura y la piel levantada
-            // mas marcada en la zona de segundo grado.
+            // Relieve: solo dentro de la quemadura (antes habia una parte fija
+            // que hacia rugosa toda la mano). En primer grado la piel apenas
+            // se marca; en segundo grado, arrugas y piel levantada.
             fixed4 nt = tex2D(_NormalTex, uv * 0.8 + 0.37);
+            half bump = edge * lerp(0.2, 0.45, _Degree) + zone * 0.6;
             half3 n;
-            n.xy = (nt.rg * 2 - 1) * _BumpStrength * (0.3 + edge * 0.3 + zone * 0.5);
+            n.xy = (nt.rg * 2 - 1) * _BumpStrength * bump;
             n.z = sqrt(saturate(1 - dot(n.xy, n.xy)));
             o.Normal = normalize(n);
 

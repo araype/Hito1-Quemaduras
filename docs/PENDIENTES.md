@@ -130,6 +130,11 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   modelo, ajustar `BurnSkinOverlay.burnCenter` y `dorsumDirection`.
   Unida a `experiencia-inmersiva` el 2026-11-06; reemplaza la versión por
   zonas del 2026-11-06 (`PaintMask`, `Piel_Quemada_Zonas`), que se borró.
+  Pulido el 2026-11-06 (renderizado en el editor): la mancha y su borde
+  irregular se apagan antes de la muñeca (antes se veía una línea recta) y
+  no tiñen todo el dorso (canal alfa de `BurnSkinPattern` = presencia); el
+  relieve queda solo dentro de la quemadura y en primer grado apenas se
+  marca; las ampollas rotas son translúcidas (`Ampolla_Rota`).
 - [ ] La chompa puesta parece un cilindro rígido (`SweaterItem.BuildDrape`;
   revisar si `SweaterDrape` de la rama `rediseno-tarjetas` ya lo resolvió).
 

@@ -31,8 +31,8 @@ Material:
     - _SrcBlend: 5
     - _DstBlend: 10
     - _ZWrite: 0
-    - _Glossiness: 0.3
+    - _Glossiness: 0.55
     - _Metallic: 0
     m_Colors:
-    - _Color: {r: 0.93, g: 0.82, b: 0.76, a: 0.78}
+    - _Color: {r: 0.88, g: 0.68, b: 0.62, a: 0.5}
   m_BuildTextureStacks: []
