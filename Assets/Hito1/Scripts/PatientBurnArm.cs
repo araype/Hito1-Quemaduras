@@ -16,6 +16,8 @@ namespace SojaExiles
     //     protegerla;
     //   - si se cierra el agua, o cuando ya termino de enfriar, la saca del
     //     agua y la vuelve a proteger (asi es facil cubrirla);
+    //   - tras el sobresalto, le muestra al jugador la mano quemada unos
+    //     segundos (dorso hacia el), para que vea donde y como se quemo;
     //   - aparta la mano de lo que no quiere que le pongan (Avoid);
     //   - puede recibir un objeto que le alcanza el jugador (ReceiveObject).
     // Mueve el objetivo de la mano (kinematico) que usa PatientReach; si el
@@ -44,6 +46,14 @@ namespace SojaExiles
         public float stepAwayDistance = 0.45f;
         public float stepAwaySide = 0.35f;
         public float stepAwayDelay = 0.6f;
+
+        [Header("Mostrar la mano quemada")]
+        public bool showHandAfterBurn = true;
+        [Tooltip("Segundos despues de quemarse en que la muestra, y cuanto la deja a la vista.")]
+        public float showAfterBurn = 2.6f;
+        public float showSeconds = 3.2f;
+        [Tooltip("Cuanto adelanta la mano desde el pecho hacia el jugador (m); menos si esta muy cerca.")]
+        public float showDistance = 0.33f;
         [Tooltip("Segundos que deja la mano donde la soltaron antes de volver a protegerla.")]
         public float holdAfterRelease = 2.5f;
 
@@ -66,7 +76,8 @@ namespace SojaExiles
             Cooking,
             Guard,
             Placed,
-            InWater
+            InWater,
+            Show
         }
 
         public Mode Current { get; private set; } = Mode.Cooking;
@@ -91,6 +102,7 @@ namespace SojaExiles
         private Transform viewer;
         private bool receiving;
         private float palmDown;
+        private float showUntil;
 
         private void Awake()
         {
@@ -245,6 +257,49 @@ namespace SojaExiles
             }
 
             reach.WalkTo(goal, 0.6f);
+
+            if (showHandAfterBurn)
+            {
+                yield return new WaitForSeconds(Mathf.Max(0f, showAfterBurn - stepAwayDelay));
+                if (ShowHand(showSeconds))
+                {
+                    BurnPatientReactions reactions = GetComponent<BurnPatientReactions>();
+                    if (reactions != null)
+                    {
+                        reactions.Say("voz_mira_mano", true);
+                    }
+                }
+            }
+        }
+
+        // Le muestra la mano quemada al jugador unos segundos (no si el
+        // jugador la tiene tomada o si la mano esta bajo el agua: ahi el
+        // reloj se pausaria). Devuelve false si no la muestra.
+        public bool ShowHand(float seconds)
+        {
+            if (target == null || SimpleGrab.IsHeldObject(target) || Current == Mode.InWater
+                || Current == Mode.Cooking)
+            {
+                return false;
+            }
+
+            Current = Mode.Show;
+            showUntil = Time.time + seconds;
+            return true;
+        }
+
+        // La mano hacia el jugador, a la altura del pecho y con el dorso
+        // arriba (UpdatePalm), sin estirar del todo el brazo. Si el jugador
+        // esta muy cerca, la adelanta menos para no meterla en el.
+        private Vector3 ShowGoal()
+        {
+            Vector3 chest = body.Chest.position;
+            Vector3 toViewer = viewer != null ? PatientBody.Flat(viewer.position - chest) : Vector3.zero;
+            float distance = toViewer.magnitude;
+            Vector3 dir = distance > 0.05f ? toViewer / distance : PatientBody.Flat(body.TorsoForward).normalized;
+            float reach = Mathf.Min(showDistance, Mathf.Max(0.12f, distance - 0.35f));
+            Vector3 side = PatientBody.Flat(transform.right).normalized * (rightArm ? 1f : -1f);
+            return chest + dir * reach + side * 0.06f + Vector3.down * 0.1f;
         }
 
         private void SetPlaced(Vector3 at)
@@ -350,6 +405,9 @@ namespace SojaExiles
                 case Mode.InWater:
                     goal = WaterGoal();
                     break;
+                case Mode.Show:
+                    goal = ShowGoal();
+                    break;
                 default:
                     goal = GuardGoal();
                     break;
@@ -437,6 +495,14 @@ namespace SojaExiles
 
                     break;
 
+                case Mode.Show:
+                    if (Time.time > showUntil)
+                    {
+                        Current = Mode.Guard;
+                    }
+
+                    break;
+
                 case Mode.InWater:
                     if (!WaterRunning)
                     {
@@ -454,7 +520,10 @@ namespace SojaExiles
                         waterLostTime = -1f;
                     }
 
-                    if (cooledTime >= 0f && Time.time - cooledTime > withdrawAfterCooled)
+                    // Durante la llamada al 106 la deja en el agua (si la
+                    // sacara, el jugador no podria atenderla con el celular
+                    // en la mano y ella hablaria encima del operador).
+                    if (cooledTime >= 0f && Time.time - cooledTime > withdrawAfterCooled && !EmergencyCall.InCall)
                     {
                         Current = Mode.Guard;
                     }
@@ -481,7 +550,7 @@ namespace SojaExiles
         private void UpdatePalm()
         {
             bool held = SimpleGrab.IsHeldObject(target);
-            bool underWater = Current == Mode.InWater
+            bool underWater = Current == Mode.InWater || Current == Mode.Show
                 || (held && Current != Mode.Cooking && WaterRunning && PalmUnderStream(0.1f));
             float speed = Time.deltaTime / Mathf.Max(0.05f, palmTurnSeconds);
             palmDown = Mathf.MoveTowards(palmDown, underWater ? 1f : 0f, speed);

@@ -94,7 +94,7 @@ emergencia).
 Para el narrador conviene `[calm]` al inicio de cada frase, y en los
 errores `[firm]` (corrige sin regañar).
 
-## Operador del 106 y narrador (llamada, pendientes de generar)
+## Operador del 106, narrador y tía (llamada, pendientes de generar)
 
 La llamada al 106 (`EmergencyCall`) ya funciona sin estas voces: el texto se
 lee en el panel. Al generarlas, se reproducen solas desde el celular.
@@ -110,11 +110,19 @@ Usa `[calm]` en todas; en `op_agua_no`, `[firm]`.
 | `op_ampollas` | Pide mirar la quemadura | `[calm] Mire bien la quemadura. ¿Tiene ampollas?` |
 | `op_centro` | Con ampollas | `[calm] Con ampollas en la mano, debe verla un médico. Cuando termine de enfriarla, cúbrala con film o una gasa limpia, sin apretar.` |
 | `op_casa` | Sin ampollas | `[calm] Si solo está roja y es pequeña, puede cuidarla en casa. Si salen ampollas o empeora, llévela al centro de salud.` |
-| `op_decidir` | Pregunta qué harán | `[calm] ¿Qué van a hacer?` |
+| `op_decidir_centro` | Tras recomendar el centro de salud | `[calm] ¿Puede llevarla al centro de salud?` |
+| `op_decidir_casa` | Tras recomendar cuidarla en casa | `[calm] ¿Podrá cuidarla en casa?` |
 | `op_cierre` | Antes de colgar | `[warmly] De acuerdo. Si empeora o tiene dudas, vuelva a llamar. Cuídela mucho.` |
 | `guia_llamar` | Narrador: paso "Llama al 106" | `[calm] Mientras se enfría, pide ayuda. Toma el celular del mesón, llévalo a tu oreja y responde lo que te pregunten.` |
 
-Las 10 suman unos 700 créditos.
+Tía Rosa (con la misma voz que sus otras frases):
+
+| Archivo | Cuándo suena | Para ElevenLabs |
+|---|---|---|
+| `voz_mira_mano` | Tras quemarse, le muestra la mano al jugador | `[crying] ¡Mira, mira cómo se me puso!` |
+| `voz_aqui_mirala` | En la llamada, antes de la pregunta de las ampollas | `[in pain] Aquí, mírala.` |
+
+Las 13 suman unos 800 créditos.
 
 ## Quejidos adicionales
 

@@ -314,8 +314,15 @@ namespace SojaExiles
             float dt = Time.deltaTime;
             stateTime += dt;
             BurnSequenceManager.BurnState state = burnSequence.CurrentState;
+            // Durante la llamada al 106 no se queja ni habla encima del
+            // operador: lo que tenia por decir espera a que cuelgue.
+            bool quiet = EmergencyCall.InCall;
+            if (quiet)
+            {
+                nextQueuedTime = Mathf.Max(nextQueuedTime, Time.time + 0.8f);
+            }
 
-            if (queuedLines.Count > 0 && Time.time >= nextQueuedTime && !IsSpeaking)
+            if (queuedLines.Count > 0 && Time.time >= nextQueuedTime && !IsSpeaking && !quiet)
             {
                 Say(queuedLines[0], true);
                 queuedLines.RemoveAt(0);
@@ -330,7 +337,7 @@ namespace SojaExiles
             if (state == BurnSequenceManager.BurnState.Burned)
             {
                 burnedWithoutWater += dt;
-                if (Time.time >= nextPainLine && !IsSpeaking)
+                if (Time.time >= nextPainLine && !IsSpeaking && !quiet)
                 {
                     nextPainLine = Time.time + Random.Range(painLineInterval.x, painLineInterval.y);
                     // Nunca el mismo quejido dos veces seguidas.
@@ -344,7 +351,8 @@ namespace SojaExiles
                     Say(PainLines[line], false);
                 }
 
-                if (voiceHints && !waterHinted && burnedWithoutWater > waterHintDelay && !relieved && !IsSpeaking)
+                if (voiceHints && !waterHinted && burnedWithoutWater > waterHintDelay && !relieved && !IsSpeaking
+                    && !quiet)
                 {
                     waterHinted = true;
                     Say("voz_pista_agua", false);
@@ -359,7 +367,7 @@ namespace SojaExiles
             }
 
             if (state == BurnSequenceManager.BurnState.Cooled && voiceHints && !clothHinted
-                && stateTime > clothHintDelay && !IsSpeaking)
+                && stateTime > clothHintDelay && !IsSpeaking && !quiet)
             {
                 clothHinted = true;
                 Say("voz_pista_pano", false);

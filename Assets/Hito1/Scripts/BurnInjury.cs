@@ -41,7 +41,7 @@ namespace SojaExiles
         [Header("Ampollas (segundo grado)")]
         public int blisterCount = 6;
         [Tooltip("Segundos despues de la quemadura en que empiezan a verse.")]
-        public float blisterOnsetSeconds = 6f;
+        public float blisterOnsetSeconds = 2.5f;
         [Tooltip("Segundos sin agua hasta llegar a su tamano mayor.")]
         public float blisterGrowSeconds = 45f;
         public Vector2 blisterDiameter = new Vector2(0.008f, 0.018f);
@@ -66,6 +66,14 @@ namespace SojaExiles
         }
 
         public static BurnInjury Instance { get; private set; }
+
+        // Hay ampollas que se ven (la primera ya asomo lo suficiente). Lo usa
+        // la llamada al 106: la respuesta correcta es lo que el jugador ve,
+        // no el grado (antes de que salgan, decir "no" no es un error).
+        public bool BlistersVisible
+        {
+            get { return blisters.Count > 0 && blisterAmount * 1.3f > 0.2f; }
+        }
 
         private PatientBody body;
         private Transform hand;

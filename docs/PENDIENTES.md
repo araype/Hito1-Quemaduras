@@ -154,6 +154,24 @@ pasos, 0 errores, 100 puntos. Capturas en `images/vr_*.jpg` del informe.
   Sin celular en la escena se usa el panel anterior. **Faltan las voces**
   del operador y `guia_llamar` (guion en `docs/VOCES.md`); mientras tanto
   se leen en el panel.
+  Revisión de coherencia (2026-11-06, probado en Play en el editor con
+  acciones simuladas y sin sonido): el operador responde a lo que dice el
+  jugador (decir que la mano está en el agua cuando no lo está es error);
+  la respuesta correcta de las ampollas es lo que se ve
+  (`BurnInjury.BlistersVisible`; salen desde los 2,5 s); la decisión se
+  juzga contra lo que recomendó el operador, sin doble castigo; la pregunta
+  final es "¿Puede llevarla al centro de salud?" o "¿Podrá cuidarla en
+  casa?"; el panel va abajo y al costado contrario a la tía (no tapa la
+  mano); durante la llamada la tía no se queja, no habla encima y no saca
+  la mano del agua; en modo evaluación la pantalla del celular parpadea.
+- [x] **La tía muestra la mano quemada** al jugador tras el sobresalto
+  (`PatientBurnArm.ShowHand`, modo `Show`: a la altura del pecho, dorso a
+  la vista, menos estirada si el jugador está cerca; no si la mano está en
+  el agua o el jugador la sostiene) y otra vez en la llamada, antes de la
+  pregunta de las ampollas. Voces nuevas `voz_mira_mano` y
+  `voz_aqui_mirala` (guion en `docs/VOCES.md`).
+- [ ] Visto en la prueba: después del accidente la olla terminó en el piso
+  (y el charco del piso es grande). Revisar `PotAccident` tras volcarse.
 - [x] **Voces más naturales** de la paciente y el narrador: las 45 frases
   regeneradas con ElevenLabs (plan gratis, con etiquetas de emoción) y
   tres quejidos nuevos; guion y detalles en `docs/VOCES.md` (2026-11-06,

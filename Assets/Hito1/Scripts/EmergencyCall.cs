@@ -14,8 +14,11 @@ namespace SojaExiles
     //      si la quemadura tiene ampollas. Las respuestas son botones frente al
     //      jugador (se tocan con la mano libre). Para contestar bien hay que
     //      mirar la quemadura: describirla mal cuenta como error.
-    //   3. Recomienda segun lo que le dijeron y el jugador decide si la lleva
-    //      al centro de salud o la cuida en casa (BurnProtocol.Decide).
+    //   3. Recomienda segun lo que le dijeron (el operador no ve la cocina) y
+    //      pregunta si pueden seguir esa recomendacion: el jugador decide si
+    //      la lleva al centro de salud o la cuida en casa (BurnProtocol.Decide).
+    // El panel queda abajo y a un costado (no tapa la mano). Mientras dura la
+    // llamada la paciente no se queja ni saca la mano del agua.
     // Las frases del operador son op_*.wav de Resources/Hito1Audio; si falta
     // alguna, igual se lee en el panel (subtitulo).
     // Va en el objeto de BurnSequenceManager (lo instala Hito1RuntimeBootstrap).
@@ -89,6 +92,7 @@ namespace SojaExiles
 
         private void Update()
         {
+            UpdateScreen();
             if (started || phone == null || burnSequence == null
                 || burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle)
             {
@@ -113,6 +117,7 @@ namespace SojaExiles
         private IEnumerator Call()
         {
             inCall = true;
+            PlacePanel();
             burnSequence.Report(BurnSequenceManager.BurnEvent.EmergencyCalled);
             speaker.clip = Ringback();
             speaker.loop = false;
@@ -124,45 +129,80 @@ namespace SojaExiles
             yield return Ask("op_saludo", "SAMU, 106. ¿Cuál es su emergencia?",
                 "Mi tía se quemó la mano con agua hirviendo");
 
+            // El operador no ve la cocina: responde a lo que le dicen. Decir
+            // que esta bajo el agua cuando no lo esta es un error.
             yield return Ask("op_agua", "Entiendo. ¿Ya tiene la mano bajo agua fría corriente?",
                 "Sí, está bajo el chorro", "Todavía no");
             bool saysWater = answer == 0;
-            if (!saysWater || !UnderWater())
+            if (saysWater && !UnderWater())
             {
-                yield return Say("op_agua_no", "Póngala ya bajo agua fría corriente, sin hielo, y manténgala ahí.");
+                burnSequence.Report(BurnSequenceManager.BurnEvent.WrongCallInfo, "SinAgua",
+                    BurnSequenceManager.Severity.Error);
             }
-            else
+
+            if (saysWater)
             {
                 yield return Say("op_agua_si", "Muy bien. Manténgala bajo el agua unos veinte minutos.");
             }
+            else
+            {
+                yield return Say("op_agua_no", "Póngala ya bajo agua fría corriente, sin hielo, y manténgala ahí.");
+            }
+
+            // Para responder hay que mirar la quemadura: ella se la muestra
+            // (si esta bajo el agua, solo voltea; no la saca del chorro).
+            BurnPatientReactions reactions = FindObjectOfType<BurnPatientReactions>();
+            if (reactions != null)
+            {
+                reactions.Say("voz_aqui_mirala", true);
+            }
+
+            PatientBurnArm arm = FindObjectOfType<PatientBurnArm>();
+            if (arm != null)
+            {
+                arm.ShowHand(6f);
+            }
+
+            // Que termine de hablar ella antes de que pregunte el operador.
+            AudioClip showLine = Hito1FX.Clip("voz_aqui_mirala");
+            yield return new WaitForSeconds(showLine != null ? showLine.length + 0.2f : 0.6f);
 
             yield return Ask("op_ampollas", "Mire bien la quemadura. ¿Tiene ampollas?",
                 "Sí, tiene ampollas", "No, solo está roja");
             bool saysBlisters = answer == 0;
-            bool hasBlisters = protocol == null || protocol.NeedsMedicalCare;
+            // Lo correcto es lo que se ve: antes de que salgan, "no" no es error.
+            BurnInjury injury = BurnInjury.Instance;
+            bool hasBlisters = injury != null ? injury.BlistersVisible : protocol == null || protocol.NeedsMedicalCare;
             if (saysBlisters != hasBlisters)
             {
                 burnSequence.Report(BurnSequenceManager.BurnEvent.WrongCallInfo,
                     hasBlisters ? "TieneAmpollas" : "SinAmpollas", BurnSequenceManager.Severity.Error);
             }
 
-            if (saysBlisters)
+            // Recomienda segun lo que le dijeron, y la pregunta final es si
+            // pueden seguir esa recomendacion (decir que no es la decision).
+            bool advisedCenter = saysBlisters;
+            bool goToHealthCenter;
+            if (advisedCenter)
             {
                 yield return Say("op_centro", "Con ampollas en la mano, debe verla un médico. Cuando termine de " +
                     "enfriarla, cúbrala con film o una gasa limpia, sin apretar.");
+                yield return Ask("op_decidir_centro", "¿Puede llevarla al centro de salud?",
+                    "Sí, la llevo", "Prefiero cuidarla en casa");
+                goToHealthCenter = answer == 0;
             }
             else
             {
                 yield return Say("op_casa", "Si solo está roja y es pequeña, puede cuidarla en casa. Si salen " +
                     "ampollas o empeora, llévela al centro de salud.");
+                yield return Ask("op_decidir_casa", "¿Podrá cuidarla en casa?",
+                    "Sí, la cuido en casa", "Prefiero llevarla al centro de salud");
+                goToHealthCenter = answer == 1;
             }
 
-            yield return Ask("op_decidir", "¿Qué van a hacer?", "La llevaré al centro de salud",
-                "La cuidaré en casa");
-            bool goToHealthCenter = answer == 0;
             if (protocol != null)
             {
-                protocol.Decide(goToHealthCenter);
+                protocol.Decide(goToHealthCenter, advisedCenter);
             }
 
             Decided = true;
@@ -223,7 +263,11 @@ namespace SojaExiles
         private void ShowPanel(string text, string[] options)
         {
             ClosePanel();
-            panel = VRPanelKit.CreateRoot("PanelLlamada", 0.5f, 0.12f);
+            GameObject root = new GameObject("PanelLlamada");
+            root.AddComponent<NoAutoCollider>();
+            root.transform.SetPositionAndRotation(panelPosition, panelRotation);
+            root.AddComponent<OverlayPanel>();
+            panel = root.transform;
             int lines = VRPanelKit.Wrap(text, 38).Split('\n').Length;
             float height = 0.1f + lines * 0.03f + (options != null ? 0.1f : 0f);
             float top = height * 0.5f;
@@ -256,6 +300,26 @@ namespace SojaExiles
             }
         }
 
+        // Donde va el panel durante toda la llamada: abajo y a un costado de la
+        // vista, del lado contrario a la paciente. Antes quedaba al frente y
+        // tapaba la mano justo cuando el operador pedia mirarla.
+        private Vector3 panelPosition;
+        private Quaternion panelRotation;
+
+        private void PlacePanel()
+        {
+            Transform eye = head != null ? head : VRPanelKit.Head();
+            Vector3 eyePos = eye != null ? eye.position : transform.position + Vector3.up * 1.6f;
+            Vector3 forward = eye != null ? Vector3.ProjectOnPlane(eye.forward, Vector3.up) : Vector3.forward;
+            forward = forward.sqrMagnitude > 1e-4f ? forward.normalized : Vector3.forward;
+            Vector3 right = Vector3.Cross(Vector3.up, forward);
+            PatientBody patient = FindObjectOfType<PatientBody>();
+            float side = patient != null && Vector3.Dot(patient.transform.position - eyePos, right) > 0f ? -1f : 1f;
+            Vector3 dir = Quaternion.AngleAxis(32f * side, Vector3.up) * forward;
+            panelPosition = eyePos + dir * 0.45f + Vector3.down * 0.3f;
+            panelRotation = Quaternion.LookRotation(panelPosition - eyePos, Vector3.up);
+        }
+
         private void ClosePanel()
         {
             if (panel != null)
@@ -266,6 +330,27 @@ namespace SojaExiles
         }
 
         // ---------------- celular ----------------
+
+        // En modo evaluacion no hay brillo de la guia: la pantalla parpadea
+        // unos segundos despues del accidente (y cada tanto) como si llegara
+        // un aviso, para que el jugador sepa que el celular esta ahi.
+        private void UpdateScreen()
+        {
+            if (screen == null || burnSequence == null)
+            {
+                return;
+            }
+
+            bool hint = !started && BurnGuide.Instance != null && !BurnGuide.Instance.Guided
+                && burnSequence.CurrentState != BurnSequenceManager.BurnState.Idle;
+            float since = Time.time - burnSequence.BurnTime;
+            bool blinking = hint && since > 8f && since % 30f > 8f && since % 30f < 12f;
+            float k = blinking ? 0.5f + 0.5f * Mathf.Sin(Time.time * 9f) : 0f;
+            IndicatorUtil.SetColor(screen, Color.Lerp(ScreenIdle, new Color(0.75f, 0.9f, 1f), k));
+        }
+
+        private static readonly Color ScreenIdle = new Color(0.16f, 0.42f, 0.78f);
+        private Renderer screen;
 
         private Rigidbody BuildPhone()
         {
@@ -295,8 +380,8 @@ namespace SojaExiles
             Transform t = go.transform;
             PropKit.Part(t, PrimitiveType.Cube, new Vector3(0f, 0.006f, 0f), new Vector3(0.075f, 0.011f, 0.155f),
                 "Mango", new Color(0.06f, 0.06f, 0.065f));
-            PropKit.Part(t, PrimitiveType.Cube, new Vector3(0f, 0.0118f, 0f), new Vector3(0.066f, 0.001f, 0.14f),
-                "Panel_Boton", new Color(0.16f, 0.42f, 0.78f));
+            screen = PropKit.Part(t, PrimitiveType.Cube, new Vector3(0f, 0.0118f, 0f),
+                new Vector3(0.066f, 0.001f, 0.14f), "Panel_Boton", ScreenIdle);
             go.GetComponent<Grabbable>().SetHome();
 
             speaker = go.AddComponent<AudioSource>();

@@ -96,6 +96,7 @@ namespace SojaExiles
         private bool ringStuck;
         private bool decisionShown;
         private string pendingDecision;
+        private bool decisionCorrect;
         private bool finishing;
 
         public bool IsDone(Step step)
@@ -411,14 +412,19 @@ namespace SojaExiles
         }
 
         // La respuesta del panel de decision medica.
-        public void Decide(bool goToHealthCenter)
+        // 'advised': lo que recomendo el operador del 106 (null sin llamada).
+        // Con llamada, lo correcto es seguir su consejo: si el jugador le
+        // describio mal la quemadura, ese error ya se conto (WrongCallInfo) y
+        // seguir el consejo que recibio no se castiga otra vez.
+        public void Decide(bool goToHealthCenter, bool? advised = null)
         {
             if (Finished || burnSequence == null)
             {
                 return;
             }
 
-            bool correct = goToHealthCenter == NeedsMedicalCare;
+            bool correct = advised.HasValue ? goToHealthCenter == advised.Value : goToHealthCenter == NeedsMedicalCare;
+            decisionCorrect = correct;
             burnSequence.Report(BurnSequenceManager.BurnEvent.MedicalDecision,
                 goToHealthCenter ? "CentroDeSalud" : "Casa",
                 correct ? BurnSequenceManager.Severity.None : BurnSequenceManager.Severity.Error);
@@ -432,7 +438,7 @@ namespace SojaExiles
             }
 
             Decision = decision;
-            DecisionCorrect = decision != null && (decision == "CentroDeSalud") == NeedsMedicalCare;
+            DecisionCorrect = decision != null && decisionCorrect;
             if (decision == null)
             {
                 // Nunca llamo al 106.
@@ -501,6 +507,8 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnEvent.RemedyNear:
                 case BurnSequenceManager.BurnEvent.RemedyApplied:
                     return ExplainRemedy(detail);
+                case BurnSequenceManager.BurnEvent.MedicalDecision when EmergencyCall.Instance != null:
+                    return "Sigue lo que recomienda el 106: no decidas lo contrario sin una buena razón.";
                 case BurnSequenceManager.BurnEvent.MedicalDecision:
                     return NeedsMedicalCare
                         ? "Una quemadura con ampollas en la mano necesita revisión médica."
@@ -519,6 +527,8 @@ namespace SojaExiles
                     }
 
                     break;
+                case BurnSequenceManager.BurnEvent.WrongCallInfo when detail == "SinAgua":
+                    return "Al 106 dijiste que la mano estaba bajo el agua y no lo estaba: informa lo que pasa de verdad.";
                 case BurnSequenceManager.BurnEvent.WrongCallInfo:
                     return detail == "TieneAmpollas"
                         ? "Mira bien la quemadura antes de describirla: tenía ampollas (segundo grado)."
