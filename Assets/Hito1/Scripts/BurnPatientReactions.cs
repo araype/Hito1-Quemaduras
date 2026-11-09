@@ -463,6 +463,12 @@ namespace SojaExiles
             voice.volume = voiceVolume;
             voice.pitch = Random.Range(0.97f, 1.03f);
             voice.Play();
+
+            // El gesto que acompana la frase (asentir, negar, alivio...).
+            if (PatientAnimator.Instance != null)
+            {
+                PatientAnimator.Instance.ForVoice(line);
+            }
         }
 
         // Dice la frase despues de 'delay' segundos (o despues de las que ya

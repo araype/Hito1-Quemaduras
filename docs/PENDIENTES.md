@@ -106,7 +106,8 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 
 - **Probar en el Quest con las manos** todo lo hecho en el editor. Con más
   atención: los arreglos de `docs/QUEMADURA_INMERSION.md`, sección 16
-  (cubrir con la gasa manteniéndola 1 s encima, solapa del film, cortar la tira con las manos y si se ve bien, gesto
+  (animaciones de la tía: sección 17, y que sigan los 72 fps; cubrir con la
+  gasa manteniéndola 1 s encima, solapa del film, cortar la tira con las manos y si se ve bien, gesto
   de envolver la mano con el film, la tía que se voltea para recibir
   la taza y la deja en el mesón, llevarla del brazo (que camine mirando
   hacia donde va), agarrar el celular, caminar entre

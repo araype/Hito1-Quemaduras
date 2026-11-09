@@ -228,6 +228,12 @@ namespace SojaExiles
                 {
                     patient.gameObject.AddComponent<PatientDialog>().burnSequence = burn;
                 }
+
+                // Animaciones de Mixamo (respirar, caminar, dolor y gestos).
+                if (patient.GetComponent<PatientAnimator>() == null)
+                {
+                    patient.gameObject.AddComponent<PatientAnimator>().burnSequence = burn;
+                }
             }
 
             InstallStoveKnob();

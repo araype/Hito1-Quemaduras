@@ -34,6 +34,9 @@ unión están en `docs/QUEMADURA_INMERSION.md`, sección 14. Se trabaja desde
   directamente al puntaje.
 - `BurnProtocol` arma los pasos, los errores, el puntaje y el resumen a
   partir de esos eventos.
+- La tía: animaciones de Mixamo (`PatientAnimator`, controlador en
+  `Resources/Hito1Anim`) para cuerpo, piernas y gestos; `PatientBody` mueve
+  los brazos por cinemática inversa cuando van a un objetivo.
 - Objetos creados por código con `PropKit`; paneles y textos con `VRPanelKit`,
   `RoundedPanel` y `PanelText` (TextMesh Pro, desde `rediseno-tarjetas`);
   botones táctiles con `TouchButton`.

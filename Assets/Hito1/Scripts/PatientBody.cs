@@ -114,6 +114,27 @@ namespace SojaExiles
 
         private bool ready;
 
+        // ---------------- animaciones (Mixamo) ----------------
+        // Con un Animator con controlador (lo pone PatientAnimator), las
+        // animaciones mueven cadera, piernas, torso y cabeza (respirar,
+        // caminar, gestos) y este script suma encima lo suyo: inclinarse,
+        // girar el torso, mirar y las reacciones. Los brazos siguen la
+        // animacion mientras estan en reposo y pasan suave a la cinematica
+        // inversa cuando van a un objetivo (la mano quemada, la taza, el
+        // cuello). Sin controlador, todo sigue como antes (pose de bind).
+        [Header("Animaciones")]
+        [Tooltip("Segundos para pasar un brazo de la animacion a la cinematica inversa y al reves.")]
+        public float armAnimBlendSeconds = 0.35f;
+        private Animator animator;
+
+        public bool Animated
+        {
+            get
+            {
+                return animator != null && animator.isActiveAndEnabled && animator.runtimeAnimatorController != null;
+            }
+        }
+
         private class Arm
         {
             public float side;              // +1 derecha, -1 izquierda
@@ -132,6 +153,14 @@ namespace SojaExiles
             public Vector3 blendFromLocal;  // muneca al empezar la transicion (espacio del paciente)
             public Vector3 lastWrist;
             public bool hasLastWrist;
+
+            // Con animaciones (PatientAnimator): huesos del brazo, su indice en
+            // la pose de bind, la rotacion que puso la animacion este cuadro y
+            // cuanto manda la cinematica inversa (0 = la animacion).
+            public Transform[] bones;
+            public int[] bindIndex;
+            public Quaternion[] animRotations;
+            public float ikWeight;
         }
 
         private class Leg
@@ -336,9 +365,12 @@ namespace SojaExiles
             }
 
             DisableLegacyPosers();
+            animator = GetComponent<Animator>();
             ResetToBind();
             SetupArm(right);
             SetupArm(left);
+            CollectArmBones(right);
+            CollectArmBones(left);
             ComputeKneelDrop();
 
             right.currentMode = right.previousMode = rightMode;
@@ -355,12 +387,114 @@ namespace SojaExiles
             float dt = Mathf.Min(Time.deltaTime, 0.05f);
             UpdateSprings(dt);
 
+            if (Animated)
+            {
+                LateUpdateAnimated(dt);
+                return;
+            }
+
             ResetToBind();
             ApplyLegs();
             ApplySpine();
             ApplyHead();
             ApplyArm(right, rightMode, rightTarget);
             ApplyArm(left, leftMode, leftTarget);
+        }
+
+        // La animacion ya dejo su pose (el Animator corre antes que
+        // LateUpdate). La cadera no avanza por su cuenta (Walking de Mixamo
+        // camina hacia adelante; quien mueve a la paciente es PatientReach):
+        // conserva la altura de la animacion y el lugar de la pose de bind.
+        private void LateUpdateAnimated(float dt)
+        {
+            CaptureArmAnimation(right);
+            CaptureArmAnimation(left);
+            Vector3 animatedHips = hips.localPosition;
+            hips.localPosition = new Vector3(hipsBindLocalPosition.x, animatedHips.y, hipsBindLocalPosition.z);
+
+            // Los brazos parten de la pose de bind: la cinematica inversa mide
+            // sus ejes ahi.
+            ResetArmToBind(right);
+            ResetArmToBind(left);
+
+            ApplyLegs();
+            ApplySpine();
+            ApplyHead();
+            ApplyArm(right, rightMode, rightTarget);
+            ApplyArm(left, leftMode, leftTarget);
+            BlendArmWithAnimation(right, rightMode, rightTarget, dt);
+            BlendArmWithAnimation(left, leftMode, leftTarget, dt);
+        }
+
+        private void CollectArmBones(Arm arm)
+        {
+            List<Transform> bones = new List<Transform>();
+            foreach (Transform t in new[] { arm.shoulder, arm.upper, arm.fore, arm.hand })
+            {
+                if (t != null)
+                {
+                    bones.Add(t);
+                }
+            }
+
+            if (arm.fingers != null)
+            {
+                foreach (Transform[] chain in arm.fingers)
+                {
+                    bones.AddRange(chain);
+                }
+            }
+
+            List<Transform> kept = new List<Transform>();
+            List<int> index = new List<int>();
+            foreach (Transform bone in bones)
+            {
+                int i = System.Array.IndexOf(resetBones, bone);
+                if (i >= 0)
+                {
+                    kept.Add(bone);
+                    index.Add(i);
+                }
+            }
+
+            arm.bones = kept.ToArray();
+            arm.bindIndex = index.ToArray();
+            arm.animRotations = new Quaternion[arm.bones.Length];
+        }
+
+        private static void CaptureArmAnimation(Arm arm)
+        {
+            for (int i = 0; i < arm.bones.Length; i++)
+            {
+                arm.animRotations[i] = arm.bones[i].localRotation;
+            }
+        }
+
+        private void ResetArmToBind(Arm arm)
+        {
+            for (int i = 0; i < arm.bones.Length; i++)
+            {
+                arm.bones[i].localRotation = bindLocalRotations[arm.bindIndex[i]];
+            }
+        }
+
+        // En reposo manda la animacion (el brazo cuelga y se mueve con ella);
+        // con un objetivo, la cinematica inversa. El paso es suave.
+        private void BlendArmWithAnimation(Arm arm, ArmMode mode, Transform target, float dt)
+        {
+            bool ik = mode != ArmMode.Rest && !(mode == ArmMode.Reach && target == null);
+            float speed = dt / Mathf.Max(0.01f, armAnimBlendSeconds);
+            arm.ikWeight = Mathf.MoveTowards(arm.ikWeight, ik ? 1f : 0f, speed);
+            float w = Mathf.SmoothStep(0f, 1f, arm.ikWeight);
+            if (w >= 0.999f)
+            {
+                return;
+            }
+
+            for (int i = 0; i < arm.bones.Length; i++)
+            {
+                arm.bones[i].localRotation = Quaternion.Slerp(arm.animRotations[i], arm.bones[i].localRotation, w);
+            }
         }
 
         // ---------------- preparacion ----------------
@@ -591,7 +725,11 @@ namespace SojaExiles
             Vector3 fwd = transform.forward;
             hips.position += up * (reactLift - kneelDrop * kneel);
 
-            ApplyWalk(up);
+            // Con animaciones, los pasos los da Walking (PatientAnimator).
+            if (!Animated)
+            {
+                ApplyWalk(up);
+            }
 
             if (kneel <= 0.001f)
             {
@@ -664,8 +802,12 @@ namespace SojaExiles
             spine1.rotation = Quaternion.SlerpUnclamped(Quaternion.identity, q, 0.35f) * spine1.rotation;
             spine2.rotation = Quaternion.SlerpUnclamped(Quaternion.identity, q, 0.35f) * spine2.rotation;
 
-            // Al inspirar el pecho se abre (va un poco hacia atras).
-            spine2.rotation = Quaternion.AngleAxis(-breath * breathChestDegrees, rightAxis) * spine2.rotation;
+            // Al inspirar el pecho se abre (va un poco hacia atras). Con
+            // animaciones, la respiracion ya viene en ellas.
+            if (!Animated)
+            {
+                spine2.rotation = Quaternion.AngleAxis(-breath * breathChestDegrees, rightAxis) * spine2.rotation;
+            }
         }
 
         private void ApplyHead()

@@ -565,3 +565,32 @@ manos simuladas por código). Falta probar con las manos en el Quest
 | Una tarjeta "desaparecía" al acercarse a leerla | Con la mano a menos de 25 cm, la tarjeta vuelve a usar la prueba de profundidad para que el dedo se vea delante (sección 15); si estaba en parte dentro del mesón, el mesón la tapaba entera. Ahora solo usa la profundidad si nada de la escena la tapa desde los ojos (rayos al centro y a las esquinas). Probado en Play: al aire, no tapada; dentro del mesón, tapada (sigue dibujándose encima). | `OverlayPanel.BlockedFromEye` |
 | Objetos que saltaban en el mesón, el celular que "desaparecía" al ir a agarrarlo y objetos del piso que frenaban al jugador | Los objetos sueltos (taza, celular, chompa, film, bolsa, remedios...) ya no chocan con el cuerpo del jugador, con las esferas de sus manos ni con el cuerpo de la tía: las manos los empujaban (el celular, delgado, salía disparado al acercar la mano) y la cápsula del jugador se trababa con ellos. Se siguen agarrando igual (la búsqueda de agarre no usa colisiones). La mano de la tía no entra en esto. | `SimpleGrab.loosePropsIgnorePlayer` |
 | La llamada seguía bajito si se soltaba el celular | Se pone en espera: el operador se pausa, el celular brilla y suena cada 2,5 s, y un aviso "Recoge el celular y llévalo a tu oreja para seguir la llamada" sigue la vista hasta que se vuelve a llevar el celular a la oreja. | `EmergencyCall` (`EnterHold`, `FollowHoldPanel`) |
+
+## 17. Animaciones de Mixamo para la tía (`mejoras-demo`, 2026-11-09)
+
+Se evaluó cambiar la tía por un avatar de Ready Player Me: no es viable (el
+servicio cerró el 31/01/2026 tras la compra de Netflix) y no arreglaría la
+rigidez, que venía de que todo el cuerpo se calculaba por código. Se le
+agregaron animaciones de Mixamo (mismo esqueleto `mixamorig8`, sin pasar a
+Humanoid) en `Assets/Hito1/Personajes/Animaciones`.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Capa base | Quieta: respira (`Breathing`) antes del accidente y queda encorvada (`Sad Idle`) después (parámetro `Dolor`). Al moverse, camina (`Walking`, parámetro `Speed` = `PatientBody.walkSpeed`; al girar en el lugar también da pasos). La cadera no avanza por la animación: la mueve `PatientReach`. | `Resources/Hito1Anim/TiaAnimator.controller` |
+| Gestos | Capa con máscara de columna, cuello y cabeza (`TiaGestosMascara`). Se disparan con la voz de la tía: golpe al quemarse (`Stomach Hit`), alivio (`relieved sigh`), gracias (`Thankful`), negar (`shaking head no`), asentir (`head nod yes`) y ansiedad (`Nervously Look Around`). | `PatientAnimator.VoiceGestures`, `BurnPatientReactions.Say` |
+| Brazos | Siguen la animación mientras están en reposo y pasan suave (0,35 s) a la cinemática inversa cuando van a un objetivo: la mano quemada, la taza, el anillo, cuando el jugador la lleva del brazo. | `PatientBody.LateUpdateAnimated`, `BlendArmWithAnimation` |
+| Lo que hace el código encima | Inclinarse, girar el torso, mirar y las reacciones de resorte siguen sumándose sobre la animación. Los pasos procedurales y la respiración del pecho se apagan (ya vienen en la animación). Sin controlador, todo sigue como antes. | `PatientBody.Animated` |
+
+No se usan: `Left Turn` y `Right Turn` (giran la cadera además del giro de
+`PatientReach`: se volteaba el doble), `Injured Jog` (es correr) y los demás
+gestos del paquete (dependen de los brazos o no encajan). El muñeco de
+referencia del paquete (`Ch07_nonPBR.fbx`, 50 MB) se dejó fuera de `Assets`
+(`semn13/mixamo_referencia`).
+
+**Probado en Play:** la tía respira cocinando con el brazo izquierdo colgando
+de la animación y el derecho revolviendo; al quemarse hace el golpe (0,7 s) y
+queda encorvada protegiendo la mano; con `voz_remedio_no` niega con la cabeza;
+caminando, `Speed` llega a 0,62 y llega al destino. Sin errores en consola.
+**Falta en el Quest:** revisar los 72 fps con el Animator y que la mano
+quemada, la taza, el anillo, el film y la gasa se sigan viendo bien.
+
