@@ -569,6 +569,15 @@ namespace SojaExiles
                     return "El agua caliente vuelve a quemar: usa siempre agua fría o tibia.";
                 case BurnSequenceManager.BurnEvent.CoolingInterrupted:
                     return "Sacaste la mano del agua antes de tiempo: hay que enfriar 20 minutos seguidos.";
+                case BurnSequenceManager.BurnEvent.GauzePressed:
+                    return "La gasa se apoya sin apretar: presionar una quemadura duele y daña la piel.";
+                case BurnSequenceManager.BurnEvent.GauzeTouchedCenter:
+                    return "Toma la gasa de los bordes: el centro es lo que va sobre la herida y tiene que quedar limpio.";
+                case BurnSequenceManager.BurnEvent.GauzeOffCenter:
+                    return "La gasa quedó corrida" + (string.IsNullOrEmpty(detail) ? "" : " (cubre el " + detail + " %)")
+                        + ": tiene que cubrir toda la quemadura.";
+                case BurnSequenceManager.BurnEvent.BandageApplied:
+                    return "La venda quedó apretada: al hincharse la mano, aprieta. Se da suelta, solo para sujetar la gasa.";
                 case BurnSequenceManager.BurnEvent.RingStuck:
                     return "La mano se hinchó antes de sacar el anillo: retíralo lo antes posible, apenas empieces a atenderla. Si ya no sale, no lo fuerces.";
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:

@@ -1,13 +1,20 @@
+using System.Collections;
 using UnityEngine;
 
 namespace SojaExiles
 {
     // Material para cubrir la quemadura despues de enfriarla:
     //   - Gasa esteril (la opcion principal: aposito esteril que no suelta
-    //     pelusa, Cruz Roja Britanica): se apoya sobre la quemadura y se
-    //     mantiene encima 1 s (un circulo se llena, HoldHint). Mientras se
-    //     acerca, la paciente ofrece la mano. Queda una capa de gasa solo sobre
-    //     la quemadura. (Version de experiencia-inmersiva, recuperada.)
+    //     pelusa, Cruz Roja Britanica). Sale de su sobre (GauzePacket). Se
+    //     toma de los bordes (el centro va sobre la herida: tomarla del
+    //     centro es un error leve), se apoya plana y centrada sobre la
+    //     quemadura, sin apretar, y se mantiene 1 s (un circulo se llena,
+    //     HoldHint). Si se aprieta contra la mano, ella se queja y no avanza.
+    //     Al completarse se asienta sobre el dorso de la mano (medio segundo)
+    //     y queda una capa de gasa donde se apoyo: si quedo corrida y no
+    //     cubre al menos el 85 % de la quemadura, es un error. Mientras se
+    //     acerca, la paciente ofrece la mano. Despues se puede fijar con la
+    //     venda (BandageItem).
     //   - Bolsa plastica limpia (para una mano, NHS): se suelta sobre la mano
     //     quemada y la cubre holgada hasta la muneca.
     // Las dos pasan a Covered. Si se intenta antes de terminar de enfriar, no
@@ -17,7 +24,7 @@ namespace SojaExiles
     // FilmStrip). Kind.Film queda sin uso por las escenas que guardan el
     // numero.
     [RequireComponent(typeof(Rigidbody))]
-    public class CoverItem : MonoBehaviour
+    public partial class CoverItem : MonoBehaviour
     {
         public enum Kind
         {
@@ -38,6 +45,22 @@ namespace SojaExiles
         public float holdSeconds = 1f;
         [Tooltip("A esta distancia de la quemadura, con la gasa en la mano, ella ofrece la mano (m).")]
         public float offerDistance = 0.4f;
+        [Tooltip("Corrimiento maximo del centro de la gasa respecto al de la quemadura, sobre la piel (m).")]
+        public float centerTolerance = 0.045f;
+        [Tooltip("Grados que puede estar inclinada respecto al dorso de la mano.")]
+        public float flatTolerance = 50f;
+        [Tooltip("Cuanto puede hundirse la mano del jugador bajo la piel antes de contar como apretar (m).")]
+        public float pressDepth = 0.012f;
+        [Tooltip("Medio lado de la gasa (m).")]
+        public float gauzeHalfSize = 0.05f;
+        [Tooltip("Medio lado del centro de la gasa que no se debe tocar (m).")]
+        public float sterileHalfSize = 0.028f;
+        [Range(0f, 1f)] public float coverageNeeded = 0.85f;
+
+        // La gasa puesta en la mano (para la venda): centro sobre la piel en
+        // el espacio del hueso de la mano y si ya esta puesta.
+        public static bool GauzeOnHand { get; private set; }
+        public static Vector3 GauzeCenterLocal { get; private set; }
 
         private Grabbable grabbable;
         private Rigidbody body;
@@ -50,6 +73,9 @@ namespace SojaExiles
         private HoldHint hint;
         private float progress;
         private float nextEarlyReport;
+        private float pressedTime;
+        private float nextPressReport;
+        private bool centerReported;
 
         private void Start()
         {
@@ -64,11 +90,31 @@ namespace SojaExiles
             if (kind == Kind.Gasa)
             {
                 hint = new HoldHint("IndicacionGasa", 0.05f);
+                SimpleGrab.OnGrabbed += HandleGrab;
+            }
+        }
+
+        // Tomarla del centro toca el lado que va sobre la herida.
+        private void HandleGrab(Collider touched, Rigidbody rb, bool left)
+        {
+            if (rb != body || used || centerReported || burnSequence == null
+                || !SimpleGrab.TryGetHand(left, out Vector3 point, out bool _))
+            {
+                return;
+            }
+
+            Vector3 local = transform.InverseTransformPoint(point);
+            if (Mathf.Abs(local.x) < sterileHalfSize && Mathf.Abs(local.z) < sterileHalfSize)
+            {
+                centerReported = true;
+                burnSequence.Report(BurnSequenceManager.BurnEvent.GauzeTouchedCenter, null,
+                    BurnSequenceManager.Severity.Error);
             }
         }
 
         private void OnDestroy()
         {
+            SimpleGrab.OnGrabbed -= HandleGrab;
             if (hint != null)
             {
                 hint.Destroy();
@@ -105,7 +151,7 @@ namespace SojaExiles
 
             BurnSequenceManager.BurnState state = burnSequence.CurrentState;
             Vector3 burn = BurnCenter(hand);
-            float distance = Vector3.Distance(body.worldCenterOfMass, burn);
+            float distance = Vector3.Distance(GauzeCenter, burn);
             bool early = state == BurnSequenceManager.BurnState.Burned || state == BurnSequenceManager.BurnState.Cooling;
             bool ready = state == BurnSequenceManager.BurnState.Cooled;
 
@@ -131,16 +177,37 @@ namespace SojaExiles
                     arm.ShowHand(1.5f);
                 }
 
-                bool near = distance < placeDistance;
-                progress = near ? progress + Time.deltaTime / Mathf.Max(0.1f, holdSeconds)
+                Placement(hand, out float offset, out float tilt, out float depth);
+                bool centered = offset < centerTolerance;
+                bool flat = tilt < flatTolerance;
+                bool pressing = centered && depth < -pressDepth;
+                bool resting = centered && flat && !pressing && depth < 0.04f;
+
+                // Apretar: no avanza y, si sigue, ella se queja.
+                pressedTime = pressing ? pressedTime + Time.deltaTime : 0f;
+                if (pressedTime > 0.35f && Time.time >= nextPressReport)
+                {
+                    nextPressReport = Time.time + 8f;
+                    burnSequence.Report(BurnSequenceManager.BurnEvent.GauzePressed, null,
+                        BurnSequenceManager.Severity.Error);
+                }
+
+                progress = resting ? progress + Time.deltaTime / Mathf.Max(0.1f, holdSeconds)
                     : Mathf.MoveTowards(progress, 0f, Time.deltaTime * 2f);
-                hint.Show(burn, "Mantén encima\nde la quemadura", progress);
-                // Vibra suave en la mano que la sostiene y crece al llenarse.
-                if (near && BurnHaptics.Current != null)
+                string words = pressing ? "Sin apretar:\nsolo apóyala"
+                    : distance < placeDistance && !centered ? "Céntrala sobre\nla quemadura"
+                    : distance < placeDistance && !flat ? "Ponla plana\nsobre la quemadura"
+                    : "Mantén encima\nde la quemadura";
+                hint.Show(burn, words, progress);
+                // Vibra suave en la mano que la sostiene y crece al llenarse;
+                // apretando, un golpe seco.
+                if (BurnHaptics.Current != null && (resting || pressing))
                 {
                     int h = SimpleGrab.IsHeldBy(body, true) ? 0 : 1;
-                    BurnHaptics.Current.Buzz(h, 0.1f + 0.3f * progress, 0.05f, 0f, 0.5f);
+                    BurnHaptics.Current.Buzz(h, pressing ? 0.6f : 0.1f + 0.3f * progress, 0.05f, 0f,
+                        pressing ? 1f : 0.5f);
                 }
+
                 if (progress >= 1f)
                 {
                     SimpleGrab.ForceRelease(body);
@@ -183,36 +250,29 @@ namespace SojaExiles
                 hint.Hide();
             }
 
-            // Capa sobre la piel de la mano, un poco mas separada que la
-            // quemadura y la mano mojada. La bolsa llega hasta la muneca y
-            // queda holgada; la gasa, solo sobre la quemadura (y un poco
-            // alrededor).
-            SkinnedMeshRenderer layer;
-            switch (kind)
+            // La gasa se asienta sobre la mano antes de quedar puesta.
+            if (kind == Kind.Gasa && patient != null)
             {
-                case Kind.Bolsa:
-                    layer = HandSkinMesh.Build(patient, true, 0.25f, 0.01f, "Body", "BolsaMano", "Bolsa_Mano");
-                    break;
-                case Kind.Gasa:
-                    SkinnedMeshRenderer source = burnOverlay != null ? burnOverlay.Overlay : null;
-                    layer = HandSkinMesh.CopyWhere(source, c => c.a > 0.3f || c.r > 0.1f, 0.002f, "GasaMano",
-                        "Gasa_Mano");
-                    if (layer == null)
-                    {
-                        layer = HandSkinMesh.Build(patient, true, 0.45f, 0.003f, "Body", "GasaMano", "Gasa_Mano");
-                    }
-
-                    break;
-                default:
-                    layer = HandSkinMesh.Build(patient, true, 0.45f, 0.0035f, "Body", "FilmMano", "Film_Mano");
-                    break;
+                StartCoroutine(SettleGauze(hand));
+                return;
             }
 
+            // Capa sobre la piel de la mano, un poco mas separada que la
+            // quemadura y la mano mojada. La bolsa llega hasta la muneca y
+            // queda holgada.
+            SkinnedMeshRenderer layer = kind == Kind.Bolsa
+                ? HandSkinMesh.Build(patient, true, 0.25f, 0.01f, "Body", "BolsaMano", "Bolsa_Mano")
+                : HandSkinMesh.Build(patient, true, 0.45f, 0.0035f, "Body", "FilmMano", "Film_Mano");
             if (layer == null)
             {
                 Debug.LogWarning("[CoverItem] No se pudo cubrir la mano (sin malla de piel).", this);
             }
 
+            FinishCover(hand);
+        }
+
+        private void FinishCover(Transform hand)
+        {
             Hito1FX.PlayAt(kind == Kind.Gasa ? "tela_roce_2" : "film_estirar", hand.position, 0.7f);
             burnSequence.Report(BurnSequenceManager.BurnEvent.Covered, kind.ToString());
             burnSequence.ChangeState(BurnSequenceManager.BurnState.Covered);

@@ -122,6 +122,26 @@ anótalo debajo del punto (qué pasó y en qué momento) y pásalo a
   (son del narrador). Si se regraba una voz de la tía, volver a correr el
   menú Hito1 > Generar visemas de las voces.
 
-## 11. Lo que se agregue después
+## 11. Poner la gasa (sección 23 de QUEMADURA_INMERSION)
+
+- [ ] Tomar la gasa del centro da el aviso "Tómala de los bordes"; de los
+  bordes, no.
+- [ ] Inclinada o corrida, la indicación lo dice ("Ponla plana…",
+  "Céntrala…") y el círculo no se llena.
+- [ ] Apoyarla sin apretar llena el círculo. Empujarla contra la mano de la
+  tía dice "Sin apretar", vibra seco y, si sigues, ella se queja.
+  **Ajustar** si salta muy fácil o nunca: `CoverItem.pressDepth` (1,2 cm) y
+  `HandHalfThickness` (1,8 cm).
+- [ ] Al completarse, la gasa se asienta sobre el dorso (no aparece de
+  golpe) y queda como tela con trama.
+- [ ] Puesta un poco corrida (más de 3 cm), la quemadura asoma y el
+  resumen dice que quedó corrida.
+- [ ] Con la gasa puesta, dar una vuelta holgada con la venda alrededor de
+  su mano la fija; muy pegada, ella se queja y es error. **Ajustar**
+  `BandageItem.tightRadius` (5,5 cm) si cuesta distinguir.
+- [ ] Soltar un sobre o la venda cerca de su lugar en el botiquín (tapa
+  abierta) lo vuelve a acomodar.
+
+## 12. Lo que se agregue después
 
 Las mejoras nuevas (poses de mano) se agregan aquí al terminarlas.

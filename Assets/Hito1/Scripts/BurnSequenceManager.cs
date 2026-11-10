@@ -62,7 +62,11 @@ namespace SojaExiles
             PatientAlarmed,     // se la asusto mas en vez de calmarla
             BadAdvice,          // se le recomendo un remedio casero (detalle: cual)
             CoolingConvinced,   // siguio con la mano en el agua (detalle: null, o Templada si se templo el agua)
-            CoolingGaveUp       // saco la mano por el frio (detalle: Consejo, SinRespuesta o SinTemplar)
+            CoolingGaveUp,      // saco la mano por el frio (detalle: Consejo, SinRespuesta o SinTemplar)
+            GauzePressed,       // se apreto la gasa contra la quemadura (hay que apoyarla)
+            GauzeTouchedCenter, // se tomo la gasa del centro (el lado que va sobre la herida)
+            GauzeOffCenter,     // la gasa quedo corrida y no cubre toda la quemadura (detalle: porcentaje)
+            BandageApplied      // se fijo la gasa con la venda (detalle: Suelta o Apretada)
         }
 
         public enum Severity

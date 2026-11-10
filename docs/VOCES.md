@@ -161,6 +161,10 @@ Al regenerar una voz con ElevenLabs, reemplazar el `.wav` y quitar su línea de
 | `guia_err_olla` | Narradora | `[firm] No toques la olla: sigue caliente y también te quemarías.` |
 | `guia_err_charco` | Narradora | `[calm] El piso mojado resbala: rodea el agua derramada.` |
 | `guia_err_anillo` | Narradora | `[calm] Su mano ya se hinchó: no fuerces el anillo. Sigue con el agua fría; en el centro de salud se lo sacarán.` (Nueva, 2026-11-09: todavía no existe, mientras tanto solo el texto.) |
+| `guia_err_apretar` | Narradora | `[calm] Apóyala sin apretar: solo tiene que quedar encima.` (Nueva, 2026-11-09.) |
+| `guia_err_centro_gasa` | Narradora | `[calm] Tómala de los bordes: el centro va sobre la herida y debe quedar limpio.` (Nueva, 2026-11-09.) |
+| `guia_err_gasa_corrida` | Narradora | `[calm] La gasa quedó corrida: la próxima vez céntrala para cubrir toda la quemadura.` (Nueva, 2026-11-09.) |
+| `guia_err_venda` | Narradora | `[firm] La venda va suelta: al hincharse la mano, una venda apretada le corta la circulación.` (Nueva, 2026-11-09.) |
 | `voz_aprieta` | Tía | `[in pain] ¡Ay, me aprieta! No me envuelvas la mano, por favor.` |
 | `voz_templar_pide` | Tía | `[worried] Ya, pero ábrela solo un poquito, que la caliente quema.` |
 | `voz_templada` | Tía | `[relieved] Ay, así está mejor. Aguanto.` |

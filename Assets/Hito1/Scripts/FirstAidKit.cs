@@ -9,7 +9,9 @@ namespace SojaExiles
     // tirador tambien la abre o la cierra. Adentro: sobres de gasa esteril
     // (GauzePacket: se rasgan con las dos manos), una venda (de adorno) y una
     // pomada, que no se debe usar en una quemadura (HomeRemedy.Pomada).
-    // Con la tapa cerrada no se puede sacar nada de adentro.
+    // Con la tapa cerrada no se puede sacar nada de adentro. Cada cosa tiene
+    // su lugar: si se suelta cerca (a menos de slotReach) con la tapa abierta,
+    // vuelve a acomodarse ahi.
     // Lo arma BurnSceneProps.
     public class FirstAidKit : MonoBehaviour
     {
@@ -22,6 +24,19 @@ namespace SojaExiles
         public float openAngle = 105f;
         [Tooltip("Distancia al tirador para tomar la tapa (m).")]
         public float handleReach = 0.08f;
+        [Tooltip("Si algo se suelta a menos de esto de su lugar en el botiquin, vuelve a acomodarse (m).")]
+        public float slotReach = 0.12f;
+
+        private class Slot
+        {
+            public Rigidbody body;
+            public Grabbable grab;
+            public Vector3 localPosition;
+            public Quaternion localRotation;
+            public bool wasHeld;
+        }
+
+        private readonly List<Slot> slots = new List<Slot>();
 
         public static FirstAidKit Current { get; private set; }
 
@@ -119,7 +134,15 @@ namespace SojaExiles
         {
             item.transform.SetPositionAndRotation(transform.TransformPoint(local),
                 transform.rotation * Quaternion.Euler(0f, yaw, 0f));
-            item.GetComponent<Grabbable>().SetHome();
+            Grabbable grab = item.GetComponent<Grabbable>();
+            grab.SetHome();
+            slots.Add(new Slot
+            {
+                body = item.GetComponent<Rigidbody>(),
+                grab = grab,
+                localPosition = transform.InverseTransformPoint(item.transform.position),
+                localRotation = Quaternion.Inverse(transform.rotation) * item.transform.rotation
+            });
             return item;
         }
 
@@ -130,6 +153,8 @@ namespace SojaExiles
             PropKit.Part(root.transform, PrimitiveType.Cylinder, new Vector3(0f, 0.025f, 0f),
                 new Vector3(0.05f, 0.025f, 0.05f), Quaternion.Euler(0f, 0f, 90f), "Gasa_Tejido",
                 new Color(0.97f, 0.96f, 0.92f));
+            // Con la gasa puesta, sirve para fijarla con una vuelta suelta.
+            root.AddComponent<BandageItem>();
             return root;
         }
 
@@ -249,6 +274,8 @@ namespace SojaExiles
                 angle = Mathf.MoveTowards(angle, target, 300f * Time.deltaTime);
             }
 
+            UpdateSlots();
+
             lid.localRotation = Quaternion.Euler(-angle, 0f, 0f);
 
             if (IsOpen && !announcedOpen)
@@ -259,6 +286,35 @@ namespace SojaExiles
             else if (!IsOpen && angle < 5f)
             {
                 announcedOpen = false;
+            }
+        }
+
+        // Lo que se suelta cerca de su lugar, con la tapa abierta, vuelve ahi.
+        private void UpdateSlots()
+        {
+            for (int i = slots.Count - 1; i >= 0; i--)
+            {
+                Slot slot = slots[i];
+                if (slot.body == null || slot.grab == null)
+                {
+                    slots.RemoveAt(i);
+                    continue;
+                }
+
+                bool held = slot.grab.IsHeld;
+                Vector3 home = transform.TransformPoint(slot.localPosition);
+                if (slot.wasHeld && !held && IsOpen && Vector3.Distance(slot.body.position, home) < slotReach)
+                {
+                    slot.body.velocity = Vector3.zero;
+                    slot.body.angularVelocity = Vector3.zero;
+                    slot.body.position = home;
+                    slot.body.rotation = transform.rotation * slot.localRotation;
+                    slot.body.transform.SetPositionAndRotation(home, transform.rotation * slot.localRotation);
+                    slot.grab.SetHome();
+                    Hito1FX.PlayAt("perilla_clic", home, 0.3f);
+                }
+
+                slot.wasHeld = held;
             }
         }
 

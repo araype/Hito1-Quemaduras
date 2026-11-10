@@ -158,6 +158,21 @@ namespace SojaExiles
                     Say("voz_saco_agua", true);
                     break;
 
+                // Le aprietan la gasa o la venda sobre la quemadura.
+                case BurnSequenceManager.BurnEvent.GauzePressed:
+                    Say("voz_dolor_4", true);
+                    Hurt(0.5f);
+                    break;
+
+                case BurnSequenceManager.BurnEvent.BandageApplied:
+                    if (severity != BurnSequenceManager.Severity.None)
+                    {
+                        Say("voz_dolor_3", true);
+                        Hurt(0.4f);
+                    }
+
+                    break;
+
                 case BurnSequenceManager.BurnEvent.BurnedHandGrabbed:
                     Say("voz_mano_no", true);
                     Hurt(0.6f);

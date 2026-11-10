@@ -742,3 +742,35 @@ cada frase de la tía tiene una pista de visemas sacada de su texto.
 **Probado en Play:** con "Ay, mi anillo… gracias…", a los 1,49 s la boca
 estaba en "I", con la mandíbula poco abierta. Sin errores en consola.
 **Falta en el Quest:** ver de cerca si la boca acompaña bien la voz.
+
+## 23. Poner la gasa bien: bordes, sin apretar, centrada y con venda (`mejoras-demo`, 2026-11-09)
+
+Antes bastaba acercar la gasa a la quemadura 1 s, y la capa aparecía de
+golpe con la forma de la quemadura. Ahora se pide hacerlo como en la vida
+real:
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Tomarla de los bordes | Si se agarra la gasa por el centro (la parte que va sobre la herida: 5,6 × 5,6 cm al medio), es un error leve: "Toma la gasa de los bordes…". Se cuenta una vez. La gasa que sale del sobre ya queda en la mano y no cuenta. | `CoverItem.HandleGrab`, `GauzeTouchedCenter` |
+| Plana y centrada | Solo se llena el círculo si la gasa está plana sobre el dorso (inclinada menos de 50°) y centrada (corrida menos de 4,5 cm). Si no, la indicación dice "Ponla plana…" o "Céntrala…". | `CoverItem.UpdateGauze`, `Placement` |
+| Sin apretar | Si la mano del jugador se hunde más de 1,2 cm bajo la piel de la tía, no avanza, la indicación dice "Sin apretar: solo apóyala" y vibra seco. Si sigue apretando 0,35 s, ella se queja y es un error. | `pressDepth`, `GauzePressed` |
+| Se amolda | Al completarse, la gasa baja, se pone plana sobre el dorso siguiendo la mano y se aplana en 0,45 s. Después queda una capa de gasa donde se apoyó, que aparece en 0,3 s, con el tejido a su tamaño real (coordenadas de textura planas) y casi opaca. | `SettleGauze`, `GauzeLayer`, `PlanarUV`, `Hito1FX/Gasa_Puesta` |
+| Cubrir toda la quemadura | Se calcula cuánto de la quemadura (4 cm de radio) tapa la gasa: centrada o corrida hasta 2 cm, 97-100 %; a 3 cm, 84 %; a 4,5 cm, 60 %. Por debajo del 85 % es un error ("La gasa quedó corrida…") y la quemadura asoma bajo la capa. | `Coverage`, `coverageNeeded`, `GauzeOffCenter` |
+| Venda suelta (opcional) | Con la gasa puesta, se toma la venda del botiquín y se da una vuelta alrededor de la mano de la tía (330°, medidos alrededor del eje de su mano). Si la vuelta va muy pegada (radio medio menor que 5,5 cm), queda apretada: ella se queja y es un error. Holgada, queda bien. Queda una banda de venda sobre la gasa. | `BandageItem`, `BandageApplied` (detalle Suelta o Apretada) |
+| Lugares fijos | Cada cosa del botiquín tiene su lugar: si se suelta a menos de 12 cm de él con la tapa abierta, vuelve a acomodarse (con un clic). | `FirstAidKit.UpdateSlots` |
+
+Los cuatro eventos nuevos van al final de `BurnEvent`. En modo guiado, el
+narrador corrige cada error con texto (las voces `guia_err_apretar`,
+`guia_err_centro_gasa`, `guia_err_gasa_corrida` y `guia_err_venda` faltan
+grabarlas: `VOCES.md`). La tía se queja con `voz_dolor_4` (gasa apretada) y
+`voz_dolor_3` (venda apretada).
+
+**Probado en Play:** con la gasa puesta por código a 1 cm del centro, se
+asentó sobre el dorso, cubrió el 100 % y quedó la capa de tejido sin
+errores; la venda puesta por código dejó la banda encima. Al principio, con
+la mano de la tía moviéndose entre dos pasos de la prueba, la gasa quedó a
+15 cm y se registró bien el error de gasa corrida (0 %). **Falta en el
+Quest:** todo con las manos y con controles, y ajustar los números al
+probar (ver `PRUEBAS_QUEST.md`): `HandHalfThickness` (1,8 cm, grosor
+supuesto de la mano), `pressDepth`, `centerTolerance`, `flatTolerance` y
+`BandageItem.tightRadius`.

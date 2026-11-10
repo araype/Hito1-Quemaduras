@@ -101,6 +101,23 @@ namespace SojaExiles
             gauze.color = Color.white;
             EditorUtility.SetDirty(gauze);
 
+            // Gasa (y venda) ya puesta sobre la mano: el mismo tejido, casi
+            // opaca. La capa recibe coordenadas de textura planas
+            // (CoverItem.PlanarUV), asi la trama tiene el tamano real.
+            Material placed = LoadOrCreate(Folder + "/Gasa_Puesta.mat");
+            placed.CopyPropertiesFromMaterial(gauze);
+            placed.SetTextureScale("_MainTex", Vector2.one);
+            placed.SetFloat("_Mode", 2f);
+            placed.SetOverrideTag("RenderType", "Transparent");
+            placed.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            placed.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            placed.SetInt("_ZWrite", 0);
+            placed.EnableKeyword("_ALPHABLEND_ON");
+            placed.EnableKeyword("_NORMALMAP");
+            placed.renderQueue = 3000;
+            placed.color = new Color(1f, 1f, 1f, 0.97f);
+            EditorUtility.SetDirty(placed);
+
             // Pomada untada: crema blanca, brillante y semitransparente.
             Material ointment = LoadOrCreate(Folder + "/Remedio_Pomada.mat");
             Material paste = AssetDatabase.LoadAssetAtPath<Material>(Folder + "/Remedio_PastaDental.mat");

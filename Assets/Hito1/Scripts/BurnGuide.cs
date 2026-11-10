@@ -130,7 +130,7 @@ namespace SojaExiles
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
                 hint = "Mantén su mano bajo el agua hasta que el reloj complete las 20 marcas.", clip = "guia_esperar" },
             new StepInfo { id = StepId.Cubrir, title = "Cubre con una gasa limpia",
-                hint = "Abre el botiquín, toma un sobre de gasa y rásgalo separando las manos. Apoya la gasa sobre la quemadura y mantenla 1 segundo, sin apretar. Si no hay gasa, usa film: sostén el rollo, toma el borde que brilla con la otra mano y pon las tiras a lo largo de su mano.",
+                hint = "Abre el botiquín, toma un sobre de gasa y rásgalo separando las manos. Toma la gasa de los bordes y apóyala plana y centrada sobre la quemadura 1 segundo, sin apretar. Si quieres, fíjala con la venda dando una vuelta suelta. Si no hay gasa, usa film: sostén el rollo, toma el borde que brilla con la otra mano y pon las tiras a lo largo de su mano.",
                 clip = "guia_cubrir" }
         };
 
@@ -1055,6 +1055,22 @@ namespace SojaExiles
                     break;
                 case BurnSequenceManager.BurnEvent.FilmWrapped:
                     Correct("guia_err_envolver", "No la envuelvas: apoya el film encima. La mano se va a hinchar.");
+                    break;
+                case BurnSequenceManager.BurnEvent.GauzePressed:
+                    Correct("guia_err_apretar", "Apóyala sin apretar: solo tiene que quedar encima.");
+                    break;
+                case BurnSequenceManager.BurnEvent.GauzeTouchedCenter:
+                    Correct("guia_err_centro_gasa", "Tómala de los bordes: el centro va sobre la herida y debe quedar limpio.");
+                    break;
+                case BurnSequenceManager.BurnEvent.GauzeOffCenter:
+                    Correct("guia_err_gasa_corrida", "La gasa quedó corrida: la próxima vez céntrala para cubrir toda la quemadura.");
+                    break;
+                case BurnSequenceManager.BurnEvent.BandageApplied:
+                    if (severity != BurnSequenceManager.Severity.None)
+                    {
+                        Correct("guia_err_venda", "La venda va suelta: al hincharse la mano, una venda apretada le corta la circulación.");
+                    }
+
                     break;
                 case BurnSequenceManager.BurnEvent.RingStuck:
                     // Antes el punto del anillo desaparecia sin explicacion y
