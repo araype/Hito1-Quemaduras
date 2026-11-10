@@ -27,11 +27,17 @@ namespace SojaExiles
         private const float Width = 1.0f;
         private const float Height = 0.86f;
         private const float Pad = 0.045f;
+        private const float Distance = 0.62f;
+        private const float Scale = 0.72f;
 
         public static BurnSummaryPanel Show(BurnProtocol protocol)
         {
-            Transform root = VRPanelKit.CreateRoot("PanelResumen", 1.0f, 0.12f);
-            PanelFollow.Add(root, 1.0f, 0.12f, new Vector2(Width, Height));
+            // Al alcance de la mano (0,62 m, como las otras tarjetas) y mas
+            // chico para que quepa en la vista. Antes iba a 1 m y seguia a la
+            // cabeza: al acercarse se alejaba y los botones no se alcanzaban.
+            Transform root = VRPanelKit.CreateRoot("PanelResumen", Distance, 0.12f);
+            root.localScale = Vector3.one * Scale;
+            PanelFollow.Add(root, Distance, 0.12f, new Vector2(Width, Height) * Scale);
             BurnSummaryPanel panel = root.gameObject.AddComponent<BurnSummaryPanel>();
             panel.Build(protocol);
             return panel;

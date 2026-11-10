@@ -253,7 +253,8 @@ namespace SojaExiles
                     continue;
                 }
 
-                Vector3 local = transform.InverseTransformPoint(hand);
+                // En metros aunque el panel este escalado (el resumen).
+                Vector3 local = Quaternion.Inverse(transform.rotation) * (hand - transform.position);
                 if (Mathf.Abs(local.x) < halfSize.x + 0.05f && Mathf.Abs(local.y) < halfSize.y + 0.05f
                     && local.z > -0.15f && local.z < 0.05f)
                 {

@@ -206,7 +206,16 @@ namespace SojaExiles
             {
                 if (SimpleGrab.IsHandCollider(overlap[i]))
                 {
-                    return SimpleGrab.IsLeftHandCollider(overlap[i]) ? 0 : 1;
+                    // Si esa mano tiene punta de dedo, solo cuenta el dedo: la
+                    // esfera de la palma pasaba por los botones de arriba al
+                    // bajar a otro y los marcaba sin querer.
+                    bool left = SimpleGrab.IsLeftHandCollider(overlap[i]);
+                    if (SimpleGrab.TryGetFingertip(left, out Vector3 _))
+                    {
+                        continue;
+                    }
+
+                    return left ? 0 : 1;
                 }
             }
 

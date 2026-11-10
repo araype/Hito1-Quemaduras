@@ -608,3 +608,14 @@ desde abajo sin atravesarlo; con la chompa puesta y la tía ofreciendo la mano
 (como al acercar la gasa), la chompa queda sobre los hombros y la espalda, sin
 alas ni bloque. El anillo y la tarjeta quitada, solo compilados.
 
+
+### Tarjeta de resultados: botones que no se alcanzaban y opciones que se marcaban solas (2026-11-09)
+
+| Bug | Arreglo | Dónde |
+|---|---|---|
+| En el resumen final no se podía tocar ningún botón | La tarjeta iba a 1 m y seguía la cabeza: al acercarse se alejaba. Ahora va a 0,62 m (como las otras tarjetas) y al 72 % de su tamaño para que quepa en la vista. La detección de la mano junto al panel se mide en metros aunque el panel esté escalado. | `BurnSummaryPanel.Show`, `PanelPlacement` |
+| Las opciones de las tarjetas se marcaban solas | Al bajar la mano hacia un botón, la esfera de la palma pasaba por los de arriba. Si esa mano tiene punta de dedo, ahora solo cuenta el dedo. | `TouchButton` |
+
+**Solo compilado** en el editor (sin errores en consola). Falta probarlo en
+el Quest: llegar al resumen y tocar cada botón, y que en las tarjetas con
+varias opciones no se marque ninguna al pasar la mano.
