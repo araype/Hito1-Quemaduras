@@ -223,8 +223,11 @@ namespace SojaExiles
             rb.useGravity = false;
 
             Transform hips = body.Hips, spine = body.Spine, chest = body.Chest, neck = body.Neck, head = body.Head;
-            Capsule("Cadera", hips, spine, 0.12f, layer, 0.04f);
-            Capsule("Torso", spine, neck, 0.115f, layer, 0f);
+            // El grosor del torso y la cadera sale de la malla (la tia de
+            // Avaturn es mas ancha de pecho y espalda que la de Mixamo: con
+            // 11,5 cm fijos la chompa la atravesaba).
+            Capsule("Cadera", hips, spine, FitRadius(hips, spine, 0.12f, 0.10f, 0.17f), layer, 0.04f);
+            Capsule("Torso", spine, neck, FitRadius(spine, neck, 0.115f, 0.10f, 0.17f), layer, 0f);
             Capsule("Cuello", neck, head, 0.05f, layer, 0f);
             Sphere("Cabeza", head, head.position + body.TorsoUp * 0.09f, 0.1f, layer);
 
@@ -310,6 +313,66 @@ namespace SojaExiles
 
             Current = this;
             Debug.Log($"[PatientPhysics] {colliders.Count} colliders en el cuerpo; el brazo quemado se agarra en {armColliders.Count} partes");
+        }
+
+        // Radio que cubre el 80 % de los vertices del cuerpo y la ropa que
+        // rodean el tramo entre dos huesos (sin los de los brazos).
+        private float FitRadius(Transform from, Transform to, float fallback, float min, float max)
+        {
+            if (from == null || to == null)
+            {
+                return fallback;
+            }
+
+            Vector3 a = from.position;
+            Vector3 axis = to.position - a;
+            float length = axis.magnitude;
+            if (length < 1e-3f)
+            {
+                return fallback;
+            }
+
+            axis /= length;
+            List<float> distances = new List<float>();
+            Mesh baked = new Mesh();
+            foreach (SkinnedMeshRenderer r in GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                if (r.sharedMesh == null || r.sharedMesh.vertexCount < 500)
+                {
+                    continue;
+                }
+
+                r.BakeMesh(baked, true);
+                Matrix4x4 toWorld = r.transform.localToWorldMatrix;
+                Vector3[] vertices = baked.vertices;
+                for (int i = 0; i < vertices.Length; i++)
+                {
+                    Vector3 p = toWorld.MultiplyPoint3x4(vertices[i]);
+                    float along = Vector3.Dot(p - a, axis);
+                    if (along < length * 0.15f || along > length * 0.85f)
+                    {
+                        continue;
+                    }
+
+                    float d = Vector3.Distance(p, a + axis * along);
+                    if (d < 0.3f)
+                    {
+                        distances.Add(d);
+                    }
+                }
+            }
+
+            Destroy(baked);
+            if (distances.Count < 50)
+            {
+                return fallback;
+            }
+
+            // Los brazos pegados al cuerpo quedan lejos: se descartan con el
+            // percentil (el torso es la mayoria de los vertices).
+            distances.Sort();
+            float radius = distances[Mathf.Clamp((int)(distances.Count * 0.8f), 0, distances.Count - 1)];
+            return Mathf.Clamp(radius, min, max);
         }
 
         private Collider Capsule(string partName, Transform from, Transform to, float radius, int layer, float extend)

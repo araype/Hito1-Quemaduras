@@ -630,10 +630,20 @@ hablar y huesos con los nombres de Mixamo sin prefijo.
 | Parte | Cómo quedó | Dónde |
 |---|---|---|
 | Importar | Paquete glTFast 6.10.1. El GLB está en `Personajes/Avaturn/TiaAvaturn.glb` (por Git LFS). El original queda fuera del proyecto en `semn13/avaturn/model.glb`. | `Packages/manifest.json` |
-| Preparar | Menú **Hito1 > Preparar tia de Avaturn**: crea el avatar Humanoid y el prefab `Resources/Hito1Avatar/TiaAvaturn`, pasa a Humanoid las 24 animaciones de Mixamo y el FBX de la tía anterior (con la raíz horneada: la animación no la mueve ni la gira), y la máscara de gestos a columna y cabeza Humanoid. A la ropa se le quita el mapa de normales: oscurecía media blusa. | `Editor/AvaturnSetup.cs` |
+| Preparar | Menú **Hito1 > Preparar tia de Avaturn**: crea el avatar Humanoid y el prefab `Resources/Hito1Avatar/TiaAvaturn`, pasa a Humanoid las 24 animaciones de Mixamo y el FBX de la tía anterior (con la raíz horneada: la animación no la mueve ni la gira), y la máscara de gestos a columna y cabeza Humanoid. | `Editor/AvaturnSetup.cs` |
+| Materiales | Con los de glTFast los mapas de normales salían mal: media blusa, medio brazo y media cara oscuros (las zonas con la textura en espejo), y la piel se veía gris. Ahora las imágenes se sacan del GLB a `Avaturn/Texturas` (normales como Normal map; en el Quest, ASTC 4x4 para cara, cuerpo y ojos) y los materiales son Standard (`Avaturn/Materiales`). La piel y los ojos no son metálicos y la piel tiene poco brillo. El pelo, las pestañas y las cejas usan `Hito1/CabelloA2C`, con bordes suaves por el antialiasing del Quest (antes se veían pixelados). | `Editor/AvaturnMaterials.cs`, `Avaturn/CabelloA2C.shader` |
 | Cambio de modelo | Al dar Play, `PatientBody.Awake` cambia las mallas y el esqueleto de Mixamo por los de Avaturn, pone su avatar en el Animator y deja `bonePrefix` vacío. Los componentes de la tía siguen iguales. La piel se llama `Body_Mesh` y las capas que buscan "Body" (quemadura, agua, gasa, film) la encuentran. Para volver a la de Mixamo: `PatientBody.useAvaturn` apagado. | `PatientModelSwap`, `PatientBody.useAvaturn` |
 | Cara | Gesto de fondo según el estado: tranquila cocinando, dolor según `BurnPatientReactions.Pain`, alivio al enfriar o cubrir, agradecida al final. Con cada frase, un gesto corto: golpe de dolor, miedo, alivio, gracias, ceño al negar o si le aprietan la mano. Parpadea sola y los ojos miran al jugador (máximo 22°). | `PatientFace` (lo instala `Hito1RuntimeBootstrap` si el modelo tiene expresiones) |
 | Boca | Mientras suena su voz, abre la mandíbula según el volumen del clip y va turnando visemas (aa, O, E, I, U). | `PatientFace.AddTalk` |
+
+Arreglos tras la primera prueba en el visor (2026-11-09):
+
+| Bug | Arreglo | Dónde |
+|---|---|---|
+| Sombras raras en el cuerpo, brazos con luz dispareja, cara gris y de baja calidad | Materiales Standard con texturas bien importadas (fila "Materiales"). | `AvaturnMaterials` |
+| Ojos con demasiado blanco al mirar | Giran por separado en horizontal (máx. 22°) y en vertical (máx. 12°). | `PatientFace.eyeMaxPitch` |
+| Al voltearse a recibir la taza, la mano derecha quedaba doblada contra la pierna | Mientras atiende al jugador (la cuchara queda en la olla), ese brazo cuelga como en la animación. Los dedos de Avaturn tienen 3 falanges sin hueso de punta: ahora también se dobla la última. | `PatientBurnArm.UpdateOwnArmRest`, `PatientBody.RelaxHand` |
+| Chompa con las mangas paradas como cuernos y la capa abierta como alas | Las mangas solo se apartan del cuerpo hacia los lados o adelante, nunca hacia arriba. La parte baja de la capa ya no se aparta de los brazos. La capa llega hasta el borde de los hombros, con los brazos por fuera. El torso y la cadera de `PatientPhysics` toman su grosor de la malla (16 y 17 cm en la tía de Avaturn; antes 11,5 y 12 fijos, y la blusa atravesaba la capa). | `SweaterDrape`, `SweaterItem`, `PatientPhysics.FitRadius` |
 
 Ojo: glTFast guarda el peso completo de cada expresión como 1, no como 100.
 `PatientFace` usa el peso que trae cada forma; si se pasa de ahí, la cara se

@@ -26,6 +26,8 @@ namespace SojaExiles
         public float talkLoudness = 0.12f;
         [Tooltip("Grados maximos que giran los ojos para mirar al jugador.")]
         public float eyeMaxDegrees = 22f;
+        [Tooltip("Grados maximos hacia arriba o abajo.")]
+        public float eyeMaxPitch = 12f;
 
         // Gestos: blendshape -> peso (0 a 1).
         private static readonly Dictionary<string, Dictionary<string, float>> Expressions =
@@ -146,6 +148,7 @@ namespace SojaExiles
         private Transform head, leftEye, rightEye;
         private Quaternion leftEyeRest, rightEyeRest;
         private Vector3 headForward;
+        private Vector3 headUp = Vector3.up;
         private Transform viewer;
 
         public static bool HasExpressions(GameObject patient)
@@ -221,6 +224,7 @@ namespace SojaExiles
                 leftEyeRest = Quaternion.Inverse(head.rotation) * leftEye.rotation;
                 rightEyeRest = Quaternion.Inverse(head.rotation) * rightEye.rotation;
                 headForward = Quaternion.Inverse(head.rotation) * transform.forward;
+                headUp = Quaternion.Inverse(head.rotation) * transform.up;
             }
 
             nextBlink = Time.time + Random.Range(1.5f, 4f);
@@ -398,23 +402,32 @@ namespace SojaExiles
                 return;
             }
 
-            Vector3 forward = head.rotation * headForward;
-            Vector3 toViewer = viewer.position - eye.position;
-            if (Vector3.Angle(forward, toViewer) > 70f)
+            // En el espacio de la cabeza: giro horizontal y vertical por
+            // separado. El vertical va mas corto: los ojos muy arriba o muy
+            // abajo dejaban ver demasiado blanco y la cara se veia rara.
+            Vector3 local = Quaternion.Inverse(head.rotation) * (viewer.position - eye.position);
+            Vector3 f = headForward.normalized;
+            Vector3 u = Vector3.ProjectOnPlane(headUp, f).normalized;
+            Vector3 r = Vector3.Cross(u, f);
+            float ahead = Vector3.Dot(local, f);
+            if (ahead <= 0.05f)
             {
                 eye.rotation = restWorld;
                 return;
             }
 
-            Quaternion turn = Quaternion.FromToRotation(forward, toViewer);
-            turn.ToAngleAxis(out float angle, out Vector3 axis);
-            if (angle > 180f)
+            float yaw = Mathf.Atan2(Vector3.Dot(local, r), ahead) * Mathf.Rad2Deg;
+            float pitch = Mathf.Atan2(Vector3.Dot(local, u), ahead) * Mathf.Rad2Deg;
+            if (Mathf.Abs(yaw) > 70f)
             {
-                angle -= 360f;
+                eye.rotation = restWorld;
+                return;
             }
 
-            angle = Mathf.Clamp(angle, -eyeMaxDegrees, eyeMaxDegrees);
-            eye.rotation = Quaternion.AngleAxis(angle, axis) * restWorld;
+            yaw = Mathf.Clamp(yaw, -eyeMaxDegrees, eyeMaxDegrees);
+            pitch = Mathf.Clamp(pitch, -eyeMaxPitch, eyeMaxPitch);
+            Quaternion turn = Quaternion.AngleAxis(yaw, u) * Quaternion.AngleAxis(-pitch, r);
+            eye.rotation = head.rotation * turn * rest;
         }
 
         private void Add(string expression, float amount)

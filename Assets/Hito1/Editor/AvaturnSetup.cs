@@ -14,6 +14,8 @@ namespace SojaExiles
     //      Humanoid, para que sirvan en los dos esqueletos.
     //   4. La mascara de gestos pasa a partes del cuerpo Humanoid (columna y
     //      cabeza), porque las rutas de mixamorig8 no existen en Avaturn.
+    //   5. Materiales Standard con las texturas sacadas del GLB
+    //      (AvaturnMaterials).
     public static class AvaturnSetup
     {
         private const string GlbPath = "Assets/Hito1/Personajes/Avaturn/TiaAvaturn.glb";
@@ -82,7 +84,7 @@ namespace SojaExiles
                 animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
                 PrefabUtility.UnpackPrefabInstance(instance, PrefabUnpackMode.OutermostRoot, InteractionMode.AutomatedAction);
-                FixClothesNormals(instance);
+                AvaturnMaterials.Apply(instance, GlbPath);
                 PrefabUtility.SaveAsPrefabAsset(instance, PrefabPath);
             }
             finally
@@ -104,41 +106,6 @@ namespace SojaExiles
             AssetDatabase.SaveAssets();
             Debug.Log("[AvaturnSetup] Listo: avatar Humanoid, prefab " + PrefabPath + " y " + clips
                 + " animaciones en Humanoid.");
-        }
-
-        // La ropa ("avaturn_look_*") trae un mapa de normales que en Unity
-        // oscurece media blusa (la mitad con las coordenadas de textura en
-        // espejo; recalcular las tangentes no lo arregla). Se usa una copia
-        // del material sin ese mapa: la tela se ve igual y cuesta menos en el
-        // Quest.
-        private static void FixClothesNormals(GameObject root)
-        {
-            foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true))
-            {
-                if (!r.name.StartsWith("avaturn_look"))
-                {
-                    continue;
-                }
-
-                Material[] materials = r.sharedMaterials;
-                for (int i = 0; i < materials.Length; i++)
-                {
-                    if (materials[i] == null || !materials[i].HasProperty("normalTexture"))
-                    {
-                        continue;
-                    }
-
-                    string path = OutFolder + "/" + materials[i].name + "_SinNormal.mat";
-                    AssetDatabase.DeleteAsset(path);
-                    Material copy = new Material(materials[i]);
-                    copy.SetTexture("normalTexture", null);
-                    copy.DisableKeyword("_NORMALMAP");
-                    AssetDatabase.CreateAsset(copy, path);
-                    materials[i] = copy;
-                }
-
-                r.sharedMaterials = materials;
-            }
         }
 
         private static Avatar BuildAvatar(GameObject root)

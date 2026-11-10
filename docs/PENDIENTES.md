@@ -112,11 +112,13 @@ pasarse obligaría a rehacer el agarre, los botones y el rig.
 
 - **Tía de Avaturn, lo que falta probar** (hecha y probada en Play,
   `QUEMADURA_INMERSION.md`, sección 18): en el Quest, los 72 fps (35 000
-  triángulos y el shader de glTFast) y que se vean bien de cerca la cara, el
-  pelo y las manos; en el editor, el resto del caso con el modelo nuevo
-  (agua, gasa, film, chompa, sacar el anillo, llevarla del brazo,
-  caminar). Mide unos 11 cm más que la de Mixamo: si choca con la campana o
-  los muebles, bajar la escala.
+  triángulos, materiales Standard y el pelo con alpha to coverage), que el
+  pelo se vea suave con el MSAA y que la cara, los brazos y la chompa se vean
+  bien de cerca; en el editor, el resto del caso con el modelo nuevo (agua,
+  gasa, film, sacar el anillo, llevarla del brazo, caminar). Las cápsulas
+  del torso y la cadera ahora son más gruesas (16 y 17 cm): revisar que no
+  estorben al acercar las manos. Mide unos 11 cm más que la de Mixamo: si
+  choca con la campana o los muebles, bajar la escala.
 - **Usar más del Interaction SDK de Meta (evaluar):** poses de mano al
   agarrar (`HandGrabInteractable` con pose: la mano rodea la taza, el
   celular, el rollo de film en vez de quedar abierta) y probar el

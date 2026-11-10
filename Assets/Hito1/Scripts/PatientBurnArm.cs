@@ -106,6 +106,7 @@ namespace SojaExiles
         private bool receiving;
         private bool facingForReceive;
         private float attendUntil;
+        private bool ownArmResting;
         // Hacia donde mira al empezar (la cocina): vuelve ahi tras atender.
         private Vector3 homeForward = Vector3.forward;
         private float palmDown;
@@ -611,6 +612,7 @@ namespace SojaExiles
 
             UpdateMode();
             UpdateFacing();
+            UpdateOwnArmRest();
 
             // Protegiendo la mano, mira al jugador: si no, casi siempre queda
             // de espaldas y no se ve la quemadura.
@@ -987,14 +989,40 @@ namespace SojaExiles
             }
         }
 
+        // Atendiendo al jugador (la cuchara queda apoyada en la olla), el
+        // brazo cuelga como en la animacion: con la cinematica inversa la mano
+        // quedaba con la muneca doblada contra la pierna. Al volver a
+        // revolver o en cualquier otro modo, vuelve a ir a su objetivo.
+        private void UpdateOwnArmRest()
+        {
+            bool rest = Current == Mode.Cooking && (FacingPlayer || receiving);
+            if (rest == ownArmResting)
+            {
+                return;
+            }
+
+            ownArmResting = rest;
+            PatientBody.ArmMode mode = rest ? PatientBody.ArmMode.Rest : PatientBody.ArmMode.Reach;
+            if (rightArm)
+            {
+                body.rightMode = mode;
+            }
+            else
+            {
+                body.leftMode = mode;
+            }
+        }
+
         // Mientras atiende al jugador deja de revolver: la mano baja junto al
-        // cuerpo. Cerca del pecho (menos de 15 cm en horizontal) para que
-        // PatientReach no gire el cuerpo hacia ella y la deje voltearse.
+        // cuerpo, un poco adelante y afuera del muslo (a 11 cm del pecho
+        // quedaba metida en la cadera y la muneca se doblaba hacia la pierna).
+        // A 53 grados del frente: dentro del rango comodo de PatientReach
+        // (comfortOuter, 55), asi no gira el cuerpo hacia la mano.
         private Vector3 AttendGoal()
         {
             Vector3 fwd = PatientBody.Flat(body.TorsoForward).normalized;
             Vector3 side = PatientBody.Flat(transform.right).normalized * (rightArm ? 1f : -1f);
-            return body.Chest.position + fwd * 0.04f + side * 0.11f + Vector3.down * 0.4f;
+            return body.Chest.position + fwd * 0.12f + side * 0.16f + Vector3.down * 0.42f;
         }
 
         // ---------------- cuchara ----------------

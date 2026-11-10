@@ -36,6 +36,9 @@ namespace SojaExiles
         // Todas, con brazos y manos: solo para las mangas colgantes, que si
         // no atravesaban los brazos.
         private CapsuleCollider[] bodyWithArms = new CapsuleCollider[0];
+        // Sin ningun brazo: para la parte baja de la espalda, que si no se
+        // abria como alas al levantar los codos (tia de Avaturn).
+        private CapsuleCollider[] torsoOnly = new CapsuleCollider[0];
 
         public void Init(Vector3 topPoint, Vector3 upDir, Vector3 forwardDir, float dropLength)
         {
@@ -64,6 +67,7 @@ namespace SojaExiles
             {
                 List<CapsuleCollider> found = new List<CapsuleCollider>();
                 List<CapsuleCollider> all = new List<CapsuleCollider>();
+                List<CapsuleCollider> torso = new List<CapsuleCollider>();
                 foreach (CapsuleCollider c in patient.GetComponentsInChildren<CapsuleCollider>())
                 {
                     if (!c.isTrigger && c.transform != transform && !c.transform.IsChildOf(transform))
@@ -86,11 +90,16 @@ namespace SojaExiles
                     if (!c.isTrigger && c.transform != transform && !c.transform.IsChildOf(transform))
                     {
                         found.Add(c);
+                        if (!n.Contains("brazo") && !n.Contains("arm"))
+                        {
+                            torso.Add(c);
+                        }
                     }
                 }
 
                 body = found.ToArray();
                 bodyWithArms = all.ToArray();
+                torsoOnly = torso.ToArray();
             }
 
             start = Time.time;
@@ -179,7 +188,21 @@ namespace SojaExiles
                 float h = Mathf.Clamp01(below / drop); // 0 cuello, 1 borde
                 Vector3 p = v + up * below * (1f - unfold);
                 p += (forward * sway + lag) * h * h;
-                vertices[i] = body.Length > 0 ? transform.InverseTransformPoint(PushOut(transform.TransformPoint(p))) : p;
+                if (body.Length > 0)
+                {
+                    // Arriba (hombros) la tela se apoya en los brazos; abajo
+                    // solo en el torso y deja pasar los codos.
+                    Vector3 world = transform.TransformPoint(p);
+                    Vector3 onArms = PushOut(world);
+                    float armWeight = 1f - Mathf.SmoothStep(0f, 1f, (h - 0.25f) / 0.3f);
+                    Vector3 pushed = armWeight >= 0.999f ? onArms
+                        : Vector3.Lerp(PushOut(world, torsoOnly, 0f), onArms, armWeight);
+                    vertices[i] = transform.InverseTransformPoint(pushed);
+                }
+                else
+                {
+                    vertices[i] = p;
+                }
             }
 
             mesh.vertices = vertices;
@@ -197,8 +220,20 @@ namespace SojaExiles
                 sleeves[i].localPosition = sleevePosition[i] + (forward * sway + lag) * 0.6f;
                 if (body.Length > 0)
                 {
-                    // El centro de la manga queda fuera del cuerpo (mas su grosor).
-                    sleeves[i].position = PushOut(sleeves[i].position, bodyWithArms, 0.02f);
+                    // El centro de la manga queda fuera del cuerpo (mas su
+                    // grosor), pero solo hacia los lados o adelante: si una
+                    // mano levantada la empujaba hacia arriba, la manga
+                    // quedaba parada como un cuerno junto a la cabeza.
+                    Vector3 before = sleeves[i].position;
+                    Vector3 delta = PushOut(before, bodyWithArms, 0.02f) - before;
+                    Vector3 worldUp = transform.TransformDirection(up).normalized;
+                    float lift = Vector3.Dot(delta, worldUp);
+                    if (lift > 0f)
+                    {
+                        delta -= worldUp * lift;
+                    }
+
+                    sleeves[i].position = before + delta;
                 }
             }
         }

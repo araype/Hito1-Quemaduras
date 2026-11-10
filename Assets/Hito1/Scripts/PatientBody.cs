@@ -1071,11 +1071,20 @@ namespace SojaExiles
             for (int f = 0; f < arm.fingers.Length; f++)
             {
                 Transform[] chain = arm.fingers[f];
-                for (int i = 0; i + 1 < chain.Length && i < PhalanxCurlShare.Length; i++)
+                for (int i = 0; i < chain.Length && i < PhalanxCurlShare.Length; i++)
                 {
                     // Gira la falange hacia la palma alrededor de su propia
-                    // bisagra (perpendicular al hueso y a la palma).
-                    Vector3 dir = chain[i + 1].position - chain[i].position;
+                    // bisagra (perpendicular al hueso y a la palma). La
+                    // ultima de Avaturn no tiene hueso de punta: usa la
+                    // direccion de la anterior.
+                    if (i + 1 >= chain.Length && i == 0)
+                    {
+                        break;
+                    }
+
+                    Vector3 dir = i + 1 < chain.Length
+                        ? chain[i + 1].position - chain[i].position
+                        : chain[i].position - chain[i - 1].position;
                     Vector3 axis = Vector3.Cross(dir, palm);
                     if (axis.sqrMagnitude < 1e-10f)
                     {

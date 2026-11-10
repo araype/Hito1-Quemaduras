@@ -81,8 +81,11 @@ namespace SojaExiles
             // veian los hombros azules a traves de la lana). Cae por encima de
             // los brazos: la tela ya no se aparta de ellos (SweaterDrape).
             float shoulderHalf = Vector3.Distance(left, rightShoulder) * 0.5f;
-            float halfWidth = Mathf.Max(0.15f, shoulderHalf + 0.11f);
-            const float depth = 0.14f;
+            // Hasta el borde de los hombros (con 11 cm de mas, en la tia de
+            // Avaturn quedaba como una caja ancha que los brazos atravesaban);
+            // los brazos quedan por fuera, como con una chompa echada encima.
+            float halfWidth = Mathf.Max(0.15f, shoulderHalf + 0.04f);
+            const float depth = 0.16f;
             const float drop = 0.36f;
             // Arranca por encima de los hombros: si no, asomaban por arriba.
             Vector3 top = center + up * 0.06f;
@@ -182,7 +185,9 @@ namespace SojaExiles
                 Renderer sleeve = PropKit.Part(go.transform, PrimitiveType.Capsule, Vector3.zero, Vector3.one,
                     materialName, fallbackColor);
                 Transform st = sleeve.transform;
-                st.position = shoulder - up * 0.15f + forward * 0.12f;
+                // Pegada al pecho: SweaterDrape la deja justo fuera del
+                // cuerpo (a 12 cm flotaba lejos del pecho).
+                st.position = shoulder - up * 0.15f + forward * 0.05f;
                 st.rotation = Quaternion.LookRotation(forward, Quaternion.AngleAxis(side * 8f, forward) * up);
                 Vector3 ls = st.parent.lossyScale;
                 st.localScale = new Vector3(0.06f / Mathf.Abs(ls.x), 0.17f / Mathf.Abs(ls.y), 0.04f / Mathf.Abs(ls.z));
