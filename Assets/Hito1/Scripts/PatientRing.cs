@@ -426,6 +426,9 @@ namespace SojaExiles
             ring.localPosition = Vector3.zero;
             ring.localRotation = Quaternion.identity;
             ring.localScale = Vector3.one;
+            // Se queda donde cae: su "lugar" era el punto en el aire donde
+            // estaba la mano, y al volver ahi caia otra vez, en bucle.
+            loose.GetComponent<Grabbable>().returnFromFloor = false;
             busy = false;
 
             if (burnSequence != null)

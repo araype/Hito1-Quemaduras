@@ -66,8 +66,15 @@ namespace SojaExiles
 
         private bool Eligible(Rigidbody rb)
         {
-            bool grabbable = rb.GetComponent<Grabbable>() != null
-                || rb.GetComponent<Oculus.Interaction.Grabbable>() != null;
+            // Los que piden quedarse en el piso (Grabbable.returnFromFloor
+            // apagado: la cuchara caida, el anillo que se saco) no vuelven.
+            Grabbable own = rb.GetComponent<Grabbable>();
+            if (own != null && !own.returnFromFloor)
+            {
+                return false;
+            }
+
+            bool grabbable = own != null || rb.GetComponent<Oculus.Interaction.Grabbable>() != null;
             return grabbable && !rb.isKinematic
                 && rb.GetComponent<PotAccident>() == null
                 && (patient == null || !rb.transform.IsChildOf(patient.transform))

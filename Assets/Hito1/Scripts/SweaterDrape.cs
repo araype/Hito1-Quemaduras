@@ -33,6 +33,9 @@ namespace SojaExiles
         // Capsulas del cuerpo (PatientPhysics): la tela no entra en ellas.
         public float skin = 0.012f;
         private CapsuleCollider[] body = new CapsuleCollider[0];
+        // Todas, con brazos y manos: solo para las mangas colgantes, que si
+        // no atravesaban los brazos.
+        private CapsuleCollider[] bodyWithArms = new CapsuleCollider[0];
 
         public void Init(Vector3 topPoint, Vector3 upDir, Vector3 forwardDir, float dropLength)
         {
@@ -60,8 +63,26 @@ namespace SojaExiles
             if (patient != null)
             {
                 List<CapsuleCollider> found = new List<CapsuleCollider>();
+                List<CapsuleCollider> all = new List<CapsuleCollider>();
                 foreach (CapsuleCollider c in patient.GetComponentsInChildren<CapsuleCollider>())
                 {
+                    if (!c.isTrigger && c.transform != transform && !c.transform.IsChildOf(transform))
+                    {
+                        all.Add(c);
+                    }
+
+                    // Sin las de antebrazos y manos: al levantar la mano
+                    // (protegerla, ofrecerla, recibir la gasa) su capsula
+                    // empujaba la tela hacia afuera y la chompa se abria como
+                    // alas o quedaba como un bloque delante del pecho. La del
+                    // brazo (hombro a codo) se queda: por ella la tela cae
+                    // sobre los hombros y no la atraviesa el brazo.
+                    string n = c.name.ToLowerInvariant();
+                    if (n.Contains("antebrazo") || n.Contains("mano") || n.Contains("forearm") || n.Contains("hand"))
+                    {
+                        continue;
+                    }
+
                     if (!c.isTrigger && c.transform != transform && !c.transform.IsChildOf(transform))
                     {
                         found.Add(c);
@@ -69,6 +90,7 @@ namespace SojaExiles
                 }
 
                 body = found.ToArray();
+                bodyWithArms = all.ToArray();
             }
 
             start = Time.time;
@@ -98,7 +120,12 @@ namespace SojaExiles
         // Saca el punto (mundo) de las capsulas del cuerpo.
         private Vector3 PushOut(Vector3 point, float extra = 0f)
         {
-            foreach (CapsuleCollider c in body)
+            return PushOut(point, body, extra);
+        }
+
+        private Vector3 PushOut(Vector3 point, CapsuleCollider[] capsules, float extra)
+        {
+            foreach (CapsuleCollider c in capsules)
             {
                 if (c == null || !c.enabled)
                 {
@@ -171,7 +198,7 @@ namespace SojaExiles
                 if (body.Length > 0)
                 {
                     // El centro de la manga queda fuera del cuerpo (mas su grosor).
-                    sleeves[i].position = PushOut(sleeves[i].position, 0.02f);
+                    sleeves[i].position = PushOut(sleeves[i].position, bodyWithArms, 0.02f);
                 }
             }
         }

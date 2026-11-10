@@ -7,7 +7,9 @@ namespace SojaExiles
     // Lo que pasa con la paciente durante los 20 minutos de agua (E.3 y E.6):
     //   - Hacia el minuto 3 se angustia ("¿me va a quedar la marca?"). Hay que
     //     calmarla: tranquilizarla es lo correcto; asustarla o recomendar un
-    //     remedio casero es error.
+    //     remedio casero es error. Apagado por defecto (worryQuestion): la
+    //     tarjeta salia mientras el narrador pedia llamar al 106 y aportaba
+    //     poco (prueba en el Quest, 2026-11-09).
     //   - Hacia el minuto 9 el agua ya le parece muy fria y empieza a sacar
     //     la mano. Hay dos respuestas correctas: convencerla de aguantar o
     //     templar un poco el agua (abrir tambien la llave caliente: con las
@@ -26,6 +28,8 @@ namespace SojaExiles
     public class PatientDialog : MonoBehaviour
     {
         public BurnSequenceManager burnSequence;
+        [Tooltip("Hacer la pregunta del minuto 3 (se angustia y hay que calmarla).")]
+        public bool worryQuestion;
         [Tooltip("Minuto simulado en que se angustia y hay que calmarla.")]
         public float worryMinute = 3f;
         [Tooltip("Minuto simulado en que quiere sacar la mano por el frio.")]
@@ -119,7 +123,10 @@ namespace SojaExiles
             if (!worryDone && minute >= worryMinute)
             {
                 worryDone = true;
-                StartCoroutine(Worry());
+                if (worryQuestion)
+                {
+                    StartCoroutine(Worry());
+                }
             }
             else if (!resistDone && minute >= resistMinute)
             {

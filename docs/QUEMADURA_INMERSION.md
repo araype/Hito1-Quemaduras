@@ -594,3 +594,17 @@ caminando, `Speed` llega a 0,62 y llega al destino. Sin errores en consola.
 **Falta en el Quest:** revisar los 72 fps con el Animator y que la mano
 quemada, la taza, el anillo, el film y la gasa se sigan viendo bien.
 
+### Arreglos de la prueba en el Quest con las animaciones (2026-11-09)
+
+| Bug | Arreglo | Dónde |
+|---|---|---|
+| La mano que sostiene la quemada atravesaba el antebrazo | Va 10,5 cm por debajo de la muñeca quemada y 4 cm hacia el codo (antes 3,5 cm y 7 cm): la sostiene desde abajo. Valores ajustables. | `PatientBurnArm.cradleBelow`, `cradleTowardElbow` |
+| El anillo caía del aire una y otra vez | Al sacarlo, su lugar de origen era el punto en el aire donde estaba la mano: caía al piso y volvía ahí. Ahora se queda donde cae; `FloorRecovery` ya no devuelve los objetos con `returnFromFloor` apagado. | `PatientRing`, `FloorRecovery.Eligible` |
+| La tarjeta "Está asustada. ¿Qué le dices?" salía mientras el narrador pedía llamar al 106 | Se quitó la pregunta del minuto 3 (`PatientDialog.worryQuestion`, apagada). La del minuto 9 (quiere sacar la mano del agua) sigue. | `PatientDialog` |
+| La chompa se abría como alas o quedaba como un bloque delante del pecho (al ofrecer la mano, al recibir la gasa) | La tela se apartaba de las cápsulas del antebrazo y de la mano, que suben al ofrecer la mano. Ahora solo se aparta del torso, las piernas, el cuello y el brazo (hombro a codo); las mangas colgantes siguen apartándose de todo. La chompa es un poco más ancha para caer sobre los brazos. | `SweaterDrape`, `SweaterItem.BuildDrape` |
+
+**Probado en Play** con capturas: la mano izquierda sostiene el antebrazo
+desde abajo sin atravesarlo; con la chompa puesta y la tía ofreciendo la mano
+(como al acercar la gasa), la chompa queda sobre los hombros y la espalda, sin
+alas ni bloque. El anillo y la tarjeta quitada, solo compilados.
+

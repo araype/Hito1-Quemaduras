@@ -115,6 +115,11 @@ namespace SojaExiles
         [Tooltip("Si la llevan hasta el chorro y la sostienen ahi este tiempo, ella pone la mano bajo el agua.")]
         public float placeInWaterAfter = 0.8f;
 
+        [Tooltip("La otra mano sostiene la quemada: cuanto por debajo de la muneca quemada (m).")]
+        public float cradleBelow = 0.105f;
+        [Tooltip("La otra mano sostiene la quemada: cuanto desde la muneca hacia el codo (m).")]
+        public float cradleTowardElbow = 0.04f;
+
         private void Awake()
         {
             body = GetComponent<PatientBody>();
@@ -732,8 +737,11 @@ namespace SojaExiles
             Transform fore = body.ForeArm(rightArm);
             if (cradling && hand != null && fore != null)
             {
+                // Por debajo del antebrazo quemado, sosteniendolo: antes iba a
+                // 3,5 cm de la muneca y los dedos atravesaban el antebrazo.
                 Vector3 along = (hand.position - fore.position).normalized;
-                cradle.position = body.WristPosition(rightArm) - along * 0.07f + Vector3.down * 0.035f;
+                cradle.position = body.WristPosition(rightArm) - along * cradleTowardElbow
+                    + Vector3.down * cradleBelow;
                 SetOtherArm(PatientBody.ArmMode.Reach, cradle);
             }
             else if (!receiving)

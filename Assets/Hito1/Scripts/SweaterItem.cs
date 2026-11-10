@@ -78,9 +78,10 @@ namespace SojaExiles
             Vector3 rightShoulder = patient.ShoulderPosition(true);
             Vector3 center = (left + rightShoulder) * 0.5f;
             // Ancha y honda para que entren los brazos y la espalda (antes se
-            // veian los hombros azules a traves de la lana).
+            // veian los hombros azules a traves de la lana). Cae por encima de
+            // los brazos: la tela ya no se aparta de ellos (SweaterDrape).
             float shoulderHalf = Vector3.Distance(left, rightShoulder) * 0.5f;
-            float halfWidth = Mathf.Max(0.15f, shoulderHalf + 0.065f);
+            float halfWidth = Mathf.Max(0.15f, shoulderHalf + 0.11f);
             const float depth = 0.14f;
             const float drop = 0.36f;
             // Arranca por encima de los hombros: si no, asomaban por arriba.
