@@ -145,6 +145,27 @@ namespace SojaExiles
             }
         }
 
+        // Pone 'rb' en esa mano del jugador como si la hubiera agarrado (la
+        // gasa que sale del sobre queda en la mano que tenia el sobre). Falso
+        // si esa mano ya tiene algo o no se esta siguiendo.
+        public static bool ForceGrab(Rigidbody rb, bool leftHand)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                SimpleGrab grab = Instances[i];
+                Hand hand = leftHand ? grab.left : grab.right;
+                if (hand == null || hand.held != null || !hand.poseValid)
+                {
+                    continue;
+                }
+
+                grab.Grab(hand, rb, Vector3.zero);
+                return true;
+            }
+
+            return false;
+        }
+
         // Posicion del punto de agarre de una mano del jugador.
         public static bool TryGetHand(bool leftHand, out Vector3 position, out bool holding)
         {

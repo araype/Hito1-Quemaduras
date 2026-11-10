@@ -114,7 +114,7 @@ namespace SojaExiles
             // pecho y se alcanza facil (bajo el agua costaba mucho). Si se lo
             // salta, se puede sacar despues, tambien bajo el chorro.
             new StepInfo { id = StepId.Anillo, title = "Quítale el anillo",
-                hint = "Antes de que se hinche. Mantén el agarre junto a su anillo hasta que salga.",
+                hint = "Antes de que se hinche. Pellizca su anillo y deslízalo hacia la punta del dedo.",
                 clip = "guia_anillo" },
             new StepInfo { id = StepId.LlevarAlAgua, title = "Lleva su mano al chorro",
                 hint = "Tómala del antebrazo, no de la mano quemada, y llévala al chorro: ella la pondrá bajo el agua.",
@@ -130,7 +130,7 @@ namespace SojaExiles
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
                 hint = "Mantén su mano bajo el agua hasta que el reloj complete las 20 marcas.", clip = "guia_esperar" },
             new StepInfo { id = StepId.Cubrir, title = "Cubre con una gasa limpia",
-                hint = "Apoya la gasa sobre la quemadura y mantenla 1 segundo, sin apretar. Si no hay gasa, usa film: sostén el rollo, toma el borde que brilla con la otra mano y pon las tiras a lo largo de su mano.",
+                hint = "Abre el botiquín, toma un sobre de gasa y rásgalo separando las manos. Apoya la gasa sobre la quemadura y mantenla 1 segundo, sin apretar. Si no hay gasa, usa film: sostén el rollo, toma el borde que brilla con la otra mano y pon las tiras a lo largo de su mano.",
                 clip = "guia_cubrir" }
         };
 
@@ -934,6 +934,20 @@ namespace SojaExiles
                         points.Add(rr != null ? rr.bounds.center : item.transform.position);
                     }
 
+                    // La gasa esta en el botiquin: primero el tirador de la
+                    // tapa; abierto, los sobres.
+                    if (FirstAidKit.Current != null && !FirstAidKit.Current.IsOpen)
+                    {
+                        points.Add(FirstAidKit.Current.HandlePosition);
+                    }
+                    else
+                    {
+                        foreach (GauzePacket packet in FindObjectsOfType<GauzePacket>())
+                        {
+                            points.Add(packet.transform.position);
+                        }
+                    }
+
                     foreach (FilmRoll roll in FindObjectsOfType<FilmRoll>())
                     {
                         if (!roll.GetComponent<Grabbable>().IsHeld)
@@ -1041,6 +1055,12 @@ namespace SojaExiles
                     break;
                 case BurnSequenceManager.BurnEvent.FilmWrapped:
                     Correct("guia_err_envolver", "No la envuelvas: apoya el film encima. La mano se va a hinchar.");
+                    break;
+                case BurnSequenceManager.BurnEvent.RingStuck:
+                    // Antes el punto del anillo desaparecia sin explicacion y
+                    // parecia que no funcionaba.
+                    Correct("guia_err_anillo",
+                        "Su mano ya se hinchó: no fuerces el anillo. Sigue con el agua fría; en el centro de salud se lo sacarán.");
                     break;
             }
         }

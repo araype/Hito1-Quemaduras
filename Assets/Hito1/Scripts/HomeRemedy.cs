@@ -18,7 +18,9 @@ namespace SojaExiles
             Mantequilla,
             PastaDental,
             Aceite,
-            Algodon
+            Algodon,
+            // Del botiquin (2026-11-09): no se ponen cremas ni pomadas.
+            Pomada
         }
 
         public Remedy remedy;

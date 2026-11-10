@@ -570,7 +570,7 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnEvent.CoolingInterrupted:
                     return "Sacaste la mano del agua antes de tiempo: hay que enfriar 20 minutos seguidos.";
                 case BurnSequenceManager.BurnEvent.RingStuck:
-                    return "La mano se hinchó antes de sacar el anillo: retíralo apenas empieces a enfriar.";
+                    return "La mano se hinchó antes de sacar el anillo: retíralo lo antes posible, apenas empieces a atenderla. Si ya no sale, no lo fuerces.";
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:
                     return "Primero hay que terminar de enfriar la quemadura; después se cubre.";
                 case BurnSequenceManager.BurnEvent.ClothOnBurn:
@@ -634,6 +634,8 @@ namespace SojaExiles
                     return "La pasta dental irrita la piel y no enfría la quemadura.";
                 case "Algodon":
                     return "El algodón suelta fibras que se pegan a la quemadura.";
+                case "Pomada":
+                    return "Ninguna crema ni pomada va sobre una quemadura recién hecha: guarda el calor. Solo agua fría y después una gasa.";
             }
 
             return "No se usan remedios caseros sobre una quemadura.";

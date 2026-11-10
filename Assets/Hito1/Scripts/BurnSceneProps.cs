@@ -6,9 +6,11 @@ namespace SojaExiles
 {
     // Pone en la cocina los objetos del protocolo y los distractores, sin
     // tocar la escena:
-    //   - junto al lavadero: gasa esteril (la opcion principal para
-    //     cubrir: un aposito esteril que no suelta pelusa, Cruz Roja
-    //     Britanica), film transparente y bolsa plastica (si no hay gasa);
+    //   - junto al lavadero: el botiquin (FirstAidKit) con sobres de gasa
+    //     esteril (la opcion principal para cubrir: un aposito esteril que
+    //     no suelta pelusa, Cruz Roja Britanica), una venda y una pomada
+    //     (distractor); y sueltos, film transparente y bolsa plastica (si no
+    //     hay gasa);
     //   - en la silla mas cercana a la paciente: una chompa (para abrigarla);
     //   - en el meson, cerca de la cocina: mantequilla, pasta dental, aceite
     //     y algodon; el hielo, cerca del refrigerador.
@@ -67,7 +69,7 @@ namespace SojaExiles
             {
                 WaterTap tap = FindObjectOfType<WaterTap>();
                 Vector3 sink = tap != null ? tap.transform.position : stove;
-                Place(BuildGauze(), sink, counter, 0.3f, 0.9f, 0.08f, avoid);
+                PlaceKit(sink, counter, avoid, patient);
                 Place(BuildFilm(), sink, counter, 0.3f, 0.9f, 0.09f, avoid);
                 Place(BuildBag(), sink, counter, 0.3f, 0.9f, 0.09f, avoid);
             }
@@ -126,6 +128,27 @@ namespace SojaExiles
             prop.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
             prop.GetComponent<Grabbable>().SetHome();
             Debug.Log("[BurnSceneProps] " + prop.name + " en " + spot.ToString("F2"));
+        }
+
+        // El botiquin, con el frente (rotulo y tirador) hacia el centro de la
+        // cocina, y lo de adentro.
+        private void PlaceKit(Vector3 near, float counter, Vector3 avoid, PatientBody patient)
+        {
+            FirstAidKit kit = FirstAidKit.Build();
+            if (!PropKit.FindSurfaceSpot(near, counter, 0.3f, 1.1f, 0.2f, taken, avoid, avoidRadius, out Vector3 spot))
+            {
+                Debug.LogWarning("[BurnSceneProps] No hay lugar libre para el botiquin; queda junto al lavadero.");
+                spot = new Vector3(near.x, counter, near.z);
+            }
+
+            Vector3 room = patient != null ? patient.transform.position : (Camera.main != null ? Camera.main.transform.position : spot);
+            Vector3 face = room - spot;
+            face.y = 0f;
+            kit.transform.position = spot + Vector3.up * 0.002f;
+            kit.transform.rotation = face.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(face.normalized) : Quaternion.identity;
+            Physics.SyncTransforms();
+            kit.Fill();
+            Debug.Log("[BurnSceneProps] Botiquin en " + spot.ToString("F2"));
         }
 
         // Asiento de la silla mas cercana a la paciente.
@@ -221,18 +244,20 @@ namespace SojaExiles
             return root;
         }
 
-        // Paquete de gasa esteril: se apoya sobre la quemadura ya enfriada y
+        // Gasa esteril ya sacada de su sobre (GauzePacket): un cuadrado de
+        // tejido de algodon doblado. Se apoya sobre la quemadura ya enfriada y
         // se mantiene encima 1 s (CoverItem). Es la opcion principal.
-        private static GameObject BuildGauze()
+        public static GameObject BuildGauze()
         {
             GameObject root = PropKit.Grabbable("GasaEsteril", Vector3.zero, Quaternion.identity,
-                new Vector3(0.1f, 0.014f, 0.08f), 0.03f);
-            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.007f, 0f),
-                new Vector3(0.1f, 0.012f, 0.08f), "Gasa_Paquete", new Color(0.96f, 0.96f, 0.94f));
-            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.0135f, 0.022f),
-                new Vector3(0.1f, 0.002f, 0.016f), "Plastico_Azul", new Color(0.2f, 0.45f, 0.85f));
+                new Vector3(0.1f, 0.012f, 0.1f), 0.01f);
+            Color cotton = new Color(0.97f, 0.96f, 0.93f);
+            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.003f, 0f),
+                new Vector3(0.1f, 0.005f, 0.1f), "Gasa_Tejido", cotton);
+            // El doblez de arriba, un poco corrido, como al desdoblarla.
+            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0.004f, 0.0068f, 0.025f),
+                new Vector3(0.096f, 0.003f, 0.05f), Quaternion.Euler(0f, 2f, 0f), "Gasa_Tejido", cotton);
             root.AddComponent<CoverItem>().kind = CoverItem.Kind.Gasa;
-            Amarillo(root, "Gasa_Paquete", 1f);
             return root;
         }
 

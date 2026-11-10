@@ -10,8 +10,10 @@ namespace SojaExiles
     //   - Gestos cortos con su voz (ForVoice, lo llama BurnPatientReactions.Say):
     //     el golpe al quemarse, miedo, alivio, ceno al negar o si le aprietan
     //     la mano.
-    //   - Boca al ritmo de su voz (volumen del AudioSource, con visemas que
-    //     van cambiando), parpadeo y ojos que miran al jugador.
+    //   - Boca al hablar: los visemas de cada frase salen de su texto
+    //     (VisemasVoces.json, ver Editor/VisemeTracks.cs) y abren segun el
+    //     volumen; las frases sin pista turnan visemas al azar. Parpadeo y
+    //     ojos que miran al jugador.
     // Lo instala Hito1RuntimeBootstrap solo si el modelo tiene expresiones.
     [DefaultExecutionOrder(320)]
     public class PatientFace : MonoBehaviour
@@ -118,8 +120,41 @@ namespace SojaExiles
             { "voz_asustada", "Miedo" }
         };
 
-        // Visemas para hablar (se van turnando mientras suena la voz).
+        // Visemas para hablar (se van turnando mientras suena la voz, si la
+        // frase no tiene pista de visemas).
         private static readonly string[] TalkVisemes = { "viseme_aa", "viseme_O", "viseme_E", "viseme_I", "viseme_U" };
+
+        // Los 15 visemas de Oculus (los trae el avatar de Avaturn), en el
+        // orden de las pistas, y cuanto abre la mandibula cada uno.
+        public static readonly string[] Visemes =
+        {
+            "viseme_sil", "viseme_PP", "viseme_FF", "viseme_TH", "viseme_DD", "viseme_kk", "viseme_CH",
+            "viseme_SS", "viseme_nn", "viseme_RR", "viseme_aa", "viseme_E", "viseme_I", "viseme_O", "viseme_U"
+        };
+
+        private static readonly float[] VisemeJaw =
+        {
+            0f, 0f, 0.15f, 0.2f, 0.3f, 0.35f, 0.3f, 0.2f, 0.25f, 0.3f, 1f, 0.6f, 0.45f, 0.75f, 0.4f
+        };
+
+        // Pista de visemas de una frase: en cada tiempo (s del clip), el
+        // visema que empieza. Las genera el menu Hito1 > Generar visemas de
+        // las voces a partir del texto (docs/VOCES.md) y el audio.
+        [System.Serializable]
+        public class VisemeTrack
+        {
+            public string clip;
+            public List<float> times = new List<float>();
+            public List<int> visemes = new List<int>();
+        }
+
+        [System.Serializable]
+        public class VisemeData
+        {
+            public List<VisemeTrack> tracks = new List<VisemeTrack>();
+        }
+
+        private static Dictionary<string, VisemeTrack> tracks;
 
         // Cada forma: renderer, indice y peso del gesto completo (glTFast
         // guarda 1, los FBX suelen traer 100; pasar de ahi lo exagera).
@@ -366,6 +401,22 @@ namespace SojaExiles
                 return;
             }
 
+            // Con pista (sacada del texto de la frase): el visema que toca en
+            // este momento del audio, con la mandibula segun la vocal.
+            VisemeTrack track = voice != null && voice.clip != null ? TrackFor(voice.clip.name) : null;
+            if (track != null && track.times.Count > 0)
+            {
+                int v = track.visemes[IndexAt(track.times, voice.time)];
+                if (v > 0 && v < Visemes.Length)
+                {
+                    float amount = talkOpen * Mathf.Lerp(0.7f, 1.3f, talk);
+                    Add(Visemes[v], amount, true);
+                    Add("jawOpen", amount * 0.55f * VisemeJaw[v], true);
+                }
+
+                return;
+            }
+
             if (Time.time >= visemeChange)
             {
                 viseme = (viseme + Random.Range(1, TalkVisemes.Length)) % TalkVisemes.Length;
@@ -374,6 +425,52 @@ namespace SojaExiles
 
             Add(TalkVisemes[viseme], talk * talkOpen * 1.4f, true);
             Add("jawOpen", talk * talkOpen * 0.6f, true);
+        }
+
+        private static VisemeTrack TrackFor(string clip)
+        {
+            if (tracks == null)
+            {
+                tracks = new Dictionary<string, VisemeTrack>();
+                TextAsset json = Resources.Load<TextAsset>("Hito1Anim/VisemasVoces");
+                if (json != null)
+                {
+                    VisemeData data = JsonUtility.FromJson<VisemeData>(json.text);
+                    if (data != null && data.tracks != null)
+                    {
+                        foreach (VisemeTrack t in data.tracks)
+                        {
+                            if (t != null && !string.IsNullOrEmpty(t.clip) && t.times.Count == t.visemes.Count)
+                            {
+                                tracks[t.clip] = t;
+                            }
+                        }
+                    }
+                }
+            }
+
+            tracks.TryGetValue(clip, out VisemeTrack found);
+            return found;
+        }
+
+        // Ultimo tiempo de la pista que ya paso (busqueda binaria).
+        private static int IndexAt(List<float> times, float t)
+        {
+            int lo = 0, hi = times.Count - 1;
+            while (lo < hi)
+            {
+                int mid = (lo + hi + 1) / 2;
+                if (times[mid] <= t)
+                {
+                    lo = mid;
+                }
+                else
+                {
+                    hi = mid - 1;
+                }
+            }
+
+            return lo;
         }
 
         // Ojos al jugador (sin pasar de eyeMaxDegrees respecto a la cabeza).

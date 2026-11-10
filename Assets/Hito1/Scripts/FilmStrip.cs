@@ -88,6 +88,12 @@ namespace SojaExiles
         // hacia donde estaba el rollo.
         public void Tear(Vector3 rollEdge, Vector3 rollAxis)
         {
+            // Se siente el corte en las dos manos (rollo y tira).
+            if (BurnHaptics.Current != null)
+            {
+                BurnHaptics.Current.Buzz(-1, 0.6f, 0.12f, 0f, 0.9f);
+            }
+
             Vector3 toRoll = rollEdge - transform.position;
             Length = toRoll.magnitude;
             localDir = transform.InverseTransformDirection(toRoll.normalized);

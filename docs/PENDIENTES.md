@@ -60,7 +60,8 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
   `corregir-bugs` (narrador Raúl y tía Sabina), para que no cambie la voz a
   mitad de la partida, y `op_centro`, que todavía dice "gasa". Lista y
   textos en `docs/VOCES.md`, sección "Pendientes de regenerar".
-- `guia_anillo` no coincide del todo con el texto de la tarjeta.
+- `guia_anillo` todavía explica el gesto viejo ("mantén apretado"): hay que
+  regrabarla con el nuevo (pellizcar y deslizar; texto en `docs/VOCES.md`).
 
 ## Plan: orden para lo que falta
 
@@ -115,7 +116,9 @@ pasarse obligaría a rehacer el agarre, los botones y el rig.
   triángulos, materiales Standard y el pelo con alpha to coverage), que el
   pelo se vea suave con el MSAA y que la cara, los brazos y la chompa se vean
   bien de cerca; en el editor, el resto del caso con el modelo nuevo (agua,
-  gasa, film, sacar el anillo, llevarla del brazo, caminar). Las cápsulas
+  gasa, film, sacar el anillo, llevarla del brazo, caminar). Sacar el
+  anillo con la mano real en el Quest (el tiempo para que se trabe se alargó:
+  `QUEMADURA_INMERSION.md`, sección 19). Las cápsulas
   del torso y la cadera ahora son más gruesas (16 y 17 cm): revisar que no
   estorben al acercar las manos. Mide unos 11 cm más que la de Mixamo: si
   choca con la campana o los muebles, bajar la escala.
@@ -123,9 +126,12 @@ pasarse obligaría a rehacer el agarre, los botones y el rig.
   agarrar (`HandGrabInteractable` con pose: la mano rodea la taza, el
   celular, el rollo de film en vez de quedar abierta) y probar el
   `PokeInteractable` contra nuestro `TouchButton`, solo si se ve mejor.
-- **Háptica:** hoy vibran solo dos casos. Con controles, vibrar al tocar
-  la olla, el agua fría, los botones y la mano de la tía. Con las manos no
-  hay vibración: reforzar con sonido y brillo.
+- **Háptica, lo que falta:** ya vibra en el agua, el fuego, los errores, los
+  aciertos, los botones, el anillo, al tocar a la tía, al agarrar, al cortar
+  el film y al sostener la gasa (`QUEMADURA_INMERSION.md`, sección 20).
+  Falta: clips diseñados con Meta Haptics Studio (`HapticClipPlayer`, el SDK
+  ya está instalado) para el Quest 3 y los Touch Pro, y reforzar con sonido y
+  brillo cuando se juega con las manos (sin controles no hay vibración).
 - **Video en pantalla (a decidir):** en el resumen o el tutorial, un video
   corto de la técnica real (enfriar 20 min, cubrir con film) en una
   pantalla de la cocina o en el celular. Debe tener respaldo de las guías
@@ -133,6 +139,26 @@ pasarse obligaría a rehacer el agarre, los botones y el rig.
 - **Multijugador (fuera de alcance, a decidir):** modo instructor que mira
   y comenta la sesión (Netcode for GameObjects). Grande; solo si el curso
   lo pide.
+
+## H. Auditoría (2026-11-09)
+
+### H.1 Assets de más calidad (lo que queda)
+
+El botiquín y la gasa ya están (`QUEMADURA_INMERSION.md`, sección 21), hechos
+por código. Si se quiere más realismo, cambiar las piezas por modelos:
+Poly Haven y ambientCG (CC0, sin atribución), Sketchfab (muchos CC BY: citar
+al autor) o Unity Asset Store (gratis con cuenta). Los que piden cuenta los
+baja el usuario. Presupuesto del Quest: menos de 10 000 triángulos y
+texturas de 1024 por objeto de mano.
+
+### H.2 Otras mejoras de inmersión
+
+- **Boca:** ya sigue los visemas sacados del texto (`QUEMADURA_INMERSION.md`,
+  sección 22). Si en el Quest no convence, la alternativa más precisa es
+  Oculus Lipsync (lo baja el usuario desde la página de Meta, porque pide
+  aceptar su licencia). El Movement SDK no sirve para esto: saca la cara
+  del micrófono de quien juega, no de un audio grabado.
+- Ver también F (poses de mano, háptica) y E (distractores, línea de tiempo).
 
 ## G. Validación, pruebas e informe
 

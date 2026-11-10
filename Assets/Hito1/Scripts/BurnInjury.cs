@@ -38,7 +38,10 @@ namespace SojaExiles
         [Tooltip("Cuanto engrosa la mano hinchada del todo (0,12 = 12 %).")]
         public float maxSwelling = 0.12f;
         [Tooltip("Segundos sin agua hasta hincharse del todo.")]
-        public float swellSecondsUntreated = 70f;
+        // 150 s (antes 70): con 70 el anillo se trababa a los 42 s, antes de
+        // que la guia llegara a pedirlo (apagar la hornilla y abrir el agua
+        // van primero).
+        public float swellSecondsUntreated = 150f;
         [Tooltip("Cuanto mas lento se hincha bajo el agua o ya enfriada.")]
         public float treatedSlowdown = 8f;
 

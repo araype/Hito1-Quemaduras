@@ -79,7 +79,7 @@ en una emergencia).
 | `guia_apagar` | Paso 1 | Primero, apaga la hornilla para que nadie más se queme. Toca la perilla que brilla. |
 | `guia_agua` | Paso 2 | Ahora abre la llave de agua fría, la del punto azul. |
 | `guia_llevar` | Paso 3 | Tómala del antebrazo, no de la mano quemada, y llévala hasta el chorro. Suelta su mano cerca del agua y ella la pondrá debajo. |
-| `guia_anillo` | Paso 4 | Quítale el anillo antes de que la mano se hinche. Acerca tu mano libre al punto dorado y mantén apretado el botón lateral, o junta el pulgar y el índice, hasta que el anillo salga. |
+| `guia_anillo` | Paso 4 | Quítale el anillo antes de que la mano se hinche. Pellizca el punto dorado con tu mano libre, con el botón lateral o juntando el pulgar y el índice, y deslízalo hacia la punta de su dedo. (**Regrabar**, 2026-11-09: el audio actual todavía dice "mantén apretado".) |
 | `guia_abrigo` | Paso 5 | El agua fría también le enfría el cuerpo. Abrígala con la chompa. |
 | `guia_esperar` | Paso 6 | Bien hecho. Ahora espera a que el reloj complete los 20 minutos, sin sacar su mano del agua. |
 | `guia_cubrir` | Paso 7 | Ya está enfriada. Cubre la quemadura con una gasa limpia, sin apretar. Si no hay gasa, usa film. (ElevenLabs, recuperada de `experiencia-inmersiva`.) |
@@ -160,6 +160,7 @@ Al regenerar una voz con ElevenLabs, reemplazar el `.wav` y quitar su línea de
 | `guia_err_aguantar` | Narradora | `[calm] Anímala a aguantar o témplale un poco el agua: hay que completar los veinte minutos.` |
 | `guia_err_olla` | Narradora | `[firm] No toques la olla: sigue caliente y también te quemarías.` |
 | `guia_err_charco` | Narradora | `[calm] El piso mojado resbala: rodea el agua derramada.` |
+| `guia_err_anillo` | Narradora | `[calm] Su mano ya se hinchó: no fuerces el anillo. Sigue con el agua fría; en el centro de salud se lo sacarán.` (Nueva, 2026-11-09: todavía no existe, mientras tanto solo el texto.) |
 | `voz_aprieta` | Tía | `[in pain] ¡Ay, me aprieta! No me envuelvas la mano, por favor.` |
 | `voz_templar_pide` | Tía | `[worried] Ya, pero ábrela solo un poquito, que la caliente quema.` |
 | `voz_templada` | Tía | `[relieved] Ay, así está mejor. Aguanto.` |

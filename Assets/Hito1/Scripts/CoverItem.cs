@@ -135,6 +135,12 @@ namespace SojaExiles
                 progress = near ? progress + Time.deltaTime / Mathf.Max(0.1f, holdSeconds)
                     : Mathf.MoveTowards(progress, 0f, Time.deltaTime * 2f);
                 hint.Show(burn, "Mantén encima\nde la quemadura", progress);
+                // Vibra suave en la mano que la sostiene y crece al llenarse.
+                if (near && BurnHaptics.Current != null)
+                {
+                    int h = SimpleGrab.IsHeldBy(body, true) ? 0 : 1;
+                    BurnHaptics.Current.Buzz(h, 0.1f + 0.3f * progress, 0.05f, 0f, 0.5f);
+                }
                 if (progress >= 1f)
                 {
                     SimpleGrab.ForceRelease(body);

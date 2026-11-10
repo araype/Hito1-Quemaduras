@@ -656,3 +656,89 @@ quemadura con ampollas queda en el dorso de la mano nueva, el anillo en el
 anular y la otra mano la sostiene desde abajo. Sin errores en consola.
 **Falta:** el resto del caso con el modelo nuevo y todo en el Quest (ver
 `PENDIENTES.md`, sección F).
+
+## 19. El anillo ya no se traba antes de tiempo (`mejoras-demo`, 2026-11-09)
+
+En el visor casi nunca se podía sacar el anillo. Medido en Play con una
+quemadura de segundo grado: sin enfriar, la hinchazón llegaba a 0,6 a los
+42 s, y el primer intento lo trababa para siempre. La guía pide antes apagar
+la hornilla y abrir el agua, así que casi nadie llegaba a tiempo. Además, al
+trabarse, el punto dorado desaparecía sin explicación.
+
+| Cambio | Dónde |
+|---|---|
+| La mano tarda 150 s sin agua en hincharse del todo (antes 70) y el anillo se traba con 0,9 de hinchazón (antes 0,6): unos 2 min 15 s sin enfriar, y bajo el agua 8 veces más. En primer grado nunca se traba (no pasa de 0,55). | `BurnInjury.swellSecondsUntreated`, `PatientRing.stuckSwelling` |
+| Si se traba, en modo guiado aparece "¡Cuidado! Su mano ya se hinchó: no fuerces el anillo. Sigue con el agua fría; en el centro de salud se lo sacarán." (la voz `guia_err_anillo` falta grabarla: `VOCES.md`). La tía ya decía "¡No sale, ya se me hinchó el dedo!". | `BurnGuide.HandleEvent` |
+| La explicación del resumen dice que hay que sacarlo apenas se empieza a atenderla, y que si ya no sale no se fuerza. | `BurnProtocol.Explain` |
+
+**Probado en Play:** a los 111 s sin enfriar la hinchazón va en 0,74 y el
+anillo todavía sale. Forzando el caso trabado en modo guiado, aparece la
+tarjeta de aviso y el error queda en el resumen. **Falta** sacarlo con la mano
+real en el Quest.
+
+## 20. Voces espaciales, más vibración y anillo deslizable (`mejoras-demo`, 2026-11-09)
+
+| Cambio | Cómo quedó | Dónde |
+|---|---|---|
+| Voces espaciales | Todas las fuentes 3D (la voz y la respiración de la tía, los efectos y el operador del 106 en el celular) usan el HRTF de Meta XR Audio, que ya era el espacializador del proyecto. Con audífonos se oye de dónde viene, también arriba, abajo y atrás. El narrador sigue en off (sin espacializar). | `Hito1FX.Spatialize` (en `CreateSource`), `EmergencyCall` |
+| Más vibración | Un toque corto en la mano que agarra algo; vibración áspera en las dos manos al cortar una tira de film; suave y creciente en la mano que sostiene la gasa sobre la quemadura. | `BurnHaptics.HandleGrab`, `FilmStrip.Tear`, `CoverItem` |
+| Anillo deslizable | Se pellizca y se desliza hacia la punta del dedo (3,5 cm). El anillo sigue a la mano, y el avance se mide sobre el dedo: si la tía mueve la mano, no cuenta. Vibra más al deslizarlo. Mantener el pellizco sin moverse también lo saca, pero en 3 s, por si el gesto cuesta con seguimiento de manos. Si se suelta antes, vuelve. Si la mano está muy hinchada, se traba al llegar al 25 %. | `PatientRing.slideDistance`, `holdSeconds`, `TipDirection` |
+
+Los textos dicen "Pellízcalo y deslízalo hacia la punta" (junto al anillo) y
+"Pellizca su anillo y deslízalo hacia la punta del dedo" (tarjeta de la
+guía). La voz `guia_anillo` todavía explica el gesto viejo y hay que
+regrabarla (`VOCES.md`).
+
+**Probado en Play:** las 9 fuentes de audio de la escena usan Meta XR Audio;
+al terminar de sacarlo, el anillo queda suelto en el piso y el paso se marca
+como hecho; sin errores en consola. **Falta en el Quest:** el gesto de
+deslizar con las manos y con los controles, cómo se oyen las voces con
+audífonos y cómo se sienten las vibraciones nuevas.
+
+## 21. Botiquín con sobres de gasa (`mejoras-demo`, 2026-11-09)
+
+Antes la gasa estaba suelta en el mesón (un cubo amarillo). Ahora está en un
+botiquín, y hay que abrirlo y rasgar el sobre como en la vida real. Todo se
+arma por código (sin modelos importados).
+
+| Parte | Cómo funciona | Dónde |
+|---|---|---|
+| Botiquín | Caja blanca con cruz roja y rótulo "PRIMEROS AUXILIOS" junto al lavadero, con el frente hacia la tía. La tapa se abre tomando el tirador gris (botón lateral o pinza) y levantándola; un toque corto en el tirador la abre o la cierra. Con la tapa cerrada no se puede sacar nada de adentro. | `FirstAidKit`, `BurnSceneProps.PlaceKit` |
+| Contenido | 2 sobres de gasa estéril, una venda (de adorno) y una pomada. La pomada es un distractor: ponerla es un error ("Ninguna crema ni pomada va sobre una quemadura recién hecha…"). | `FirstAidKit.Fill`, `HomeRemedy.Remedy.Pomada` (al final del enum) |
+| Sobre de gasa | Rótulo "GASA ESTÉRIL 10 × 10 cm" y una esquina roja. Con el sobre en una mano, se pellizca la esquina con la otra y se separan las manos 5 cm: se rasga (sonido y vibración), la gasa queda en la mano que tenía el sobre y el sobre roto cae. | `GauzePacket`, `SimpleGrab.ForceGrab` (nuevo) |
+| Gasa | Cuadrado de algodón doblado, con textura de tejido y mapa de normales generados en el editor (menú Hito1 > Generar textura de la gasa). Sigue cubriendo igual que antes (mantenerla 1 s sobre la quemadura). | `BurnSceneProps.BuildGauze`, `Editor/FirstAidTextures.cs`, `Hito1FX/Gasa_Tejido` |
+| Guía | El paso "Cubre con una gasa limpia" explica abrir el botiquín y rasgar el sobre, y marca el tirador (con la tapa cerrada) o los sobres (abierta). | `BurnGuide` |
+
+El film y la bolsa siguen sueltos en el mesón: son la alternativa casera.
+
+**Probado en Play:** el botiquín aparece sobre el mesón con todo adentro;
+la tapa abierta por código se ve bien; al rasgar un sobre por código aparece
+la gasa nueva y el rótulo se lee desde el frente. **Falta en el Quest:**
+abrir la tapa y rasgar el sobre con las manos y con controles, y comprobar
+que la gasa queda en la mano.
+
+## 22. Boca con visemas sacados del texto (`mejoras-demo`, 2026-11-09)
+
+Antes la boca se abría según el volumen, turnando vocales al azar. Ahora
+cada frase de la tía tiene una pista de visemas sacada de su texto.
+
+- **Cómo se arma** (menú **Hito1 > Generar visemas de las voces**): lee el
+  texto de cada `voz_*` en `docs/VOCES.md` y lo pasa a los 15 visemas de
+  Oculus que trae el avatar. El español se pronuncia casi como se escribe:
+  vocales a aa, E, I, O, U; b, v, p y m a PP; f a FF; t y d a DD; n, ñ y l a
+  nn; r y rr a RR; s, z y c (ante e, i) a SS; c, k, q, g y j a kk; ch, ll y
+  y (ante vocal) a CH; la h es muda. Las vocales duran más que las
+  consonantes. Después reparte la secuencia sobre los tramos del audio
+  donde hay voz (por encima del 12 % del volumen máximo, en pasos de
+  10 ms); en los silencios, la boca se cierra.
+- **Resultado:** `Resources/Hito1Anim/VisemasVoces.json`, con 30 pistas (las
+  frases que tienen texto y audio).
+- **Al hablar** (`PatientFace`): toma el visema que toca en ese momento del
+  audio, lo abre según el volumen y abre la mandíbula según la vocal (más
+  con "a", poco con "i" y "u", nada con p, b y m). Las frases sin pista
+  siguen con el método anterior.
+- **Al cambiar un texto o un audio**, hay que volver a correr el menú.
+
+**Probado en Play:** con "Ay, mi anillo… gracias…", a los 1,49 s la boca
+estaba en "I", con la mandíbula poco abierta. Sin errores en consola.
+**Falta en el Quest:** ver de cerca si la boca acompaña bien la voz.

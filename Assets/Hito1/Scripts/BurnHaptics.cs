@@ -9,7 +9,11 @@ namespace SojaExiles
     //     chorro y el jugador la sostiene (mas fuerte si el agua es caliente);
     //   - pulsos cada vez mas seguidos al acercar la mano al fuego prendido;
     //   - un golpe corto y fuerte ante un error (dos ante un error critico);
-    //   - un toque leve al hacer algo bien.
+    //   - un toque leve al hacer algo bien;
+    //   - un toque corto en la mano que agarra algo (como sentir el objeto);
+    //   - aspera en las dos manos al cortar una tira de film (FilmStrip);
+    //   - suave y creciente mientras se sostiene la gasa sobre la quemadura
+    //     (CoverItem).
     // Con seguimiento de manos (sin controles) no hace nada.
     public class BurnHaptics : MonoBehaviour
     {
@@ -32,6 +36,14 @@ namespace SojaExiles
         private Rigidbody patientHand;
         private WaterStreamFX[] streams;
 
+        // La de la escena (la usan FilmStrip y CoverItem).
+        public static BurnHaptics Current { get; private set; }
+
+        private void Awake()
+        {
+            Current = this;
+        }
+
         private void Start()
         {
             if (burnSequence == null)
@@ -50,6 +62,12 @@ namespace SojaExiles
             PatientReach reach = FindObjectOfType<PatientReach>();
             patientHand = reach != null ? reach.target : null;
             streams = FindObjectsOfType<WaterStreamFX>();
+            SimpleGrab.OnGrabbed += HandleGrab;
+        }
+
+        private void HandleGrab(Collider touched, Rigidbody body, bool left)
+        {
+            Buzz(left ? 0 : 1, 0.3f, 0.04f, 0f, 0.8f);
         }
 
         private void OnDestroy()
@@ -58,6 +76,12 @@ namespace SojaExiles
             {
                 burnSequence.OnEvent -= HandleEvent;
                 burnSequence.OnStateChanged -= HandleState;
+            }
+
+            SimpleGrab.OnGrabbed -= HandleGrab;
+            if (Current == this)
+            {
+                Current = null;
             }
 
             Stop(0);

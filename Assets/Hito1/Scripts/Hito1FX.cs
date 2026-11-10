@@ -96,7 +96,26 @@ namespace SojaExiles
             source.maxDistance = maxDistance;
             source.dopplerLevel = 0f;
             source.spread = 30f;
+            Spatialize(source);
             return source;
+        }
+
+        // Sonido con HRTF de Meta XR Audio (el espacializador del proyecto,
+        // Project Settings > Audio): con audifonos se oye de donde viene,
+        // tambien arriba, abajo y atras, no solo a la izquierda o la
+        // derecha. El narrador no pasa por aqui: es una voz "en off".
+        public static void Spatialize(AudioSource source)
+        {
+            if (source == null)
+            {
+                return;
+            }
+
+            source.spatialize = true;
+            if (source.GetComponent<MetaXRAudioSource>() == null)
+            {
+                source.gameObject.AddComponent<MetaXRAudioSource>();
+            }
         }
 
         // Sonido corto en un punto del mundo. A diferencia de

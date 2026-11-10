@@ -583,6 +583,9 @@ namespace SojaExiles
             speaker.spatialBlend = 0.85f;
             speaker.minDistance = 0.3f;
             speaker.volume = operatorVolume;
+            // El operador se oye desde el celular (al llevarlo a la oreja,
+            // por ese lado).
+            Hito1FX.Spatialize(speaker);
             Debug.Log("[EmergencyCall] Celular en " + spot.ToString("F2"));
             return go.GetComponent<Rigidbody>();
         }
