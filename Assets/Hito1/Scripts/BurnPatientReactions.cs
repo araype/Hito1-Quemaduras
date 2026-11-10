@@ -439,6 +439,18 @@ namespace SojaExiles
             get { return voice != null && voice.isPlaying; }
         }
 
+        // Dolor actual de 0 (calmada) a 1 (dolor maximo). Lo lee PatientFace.
+        public float Pain
+        {
+            get { return pain; }
+        }
+
+        // Fuente de la voz de la tia (PatientFace mueve la boca con ella).
+        public AudioSource VoiceSource
+        {
+            get { return voice; }
+        }
+
         public void Say(string line, bool interrupt)
         {
             if (voice == null || (IsSpeaking && !interrupt))
@@ -468,6 +480,13 @@ namespace SojaExiles
             if (PatientAnimator.Instance != null)
             {
                 PatientAnimator.Instance.ForVoice(line);
+            }
+
+            // Y la cara que la acompana (dolor, miedo, alivio, ceno...).
+            PatientFace face = GetComponent<PatientFace>();
+            if (face != null)
+            {
+                face.ForVoice(line);
             }
         }
 

@@ -234,6 +234,13 @@ namespace SojaExiles
                 {
                     patient.gameObject.AddComponent<PatientAnimator>().burnSequence = burn;
                 }
+
+                // Gestos de la cara y boca con la voz (solo si el modelo trae
+                // expresiones: la tia de Avaturn, no la de Mixamo).
+                if (patient.GetComponent<PatientFace>() == null && PatientFace.HasExpressions(patient.gameObject))
+                {
+                    patient.gameObject.AddComponent<PatientFace>().burnSequence = burn;
+                }
             }
 
             InstallStoveKnob();

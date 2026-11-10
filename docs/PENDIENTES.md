@@ -71,6 +71,7 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 | 2 | Variar el caso (E.1) | Que no se pueda memorizar la secuencia. El tamaño de la quemadura cambia cuánto film hace falta. | Grande |
 | 3 | **Chompa con tela simulada** (D.2) | Hoy se ve aceptable y es lo que más arriesga los 72 fps. Si no hay tiempo, queda como está. | Grande |
 | 4 | Línea de tiempo en el resumen; distractores; práctica de perilla en el tutorial (opcional) | Mejoras de la experiencia. | Variable |
+| 4b | Probar la tía de Avaturn en el Quest; poses de mano y háptica (F) | Lo que más suma a la inmersión según la revisión de herramientas. | Grande |
 | 5 | **Validación final en el Quest** con las manos y fps (G); pruebas con usuarios e informe | Al final, con todo estable. | Mediano |
 | — | Manos fantasma (RF-04) | Recortar y quitarlo del informe. | — |
 
@@ -101,6 +102,35 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 - **Línea de tiempo** en el resumen: qué hizo el jugador y cuándo, comparado
   con lo ideal.
 - **Practicar una perilla o una llave en el tutorial (E.11, opcional).**
+
+## F. Inmersión (revisión de herramientas, 2026-11-09)
+
+Revisado contra el artículo de Bravent sobre VR con Unity (2024) y lo que ya
+usa el proyecto. No se cambia al XR Interaction Toolkit: el proyecto ya
+tiene el Interaction SDK de Meta (equivalente y hecho para el Quest), y
+pasarse obligaría a rehacer el agarre, los botones y el rig.
+
+- **Tía de Avaturn, lo que falta probar** (hecha y probada en Play,
+  `QUEMADURA_INMERSION.md`, sección 18): en el Quest, los 72 fps (35 000
+  triángulos y el shader de glTFast) y que se vean bien de cerca la cara, el
+  pelo y las manos; en el editor, el resto del caso con el modelo nuevo
+  (agua, gasa, film, chompa, sacar el anillo, llevarla del brazo,
+  caminar). Mide unos 11 cm más que la de Mixamo: si choca con la campana o
+  los muebles, bajar la escala.
+- **Usar más del Interaction SDK de Meta (evaluar):** poses de mano al
+  agarrar (`HandGrabInteractable` con pose: la mano rodea la taza, el
+  celular, el rollo de film en vez de quedar abierta) y probar el
+  `PokeInteractable` contra nuestro `TouchButton`, solo si se ve mejor.
+- **Háptica:** hoy vibran solo dos casos. Con controles, vibrar al tocar
+  la olla, el agua fría, los botones y la mano de la tía. Con las manos no
+  hay vibración: reforzar con sonido y brillo.
+- **Video en pantalla (a decidir):** en el resumen o el tutorial, un video
+  corto de la técnica real (enfriar 20 min, cubrir con film) en una
+  pantalla de la cocina o en el celular. Debe tener respaldo de las guías
+  (ver Regla).
+- **Multijugador (fuera de alcance, a decidir):** modo instructor que mira
+  y comenta la sesión (Netcode for GameObjects). Grande; solo si el curso
+  lo pide.
 
 ## G. Validación, pruebas e informe
 

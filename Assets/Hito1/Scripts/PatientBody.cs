@@ -27,6 +27,10 @@ namespace SojaExiles
 
         public string bonePrefix = "mixamorig8:";
 
+        [Tooltip("Al dar Play, cambia el modelo de Mixamo por la tia de Avaturn "
+            + "(Resources/Hito1Avatar/TiaAvaturn), que tiene gestos en la cara.")]
+        public bool useAvaturn = true;
+
         [Header("Brazos")]
         public ArmMode rightMode = ArmMode.Rest;
         public ArmMode leftMode = ArmMode.Rest;
@@ -356,6 +360,12 @@ namespace SojaExiles
 
         private void Awake()
         {
+            if (useAvaturn)
+            {
+                DisableLegacyPosers();
+                PatientModelSwap.Apply(this);
+            }
+
             ready = FindBones() && CaptureBindPose();
             if (!ready)
             {

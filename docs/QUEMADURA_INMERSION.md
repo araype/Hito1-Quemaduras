@@ -619,3 +619,30 @@ alas ni bloque. El anillo y la tarjeta quitada, solo compilados.
 **Solo compilado** en el editor (sin errores en consola). Falta probarlo en
 el Quest: llegar al resumen y tocar cada botón, y que en las tarjetas con
 varias opciones no se marque ninguna al pasar la mano.
+
+## 18. Tía de Avaturn con gestos en la cara (`mejoras-demo`, 2026-11-09)
+
+La tía de Mixamo tenía la cara fija. Se cambió por un avatar de Avaturn
+**tipo T2** (cara animable), creado en hub.avaturn.me con fotos de alguien
+que dio permiso, en GLB. Trae las 52 expresiones ARKit, 15 visemas para
+hablar y huesos con los nombres de Mixamo sin prefijo.
+
+| Parte | Cómo quedó | Dónde |
+|---|---|---|
+| Importar | Paquete glTFast 6.10.1. El GLB está en `Personajes/Avaturn/TiaAvaturn.glb` (por Git LFS). El original queda fuera del proyecto en `semn13/avaturn/model.glb`. | `Packages/manifest.json` |
+| Preparar | Menú **Hito1 > Preparar tia de Avaturn**: crea el avatar Humanoid y el prefab `Resources/Hito1Avatar/TiaAvaturn`, pasa a Humanoid las 24 animaciones de Mixamo y el FBX de la tía anterior (con la raíz horneada: la animación no la mueve ni la gira), y la máscara de gestos a columna y cabeza Humanoid. A la ropa se le quita el mapa de normales: oscurecía media blusa. | `Editor/AvaturnSetup.cs` |
+| Cambio de modelo | Al dar Play, `PatientBody.Awake` cambia las mallas y el esqueleto de Mixamo por los de Avaturn, pone su avatar en el Animator y deja `bonePrefix` vacío. Los componentes de la tía siguen iguales. La piel se llama `Body_Mesh` y las capas que buscan "Body" (quemadura, agua, gasa, film) la encuentran. Para volver a la de Mixamo: `PatientBody.useAvaturn` apagado. | `PatientModelSwap`, `PatientBody.useAvaturn` |
+| Cara | Gesto de fondo según el estado: tranquila cocinando, dolor según `BurnPatientReactions.Pain`, alivio al enfriar o cubrir, agradecida al final. Con cada frase, un gesto corto: golpe de dolor, miedo, alivio, gracias, ceño al negar o si le aprietan la mano. Parpadea sola y los ojos miran al jugador (máximo 22°). | `PatientFace` (lo instala `Hito1RuntimeBootstrap` si el modelo tiene expresiones) |
+| Boca | Mientras suena su voz, abre la mandíbula según el volumen del clip y va turnando visemas (aa, O, E, I, U). | `PatientFace.AddTalk` |
+
+Ojo: glTFast guarda el peso completo de cada expresión como 1, no como 100.
+`PatientFace` usa el peso que trae cada forma; si se pasa de ahí, la cara se
+deforma.
+
+**Probado en Play** (escena `Prueba_LuzHorneada`), con capturas: la tía
+revuelve la olla; la cara se ve tranquila y, al quemarse, pasa a dolor con la
+boca abierta; la sonrisa del "gracias" y la boca con la voz funcionan; la
+quemadura con ampollas queda en el dorso de la mano nueva, el anillo en el
+anular y la otra mano la sostiene desde abajo. Sin errores en consola.
+**Falta:** el resto del caso con el modelo nuevo y todo en el Quest (ver
+`PENDIENTES.md`, sección F).

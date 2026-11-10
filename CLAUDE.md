@@ -36,7 +36,10 @@ unión están en `docs/QUEMADURA_INMERSION.md`, sección 14. Se trabaja desde
   partir de esos eventos.
 - La tía: animaciones de Mixamo (`PatientAnimator`, controlador en
   `Resources/Hito1Anim`) para cuerpo, piernas y gestos; `PatientBody` mueve
-  los brazos por cinemática inversa cuando van a un objetivo.
+  los brazos por cinemática inversa cuando van a un objetivo. Al dar Play,
+  `PatientModelSwap` cambia el modelo de Mixamo por la tía de Avaturn
+  (`Resources/Hito1Avatar/TiaAvaturn`, Humanoid, se rearma con el menú
+  Hito1 > Preparar tia de Avaturn) y `PatientFace` mueve su cara.
 - Objetos creados por código con `PropKit`; paneles y textos con `VRPanelKit`,
   `RoundedPanel` y `PanelText` (TextMesh Pro, desde `rediseno-tarjetas`);
   botones táctiles con `TouchButton`.
