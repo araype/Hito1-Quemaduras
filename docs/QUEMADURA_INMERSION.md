@@ -144,7 +144,7 @@ en el editor ni en el Quest.**
 | Ampollas | En segundo grado aparecen a los 6 s y crecen mientras no se enfría. Enfriar a tiempo las deja chicas. | `BurnInjury` |
 | Llaves | La llave que ya estaba es la **fría** (punto azul). Al lado hay una **caliente** (punto rojo). Con solo la caliente abierta sale vapor del chorro, no enfría, vuelve a enrojecer la mano, la paciente grita y cuenta como error. | `WaterTap.hot/pair` |
 | Anillo | Anillo dorado en el anular. Se saca acercando la mano libre al punto dorado y manteniendo apretado el botón lateral (o la pinza) 1,5 s; el anillo avanza, el mando vibra y, si se suelta antes, vuelve. Si la mano ya se hinchó, se traba y cuenta como error. | `PatientRing` (paciente) |
-| Chompa | Doblada en la silla más cercana. Se suelta sobre la espalda o los hombros y queda puesta. | `SweaterItem` |
+| Manta | Doblada en el sofá de la sala (antes, chompa en la silla; sección 24). Se trae a la cocina y se suelta sobre la espalda o los hombros: queda echada con tela simulada. | `BlanketItem`, `BlanketDrape` |
 | Cubrir | Film y gasa junto al lavadero (la gasa se quitó, sección 12). Se sueltan sobre la mano **ya enfriada**: la cubren y el caso termina (Success). Si se intenta antes, es un error. El paño de cocina ya no cierra el caso: sobre la quemadura cuenta como error. Ahora el film va en tiras (sección 11). | `CoverItem`, `TowelMisuse` |
 | Remedios caseros | Mantequilla, pasta dental, aceite y algodón en el mesón; hielo cerca del refrigerador. Al acercarlos, la paciente aparta la mano y protesta (error). Si se aplican, queda una capa sobre la piel y grita (error crítico; el algodón es error común). El agua quita la grasa y la pasta. | `HomeRemedy` |
 | Vibración | Suave mientras sostienes la mano de la paciente bajo el agua (más fuerte si está caliente), pulsos al acercar la mano al fuego, un golpe por error (dos si es crítico) y un toque leve en cada acierto. | `BurnHaptics` |
@@ -197,7 +197,7 @@ Quest**.
    90 s reales. El minutero avanza, el segundero gira rápido y se encienden 20
    marcas verdes. Si la mano sale del agua, el reloj **se pausa** (no vuelve a
    cero), la paciente se queja y cuenta como error.
-5. **Mientras tanto:** sacar el anillo y abrigarla con la chompa.
+5. **Mientras tanto:** sacar el anillo y abrigarla con la manta de la sala.
 6. **Cubrir** con tiras de film o una bolsa plástica (sección 11). La paciente agradece y pregunta si tiene que ir
    al médico.
 7. **Decisión médica:** a los 5 s aparece frente al jugador un panel con dos
@@ -774,3 +774,36 @@ Quest:** todo con las manos y con controles, y ajustar los números al
 probar (ver `PRUEBAS_QUEST.md`): `HandHalfThickness` (1,8 cm, grosor
 supuesto de la mano), `pressDepth`, `centerTolerance`, `flatTolerance` y
 `BandageItem.tightRadius`.
+
+## 24. Manta de la sala en vez de la chompa (`mejoras-demo`, 2026-11-10)
+
+La chompa se acoplaba mal a la tía de Avaturn: era una media capa rígida,
+armada una vez con la postura del momento, con mangas de cápsula que
+flotaban delante del pecho y un hueco en el hombro por donde se veía la
+blusa. Se cambió por una **manta**: las guías (NHS, Cruz Roja) piden
+mantener abrigada a la persona, no una prenda en particular. Además, una
+manta en la cocina no es verosímil; está doblada en el **sofá de la sala** y
+hay que ir a buscarla, dejando un momento a la tía con la mano bajo el agua.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Manta doblada | Tres capas con textura de cuadros sobre la parte delantera del asiento del sofá, hacia un extremo (sin tocar el cojín del brazo). Si cae al piso, se queda ahí (no vuelve sola al sofá). Si la escena no tiene sofá, va en la silla más cercana como antes. | `BurnSceneProps.PlaceOnSofa`, `BuildBlanket`, `BlanketItem` |
+| Tela simulada | Al soltarla a menos de 45 cm del pecho o de un hombro, se convierte en una tela de 1,35 × 0,85 m (22 × 13 puntos, Verlet). Queda sujeta en la parte alta de la espalda (borde y dos filas más) y sobre los hombros; el resto cae por su peso y choca con las 14 cápsulas y la esfera de la cabeza (`PatientPhysics`). Los extremos cuelgan abiertos por delante de los brazos. | `BlanketDrape` |
+| No se voltea | Si solo se sujetaba el borde de arriba, al girar la tía la manta pasaba por encima de los hombros y quedaba colgando por delante. Con las filas de la espalda sujetas, tras girarla 180° de golpe la columna central sigue de 18 a 30 cm detrás del pecho. | `backPinRows` |
+| Rendimiento | Simularla cuesta unos 1,6 ms por cuadro (editor del PC). Si la tela se queda quieta 1 s, se "duerme": sigue al pecho sin simular. Despierta si un brazo, la cabeza o el pecho se mueven más de 2 cm. Estando quieta, se durmió en unos 3 s; al girarla 30°, despertó. | `sleepSpeed`, `sleepAfter`, `wakeDistance` |
+| Ir a la sala | El jugador puede caminar por el camino de la cocina al sofá (7,3 m, buscado en una grilla del piso de 25 cm al dar Play), con medio metro de holgura y 1,4 m alrededor de la manta. La tía sigue limitada a la cocina. Las paredes las frena el `CharacterController`. | `PlayArea.AllowPlayerPathTo`, `ClipPlayer`, `VRLocomotion` |
+| Guía | Paso "Abrígala con una manta": "Trae la manta del sofá de la sala y suéltala sobre sus hombros." El brillo marca la manta y, cuando ya la llevas, su espalda. La voz `guia_abrigo` todavía dice "chompa": mientras no se regrabe, solo se muestra el texto (`Hito1FX.TtsStandIns`). | `BurnGuide`, `docs/VOCES.md` |
+
+Se borraron `SweaterItem` y `SweaterDrape` (ninguna escena los usaba). El
+evento sigue siendo `SweaterOn` para no cambiar el enum; la tía sigue
+diciendo "Gracias, me estaba dando frío".
+
+**Probado en Play** (escena `Prueba_LuzHorneada`, sin visor), con capturas:
+la manta doblada en el sofá; puesta por código, de espaldas, de costado y
+de frente, en reposo y después del accidente (ofreciendo la mano); el giro
+de 180°; el reposo; la cápsula del jugador movida por código desde la cocina
+hasta el sofá, que llegó a 44 cm de la manta. **Falta en el Quest:**
+agarrarla y soltarla sobre la tía con las manos y con controles, caminar
+a la sala con el joystick, los 72 fps con la tela despierta, y si se ve bien
+de cerca. Un giro instantáneo de 30° (forzado por código) dejó un brazo por
+fuera de la manta; con los giros naturales de la tía no pasó.

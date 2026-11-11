@@ -19,7 +19,7 @@ anótalo debajo del punto (qué pasó y en qué momento) y pásalo a
 ## 1. Rendimiento
 
 - [ ] 72 fps estables durante toda la partida, sobre todo: con la tía de
-  Avaturn cerca y a la vista, con el agua corriendo y con la chompa puesta.
+  Avaturn cerca y a la vista, con el agua corriendo y con la manta puesta.
 - [ ] Sin tirones al empezar la partida (al cambiar el modelo de la tía).
 
 ## 2. Tía de Avaturn
@@ -40,11 +40,17 @@ anótalo debajo del punto (qué pasó y en qué momento) y pásalo a
 - [ ] No choca con la campana ni con los muebles (mide unos 11 cm más que la
   de Mixamo).
 
-## 3. Chompa
+## 3. Manta (antes chompa)
 
-- [ ] Queda sobre los hombros y la espalda, con los brazos por fuera.
-- [ ] Las mangas no quedan paradas como cuernos al levantar la mano.
-- [ ] La capa no se abre como alas.
+- [ ] La manta está doblada en el sofá de la sala y se llega caminando con
+  el joystick desde la cocina (no deja pasar a otros cuartos).
+- [ ] Se alcanza desde el frente del sofá sin agacharse demasiado.
+- [ ] Al soltarla sobre la espalda o los hombros, cae como tela: cubre la
+  espalda y los extremos cuelgan por delante de los brazos.
+- [ ] No se voltea hacia adelante cuando la tía se gira, y los brazos no la
+  atraviesan al ofrecer la mano o recibir la gasa.
+- [ ] 72 fps con la manta puesta mientras la tía se mueve (la tela se
+  simula) y quieta (la tela se duerme).
 
 ## 4. Anillo
 

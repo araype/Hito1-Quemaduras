@@ -54,7 +54,7 @@ Mujer adulta (50 a 60 años), voz cálida; con dolor real, no actuado.
 | `voz_remedio_arde` | Le ponen un remedio casero | ¡Ay, ay! Eso me arde todavía más. | `[in pain] ¡Ay, ay! Eso me arde todavía más.` |
 | `voz_anillo_sale` | Le sacan el anillo | Ay, mi anillo… gracias, ya se me estaba hinchando. | `[relieved] Ay, mi anillo… gracias, ya se me estaba hinchando.` |
 | `voz_anillo_atorado` | El anillo ya no sale | ¡Ay! No sale, ya se me hinchó el dedo. | `[in pain] ¡Ay! No sale, ya se me hinchó el dedo.` |
-| `voz_abrigo` | Le ponen la chompa | Gracias, me estaba dando frío. | `[shivering] Gracias, me estaba dando frío.` |
+| `voz_abrigo` | Le ponen la manta | Gracias, me estaba dando frío. | `[shivering] Gracias, me estaba dando frío.` |
 | `voz_enfriada` | Terminó de enfriar | Ya se siente un poco mejor. | `[tired] Ya se siente un poco mejor.` |
 | `voz_pista_pano` | Pista: cubrir la quemadura | ¿Me la cubres con algo limpio? | `[softly] ¿Me la cubres con algo limpio?` |
 | `voz_pregunta_medico` | Antes de la decisión médica | ¿Crees que tengo que ir al médico? | `[worried] ¿Crees que tengo que ir al médico?` |
@@ -80,7 +80,7 @@ en una emergencia).
 | `guia_agua` | Paso 2 | Ahora abre la llave de agua fría, la del punto azul. |
 | `guia_llevar` | Paso 3 | Tómala del antebrazo, no de la mano quemada, y llévala hasta el chorro. Suelta su mano cerca del agua y ella la pondrá debajo. |
 | `guia_anillo` | Paso 4 | Quítale el anillo antes de que la mano se hinche. Pellizca el punto dorado con tu mano libre, con el botón lateral o juntando el pulgar y el índice, y deslízalo hacia la punta de su dedo. (**Regrabar**, 2026-11-09: el audio actual todavía dice "mantén apretado".) |
-| `guia_abrigo` | Paso 5 | El agua fría también le enfría el cuerpo. Abrígala con la chompa. |
+| `guia_abrigo` | Paso 5 | El agua fría también le enfría el cuerpo. Trae la manta del sofá de la sala y échasela sobre los hombros. (**Regrabar**, 2026-11-10: el audio actual dice "abrígala con la chompa"; mientras tanto solo se muestra el texto.) |
 | `guia_esperar` | Paso 6 | Bien hecho. Ahora espera a que el reloj complete los 20 minutos, sin sacar su mano del agua. |
 | `guia_cubrir` | Paso 7 | Ya está enfriada. Cubre la quemadura con una gasa limpia, sin apretar. Si no hay gasa, usa film. (ElevenLabs, recuperada de `experiencia-inmersiva`.) |
 | `guia_decidir` | Paso 8 | Por último, decide si necesita atención médica. Mira bien la quemadura. |
@@ -149,7 +149,7 @@ en el mismo momento o nada (el texto sigue en la tarjeta o en el panel):
 | `voz_frio` | `voz_hielo_duele` ("¡Ay! Está helado, me duele más.") |
 | `voz_aguanto` | `voz_enfriada` ("Ya se siente un poco mejor.") |
 | `voz_aprieta` | `voz_remedio_no` ("No, eso no me pongas, por favor.") |
-| `voz_templar_pide`, `guia_err_calma`, `guia_err_aguantar`, `guia_err_olla`, `guia_err_charco` | Nada (solo el texto) |
+| `voz_templar_pide`, `guia_err_calma`, `guia_err_aguantar`, `guia_err_olla`, `guia_err_charco`, `guia_abrigo` | Nada (solo el texto) |
 
 Al regenerar una voz con ElevenLabs, reemplazar el `.wav` y quitar su línea de
 `TtsStandIns`.
@@ -165,6 +165,7 @@ Al regenerar una voz con ElevenLabs, reemplazar el `.wav` y quitar su línea de
 | `guia_err_centro_gasa` | Narradora | `[calm] Tómala de los bordes: el centro va sobre la herida y debe quedar limpio.` (Nueva, 2026-11-09.) |
 | `guia_err_gasa_corrida` | Narradora | `[calm] La gasa quedó corrida: la próxima vez céntrala para cubrir toda la quemadura.` (Nueva, 2026-11-09.) |
 | `guia_err_venda` | Narradora | `[firm] La venda va suelta: al hincharse la mano, una venda apretada le corta la circulación.` (Nueva, 2026-11-09.) |
+| `guia_abrigo` | Narradora | `[calm] El agua fría también le enfría el cuerpo. Trae la manta del sofá de la sala y échasela sobre los hombros.` (Regrabar, 2026-11-10: el audio actual dice "chompa".) |
 | `voz_aprieta` | Tía | `[in pain] ¡Ay, me aprieta! No me envuelvas la mano, por favor.` |
 | `voz_templar_pide` | Tía | `[worried] Ya, pero ábrela solo un poquito, que la caliente quema.` |
 | `voz_templada` | Tía | `[relieved] Ay, así está mejor. Aguanto.` |

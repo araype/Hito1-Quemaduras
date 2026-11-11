@@ -11,7 +11,9 @@ namespace SojaExiles
     //     no suelta pelusa, Cruz Roja Britanica), una venda y una pomada
     //     (distractor); y sueltos, film transparente y bolsa plastica (si no
     //     hay gasa);
-    //   - en la silla mas cercana a la paciente: una chompa (para abrigarla);
+    //   - en el sofa de la sala: una manta doblada (para abrigarla); hay que
+    //     ir a buscarla, y el jugador puede caminar hasta alli (PlayArea);
+    //     si no hay sofa, en la silla mas cercana a la paciente;
     //   - en el meson, cerca de la cocina: mantequilla, pasta dental, aceite
     //     y algodon; el hielo, cerca del refrigerador.
     // Busca lugares libres sobre el meson (a la altura del pano) y evita el
@@ -20,7 +22,7 @@ namespace SojaExiles
     public class BurnSceneProps : MonoBehaviour
     {
         public bool coverItems = true;
-        public bool sweater = true;
+        public bool blanket = true;
         public bool remedies = true;
 
         private readonly List<Vector3> taken = new List<Vector3>();
@@ -86,12 +88,17 @@ namespace SojaExiles
                 Place(BuildIce(), iceNear, counter, fridge != null ? 0.2f : 0.35f, 1.2f, 0.09f, avoid, stove);
             }
 
-            if (sweater)
+            if (blanket)
             {
-                GameObject chompa = BuildSweater();
-                if (!PlaceOnChair(chompa, patient != null ? patient.transform.position : stove))
+                GameObject manta = BuildBlanket();
+                Vector3 near = patient != null ? patient.transform.position : stove;
+                if (PlaceOnSofa(manta, near))
                 {
-                    Place(chompa, patient != null ? patient.transform.position : stove, counter, 0.4f, 1.4f, 0.15f, avoid);
+                    PlayArea.AllowPlayerPathTo(manta.transform.position);
+                }
+                else if (!PlaceOnChair(manta, near))
+                {
+                    Place(manta, near, counter, 0.4f, 1.4f, 0.15f, avoid);
                 }
             }
         }
@@ -187,7 +194,97 @@ namespace SojaExiles
             prop.transform.position = hit.point + Vector3.up * 0.002f;
             prop.transform.rotation = Quaternion.Euler(0f, best.transform.eulerAngles.y, 0f);
             prop.GetComponent<Grabbable>().SetHome();
-            Debug.Log("[BurnSceneProps] Chompa sobre " + best.name);
+            Debug.Log("[BurnSceneProps] Manta sobre " + best.name);
+            return true;
+        }
+
+        // Sobre el asiento del sofa (el mas cercano a la paciente), hacia uno
+        // de los extremos, como una manta que se deja doblada ahi.
+        private bool PlaceOnSofa(GameObject prop, Vector3 near)
+        {
+            Renderer best = null;
+            float bestDistance = 15f;
+            foreach (Renderer r in FindObjectsOfType<Renderer>())
+            {
+                if (!r.name.StartsWith("Sofa") || r.bounds.size.x * r.bounds.size.z < 0.6f)
+                {
+                    continue;
+                }
+
+                float d = Vector3.Distance(r.bounds.center, near);
+                if (d < bestDistance)
+                {
+                    bestDistance = d;
+                    best = r;
+                }
+            }
+
+            if (best == null)
+            {
+                return false;
+            }
+
+            // El lado largo del sofa y su frente (hacia afuera de la pared,
+            // donde el asiento queda mas bajo que el respaldo).
+            Bounds b = best.bounds;
+            Vector3 along = b.size.x >= b.size.z ? Vector3.right : Vector3.forward;
+            Vector3 across = Vector3.Cross(Vector3.up, along);
+            float length = Vector3.Dot(b.size, along);
+            float depth = Vector3.Dot(b.size, across);
+            // El frente del sofa mira hacia la paciente (hacia la cocina).
+            Vector3 front = across * Mathf.Sign(Vector3.Dot(near - b.center, across) + 1e-4f);
+            Vector3 seat = Vector3.zero;
+            bool found = false;
+            // Hacia un extremo, pero sin llegar al cojin del brazo del sofa.
+            foreach (float side in new[] { 0.22f, -0.22f })
+            {
+                List<Vector3> hits = new List<Vector3>();
+                float lowest = float.MaxValue;
+                for (int s = -3; s <= 3; s++)
+                {
+                    Vector3 p = b.center + along * (length * side) + across * (depth * 0.12f * s);
+                    p.y = b.max.y + 0.1f;
+                    if (!Physics.Raycast(p, Vector3.down, out RaycastHit hit, b.size.y + 0.3f, ~0,
+                        QueryTriggerInteraction.Ignore) || hit.normal.y < 0.8f || hit.collider.attachedRigidbody != null
+                        || hit.point.y < b.min.y + 0.25f)
+                    {
+                        continue;
+                    }
+
+                    hits.Add(hit.point);
+                    lowest = Mathf.Min(lowest, hit.point.y);
+                }
+
+                // El asiento es lo mas bajo por encima de la base; de el, la
+                // parte de adelante (se alcanza sin agacharse tanto), con 12 cm
+                // de margen al borde.
+                float bestFront = float.MinValue;
+                foreach (Vector3 h in hits)
+                {
+                    float f = Vector3.Dot(h - b.center, front);
+                    if (h.y <= lowest + 0.03f && f > bestFront)
+                    {
+                        bestFront = f;
+                        seat = h - front * 0.12f;
+                        found = true;
+                    }
+                }
+
+                if (found)
+                {
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                return false;
+            }
+
+            prop.transform.position = seat + Vector3.up * 0.003f;
+            prop.transform.rotation = Quaternion.LookRotation(along, Vector3.up) * Quaternion.Euler(0f, Random.Range(-12f, 12f), 0f);
+            prop.GetComponent<Grabbable>().SetHome();
+            Debug.Log("[BurnSceneProps] Manta sobre " + best.name + " en " + seat.ToString("F2"));
             return true;
         }
 
@@ -276,15 +373,23 @@ namespace SojaExiles
             return root;
         }
 
-        private static GameObject BuildSweater()
+        // Manta doblada: tres capas un poco corridas, como tela doblada.
+        private static GameObject BuildBlanket()
         {
-            GameObject root = PropKit.Grabbable("Chompa", Vector3.zero, Quaternion.identity,
-                new Vector3(0.3f, 0.075f, 0.24f), 0.4f);
-            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.028f, 0f),
-                new Vector3(0.3f, 0.055f, 0.24f), "Lana", new Color(0.55f, 0.18f, 0.2f));
-            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.064f, -0.05f),
-                new Vector3(0.28f, 0.02f, 0.11f), "Lana", new Color(0.55f, 0.18f, 0.2f));
-            root.AddComponent<SweaterItem>();
+            Color color = new Color(0.62f, 0.2f, 0.22f);
+            GameObject root = PropKit.Grabbable("Manta", Vector3.zero, Quaternion.identity,
+                new Vector3(0.42f, 0.09f, 0.32f), 0.6f);
+            for (int i = 0; i < 3; i++)
+            {
+                PropKit.Part(root.transform, PrimitiveType.Cube,
+                    new Vector3(0.006f * (i - 1), 0.015f + i * 0.029f, -0.004f * i),
+                    new Vector3(0.42f - i * 0.006f, 0.028f, 0.32f - i * 0.004f), "Manta", color);
+            }
+
+            // Borde doblado al frente, redondeado.
+            PropKit.Part(root.transform, PrimitiveType.Capsule, new Vector3(0f, 0.045f, 0.16f),
+                new Vector3(0.09f, 0.21f, 0.09f), Quaternion.Euler(0f, 0f, 90f), "Manta", color);
+            root.AddComponent<BlanketItem>();
             return root;
         }
 

@@ -119,8 +119,11 @@ namespace SojaExiles
             new StepInfo { id = StepId.LlevarAlAgua, title = "Lleva su mano al chorro",
                 hint = "Tómala del antebrazo, no de la mano quemada, y llévala al chorro: ella la pondrá bajo el agua.",
                 clip = "guia_llevar" },
-            new StepInfo { id = StepId.Abrigar, title = "Abrígala con la chompa",
-                hint = "El agua fría también le enfría el cuerpo. Suelta la chompa sobre sus hombros.", clip = "guia_abrigo" },
+            // La manta esta en el sofa de la sala: hay que ir a buscarla y ella
+            // se queda con la mano bajo el agua.
+            new StepInfo { id = StepId.Abrigar, title = "Abrígala con una manta",
+                hint = "El agua fría también le enfría el cuerpo. Trae la manta del sofá de la sala y suéltala sobre sus hombros.",
+                clip = "guia_abrigo" },
             // Mientras se enfria (antes ese minuto quedaba sin nada que hacer).
             // Sin celular en la escena se decide al final con el panel
             // (ver ShowStep).
@@ -900,12 +903,23 @@ namespace SojaExiles
                     // esfera de la guia tapaba el anillo y su indicacion.
                     break;
                 case StepId.Abrigar:
-                    SweaterItem sweater = FindObjectOfType<SweaterItem>();
-                    if (sweater != null)
+                    BlanketItem blanket = FindObjectOfType<BlanketItem>();
+                    if (blanket != null)
                     {
-                        Renderer rr = sweater.GetComponentInChildren<Renderer>();
-                        points.Add(rr != null ? rr.bounds.center : sweater.transform.position);
-                        radius = 0.12f;
+                        Grabbable held = blanket.GetComponent<Grabbable>();
+                        PatientBody body = held != null && held.IsHeld ? FindObjectOfType<PatientBody>() : null;
+                        if (body != null && body.IsReady && body.Chest != null)
+                        {
+                            // Ya la lleva: donde soltarla (la espalda, bajo la nuca).
+                            points.Add(body.Chest.position - body.TorsoForward * 0.16f + body.TorsoUp * 0.08f);
+                        }
+                        else
+                        {
+                            Renderer rr = blanket.GetComponentInChildren<Renderer>();
+                            points.Add(rr != null ? rr.bounds.center : blanket.transform.position);
+                        }
+
+                        radius = 0.14f;
                     }
 
                     break;

@@ -31,7 +31,10 @@ namespace SojaExiles
             { "guia_err_calma", "" },
             { "guia_err_aguantar", "" },
             { "guia_err_olla", "" },
-            { "guia_err_charco", "" }
+            { "guia_err_charco", "" },
+            // Dice "abrigala con la chompa": ahora es una manta en la sala.
+            // Solo texto hasta regrabarla (docs/VOCES.md).
+            { "guia_abrigo", "" }
         };
 
         public static AudioClip Clip(string name)

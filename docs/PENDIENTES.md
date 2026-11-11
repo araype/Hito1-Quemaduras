@@ -62,6 +62,8 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
   textos en `docs/VOCES.md`, sección "Pendientes de regenerar".
 - `guia_anillo` todavía explica el gesto viejo ("mantén apretado"): hay que
   regrabarla con el nuevo (pellizcar y deslizar; texto en `docs/VOCES.md`).
+- `guia_abrigo` todavía dice "abrígala con la chompa": regrabarla con la
+  manta de la sala (texto en `docs/VOCES.md`). Mientras tanto, solo texto.
 
 ## Plan: orden para lo que falta
 
@@ -70,7 +72,7 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 | 0 | Probar la consolidación en el editor (sección 0) | Sin esto lo demás se construye sobre algo no probado. | Mediano |
 | 1 | Regenerar voces (sección 1) | Se puede hacer en paralelo. | Chico |
 | 2 | Variar el caso (E.1) | Que no se pueda memorizar la secuencia. El tamaño de la quemadura cambia cuánto film hace falta. | Grande |
-| 3 | **Chompa con tela simulada** (D.2) | Hoy se ve aceptable y es lo que más arriesga los 72 fps. Si no hay tiempo, queda como está. | Grande |
+| 3 | **Botiquín guardado en un mueble** (D.3) | Que no esté todo listo sobre el mesón como si se supiera que se iba a quemar. | Mediano |
 | 4 | Línea de tiempo en el resumen; distractores; práctica de perilla en el tutorial (opcional) | Mejoras de la experiencia. | Variable |
 | 4b | Probar la tía de Avaturn en el Quest; poses de mano y háptica (F) | Lo que más suma a la inmersión según la revisión de herramientas. | Grande |
 | 5 | **Validación final en el Quest** con las manos y fps (G); pruebas con usuarios e informe | Al final, con todo estable. | Mediano |
@@ -78,15 +80,22 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 
 **Riesgos**
 
-- Rendimiento: el film en tiras y la chompa con tela son lo único que puede
-  bajar de 72 fps. Medir en la validación final.
+- Rendimiento: el film en tiras y la manta con tela simulada son lo único
+  que puede bajar de 72 fps (la manta se duerme cuando está quieta). Medir
+  en la validación final.
 
 ## D. Objetos sobre la paciente
 
-- **Chompa con tela simulada (D.2):** ya no entra en el cuerpo; falta tela
-  Verlet como `TowelCloth` con las 14 cápsulas de `PatientPhysics`. Se toma de
-  los hombros y se deja caer desde atrás. Si no da 72 fps, copiar la piel de
-  hombros y espalda como `HandSkinMesh`.
+- **Manta (hecha, `QUEMADURA_INMERSION.md`, sección 24), lo que falta:**
+  probarla en el Quest (`PRUEBAS_QUEST.md`, sección 3). Un giro instantáneo
+  de la tía (forzado por código) dejó un brazo por fuera; si pasa con los
+  giros reales, volver a armar la tela cuando el pecho gire de golpe.
+- **Botiquín guardado en un mueble (D.3):** hoy está a la vista junto al
+  lavadero, con el film y la bolsa, como si se esperara la quemadura.
+  Guardarlo en un mueble de la cocina (bajo el lavadero o un mueble alto)
+  con una puerta que se abre (bisagra y tirador, como la perilla) y que en
+  modo guiado brille el mueble. El film y la bolsa podrían ir en un cajón.
+  Mismo criterio que la manta: buscar las cosas donde estarían en una casa.
 - Cubrir con la bolsa todavía es "soltarla sobre la mano". El film ya se
   apoya en tiras; si se quiere, la bolsa podría usar el mismo "mantener
   encima 1 s" con `HoldHint` que tenía la gasa de Araype.
@@ -114,7 +123,7 @@ pasarse obligaría a rehacer el agarre, los botones y el rig.
 - **Tía de Avaturn, lo que falta probar** (hecha y probada en Play,
   `QUEMADURA_INMERSION.md`, sección 18): en el Quest, los 72 fps (35 000
   triángulos, materiales Standard y el pelo con alpha to coverage), que el
-  pelo se vea suave con el MSAA y que la cara, los brazos y la chompa se vean
+  pelo se vea suave con el MSAA y que la cara, los brazos y la manta se vean
   bien de cerca; en el editor, el resto del caso con el modelo nuevo (agua,
   gasa, film, sacar el anillo, llevarla del brazo, caminar). Sacar el
   anillo con la mano real en el Quest (el tiempo para que se trabe se alargó:

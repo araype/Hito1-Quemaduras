@@ -137,7 +137,7 @@ namespace SojaExiles
             velocity.y = verticalVelocity;
 
             Vector3 step = velocity * Time.deltaTime;
-            Vector3 clipped = PlayArea.Clip(transform.position, step);
+            Vector3 clipped = PlayArea.ClipPlayer(transform.position, step);
             if (clipped.x != step.x)
             {
                 horizontalVelocity.x = 0f;
