@@ -807,3 +807,52 @@ agarrarla y soltarla sobre la tía con las manos y con controles, caminar
 a la sala con el joystick, los 72 fps con la tela despierta, y si se ve bien
 de cerca. Un giro instantáneo de 30° (forzado por código) dejó un brazo por
 fuera de la manta; con los giros naturales de la tía no pasó.
+
+## 25. Botiquín guardado en el mueble y film en el cajón (`mejoras-demo`, 2026-11-12)
+
+Antes el botiquín, el film y la bolsa estaban a la vista junto al lavadero,
+como si se supiera que alguien se iba a quemar. Ahora están guardados como
+en una casa, y los 20 minutos de agua son el momento para ir a buscarlos
+(la tía sigue con la mano bajo el chorro, como cuando se va por la manta).
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Dónde está | El botiquín, en el **mueble alto** más cercano al lavadero (no el de encima de la cocina), detrás de la puerta más cercana al lavadero, con el rótulo hacia afuera. Un botiquín se guarda en un lugar seco y fuera del alcance de los niños; bajo el lavadero hay humedad. El film y la bolsa, en el **cajón** bajo el mesón junto a ese mueble. Si la escena no tiene esos muebles, todo queda en el mesón como antes. | `BurnSceneProps.StoreKitInWallCabinet`, `StoreInDrawer` |
+| Puertas y cajón | Son los de la cocina (`opencloseDoor`, `Drawer_Pull_X`, que solo se abrían con el mouse). Se apaga su Animator y se mueven con la mano: se toma el tirador (botón lateral, gatillo o pinza) y la puerta gira sobre la bisagra siguiendo la mano, o el cajón sale hacia uno. Un toque corto abre o cierra. Hacia dónde y cuánto se abren se lee de su propia animación de apertura. Clic al abrir y al cerrar, y vibración al moverlos. | `StorageFront` (nuevo) |
+| Lo guardado | Queda quieto y, con el mueble cerrado, sin colliders: no se puede sacar a través de la puerta. Lo del cajón se mueve con el cajón. Al sacarlo vuelve a la física normal; si después cae al piso, vuelve al mesón, no al mueble. Si se suelta otra vez adentro del mueble o del cajón abierto, queda guardado de nuevo. | `StorageFront.Store`, `UpdateStored` |
+| Cajón macizo | En `Escenario_Quemadura` el cajón tenía un `BoxCollider` macizo (de `AutoColliders`): se cambia por una bandeja hueca (fondo y cuatro paredes) para poder poner cosas adentro. | `StorageFront.HollowOut` |
+| El botiquín se lleva | Ahora tiene Rigidbody: se toma de cualquier parte de la caja o de la tapa y lo de adentro se mueve con él. Dentro del mueble cerrado no se alcanza su tirador. Lo que se cae al piso desde el botiquín vuelve a su lugar en el botiquín. | `FirstAidKit` |
+| Guía | Paso nuevo durante el enfriamiento, después de abrigar y llamar: **"Ten lista la gasa"** ("Mientras se enfría, abre el mueble alto junto al lavadero, saca el botiquín, déjalo en el mesón y ábrelo. Si no hay gasa, el film está en el cajón de abajo."). El brillo marca el tirador del mueble; abierto, el botiquín; ya en el mesón, su tapa. Se cumple con el botiquín abierto fuera del mueble, o con el film, la bolsa o una gasa ya afuera. Si termina el enfriamiento antes, el paso de cubrir dice dónde está el botiquín y marca el mueble y el cajón cerrados. La voz `guia_preparar` falta grabarla (`VOCES.md`): mientras tanto, solo texto. | `BurnGuide` (`StepId.Preparar`, `SuppliesOut`, `KitTarget`) |
+| Registro | Al tener el botiquín listo, o al sacar el film o la bolsa, se avisa `SuppliesReady` (detalle `Botiquin`, `Film` o `Bolsa`; al final de `BurnEvent`). **No da ni quita puntos:** ninguna guía pide preparar el material durante el enfriamiento; queda en el registro de la sesión para la futura línea de tiempo. | `BurnSequenceManager.BurnEvent.SuppliesReady` |
+| Mano simulada (solo editor) | Para probar sin visor desde el MCP de Unity: `SimpleGrab.SimActive`, `SimPosition`, `SimRotation` y `SimPressed` reemplazan la pose y el botón de una mano (0 izquierda, 1 derecha) y pasan por el mismo código de agarre que las manos reales. No existe en la compilación del Quest (`#if UNITY_EDITOR`). | `SimpleGrab` |
+
+**Probado en Play** (editor, sin visor, con la mano simulada; escenas
+`Prueba_LuzHorneada` y `Escenario_Quemadura`):
+
+- Al empezar no hay nada sobre el mesón junto al lavadero; el botiquín está
+  en `Cabinet_Wall_DD_01` y el film y la bolsa en el cajón de
+  `Cabinet_Base_DD_01`.
+- Tirando del tirador, la puerta siguió a la mano (al 28 % y al 65 %) y al
+  soltar terminó de abrirse; el botiquín quedó alcanzable.
+- Tomado de un costado, el botiquín salió del mueble con los sobres
+  adentro y, al soltarlo, quedó plano sobre el mesón (sin caerse los
+  sobres). La tapa se abrió levantándola del tirador (sin agarrar la caja).
+- Un sobre de gasa salió del botiquín y cayó con física normal.
+- El cajón salió tirando 34 cm con el film adentro; el film se sacó, se
+  soltó dentro del cajón abierto y quedó guardado de nuevo; al cerrar el
+  cajón se fue con él y quedó sin colliders.
+- Modo guiado, después del accidente y con la mano de la tía bajo el agua:
+  la tarjeta mostró "Paso 7 de 9 · Ten lista la gasa", con el brillo en el
+  tirador del mueble. Con la mano simulada se abrió, se bajó el botiquín y
+  se abrió: la guía pasó a "Enfría 20 minutos" con el reloj en 12,6 de 20
+  minutos y se registró `SuppliesReady Botiquin`. Al terminar de enfriar,
+  "Cubre con una gasa limpia" marcó los dos sobres y el tirador del cajón.
+- El brillo del paso nuevo con el mueble abierto (marca el botiquín entero
+  para sacarlo) se cambió después de esa prueba y solo se compiló.
+
+Para llegar al enfriamiento se usaron atajos por código (apagar, agua,
+anillo, abrigar y llamar marcados por código, y la tía puesta frente al
+lavadero con `PatientReach.Teleport`). **Falta en el Quest:** todo con las
+manos y con controles, si el tirador de la puerta se encuentra fácil y si
+los 20 minutos (90 s reales) alcanzan para abrigar, llamar y preparar sin
+apuro.

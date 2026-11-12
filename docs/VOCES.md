@@ -81,6 +81,7 @@ en una emergencia).
 | `guia_llevar` | Paso 3 | Tómala del antebrazo, no de la mano quemada, y llévala hasta el chorro. Suelta su mano cerca del agua y ella la pondrá debajo. |
 | `guia_anillo` | Paso 4 | Quítale el anillo antes de que la mano se hinche. Pellizca el punto dorado con tu mano libre, con el botón lateral o juntando el pulgar y el índice, y deslízalo hacia la punta de su dedo. (**Regrabar**, 2026-11-09: el audio actual todavía dice "mantén apretado".) |
 | `guia_abrigo` | Paso 5 | El agua fría también le enfría el cuerpo. Trae la manta del sofá de la sala y échasela sobre los hombros. (**Regrabar**, 2026-11-10: el audio actual dice "abrígala con la chompa"; mientras tanto solo se muestra el texto.) |
+| `guia_preparar` | Paso 7 (durante el enfriamiento) | Mientras se enfría, saca el botiquín del mueble alto junto al lavadero, déjalo en el mesón y ábrelo. (**Nueva**, 2026-11-12: todavía no existe; mientras tanto solo se muestra el texto.) |
 | `guia_esperar` | Paso 6 | Bien hecho. Ahora espera a que el reloj complete los 20 minutos, sin sacar su mano del agua. |
 | `guia_cubrir` | Paso 7 | Ya está enfriada. Cubre la quemadura con una gasa limpia, sin apretar. Si no hay gasa, usa film. (ElevenLabs, recuperada de `experiencia-inmersiva`.) |
 | `guia_decidir` | Paso 8 | Por último, decide si necesita atención médica. Mira bien la quemadura. |
@@ -149,7 +150,7 @@ en el mismo momento o nada (el texto sigue en la tarjeta o en el panel):
 | `voz_frio` | `voz_hielo_duele` ("¡Ay! Está helado, me duele más.") |
 | `voz_aguanto` | `voz_enfriada` ("Ya se siente un poco mejor.") |
 | `voz_aprieta` | `voz_remedio_no` ("No, eso no me pongas, por favor.") |
-| `voz_templar_pide`, `guia_err_calma`, `guia_err_aguantar`, `guia_err_olla`, `guia_err_charco`, `guia_abrigo` | Nada (solo el texto) |
+| `voz_templar_pide`, `guia_err_calma`, `guia_err_aguantar`, `guia_err_olla`, `guia_err_charco`, `guia_abrigo`, `guia_preparar` | Nada (solo el texto) |
 
 Al regenerar una voz con ElevenLabs, reemplazar el `.wav` y quitar su línea de
 `TtsStandIns`.
@@ -166,6 +167,7 @@ Al regenerar una voz con ElevenLabs, reemplazar el `.wav` y quitar su línea de
 | `guia_err_gasa_corrida` | Narradora | `[calm] La gasa quedó corrida: la próxima vez céntrala para cubrir toda la quemadura.` (Nueva, 2026-11-09.) |
 | `guia_err_venda` | Narradora | `[firm] La venda va suelta: al hincharse la mano, una venda apretada le corta la circulación.` (Nueva, 2026-11-09.) |
 | `guia_abrigo` | Narradora | `[calm] El agua fría también le enfría el cuerpo. Trae la manta del sofá de la sala y échasela sobre los hombros.` (Regrabar, 2026-11-10: el audio actual dice "chompa".) |
+| `guia_preparar` | Narradora | `[calm] Mientras se enfría, saca el botiquín del mueble alto junto al lavadero, déjalo en el mesón y ábrelo.` (Nueva, 2026-11-12.) |
 | `voz_aprieta` | Tía | `[in pain] ¡Ay, me aprieta! No me envuelvas la mano, por favor.` |
 | `voz_templar_pide` | Tía | `[worried] Ya, pero ábrela solo un poquito, que la caliente quema.` |
 | `voz_templada` | Tía | `[relieved] Ay, así está mejor. Aguanto.` |

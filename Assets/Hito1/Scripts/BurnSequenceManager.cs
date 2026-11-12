@@ -66,7 +66,8 @@ namespace SojaExiles
             GauzePressed,       // se apreto la gasa contra la quemadura (hay que apoyarla)
             GauzeTouchedCenter, // se tomo la gasa del centro (el lado que va sobre la herida)
             GauzeOffCenter,     // la gasa quedo corrida y no cubre toda la quemadura (detalle: porcentaje)
-            BandageApplied      // se fijo la gasa con la venda (detalle: Suelta o Apretada)
+            BandageApplied,     // se fijo la gasa con la venda (detalle: Suelta o Apretada)
+            SuppliesReady       // se saco del mueble con que cubrir (detalle: Botiquin o Film); sin puntaje
         }
 
         public enum Severity

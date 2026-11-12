@@ -73,6 +73,15 @@ namespace SojaExiles
             floorY = float.NaN;
         }
 
+        // Lugar al que vuelve, dado (lo que se saca de un mueble vuelve al
+        // meson, no adentro del mueble).
+        public void SetHome(Vector3 position, Quaternion rotation)
+        {
+            startPosition = position;
+            startRotation = rotation;
+            floorY = float.NaN;
+        }
+
         private void FixedUpdate()
         {
             if (OnFloorTooLong())

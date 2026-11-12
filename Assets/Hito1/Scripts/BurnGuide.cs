@@ -93,7 +93,8 @@ namespace SojaExiles
             Abrigar,
             Llamar,
             Esperar,
-            Cubrir
+            Cubrir,
+            Preparar
         }
 
         private class StepInfo
@@ -130,6 +131,13 @@ namespace SojaExiles
             new StepInfo { id = StepId.Llamar, title = "Llama al 106",
                 hint = "Mientras se enfría, toma el celular del mesón y llévalo a tu oreja. Responde lo que te pregunten.",
                 clip = "guia_llamar" },
+            // Los 20 minutos de agua dan tiempo de buscar con que cubrir: el
+            // botiquin esta guardado en el mueble alto y el film en el cajon,
+            // como en una casa. No da ni quita puntos (ninguna guia lo pide);
+            // solo evita que al terminar haya que salir a buscarlo.
+            new StepInfo { id = StepId.Preparar, title = "Ten lista la gasa",
+                hint = "Mientras se enfría, abre el mueble alto junto al lavadero, saca el botiquín, déjalo en el mesón y ábrelo. Si no hay gasa, el film está en el cajón de abajo.",
+                clip = "guia_preparar" },
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
                 hint = "Mantén su mano bajo el agua hasta que el reloj complete las 20 marcas.", clip = "guia_esperar" },
             new StepInfo { id = StepId.Cubrir, title = "Cubre con una gasa limpia",
@@ -696,9 +704,67 @@ namespace SojaExiles
                     return EmergencyCall.Instance != null
                         ? EmergencyCall.Instance.Decided
                         : protocol == null || protocol.Finished;
+                case StepId.Preparar:
+                    return SuppliesOut();
             }
 
             return true;
+        }
+
+        // Ya hay con que cubrir a mano: el botiquin abierto fuera del mueble,
+        // o el film, la bolsa o una gasa fuera de donde estaban guardados.
+        private static bool SuppliesOut()
+        {
+            FirstAidKit kit = FirstAidKit.Current;
+            if (kit == null || kit.ReadyToUse)
+            {
+                return true;
+            }
+
+            foreach (FilmRoll roll in FindObjectsOfType<FilmRoll>())
+            {
+                if (!StorageFront.IsStored(roll.GetComponent<Rigidbody>()))
+                {
+                    return true;
+                }
+            }
+
+            foreach (CoverItem item in FindObjectsOfType<CoverItem>())
+            {
+                if (!StorageFront.IsStored(item.GetComponent<Rigidbody>()))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Donde tocar para llegar al botiquin: la puerta del mueble si sigue
+        // cerrado; si no, su tirador mientras este cerrado.
+        private static bool KitTarget(out Vector3 point)
+        {
+            FirstAidKit kit = FirstAidKit.Current;
+            point = Vector3.zero;
+            if (kit == null)
+            {
+                return false;
+            }
+
+            StorageFront holder = StorageFront.Holder(kit.Body);
+            if (holder != null && !holder.IsOpen)
+            {
+                point = holder.HandlePosition;
+                return true;
+            }
+
+            if (!kit.IsOpen)
+            {
+                point = kit.HandlePosition;
+                return true;
+            }
+
+            return false;
         }
 
         private bool Available(StepId id)
@@ -711,6 +777,9 @@ namespace SojaExiles
                     return coolingStarted;
                 case StepId.Cubrir:
                     return IsDone(StepId.Esperar);
+                case StepId.Preparar:
+                    // Si ya termino de enfriar, lo dice el paso de cubrir.
+                    return coolingStarted && !IsDone(StepId.Esperar);
                 case StepId.Llamar:
                     return EmergencyCall.Instance != null ? coolingStarted : IsDone(StepId.Cubrir);
             }
@@ -850,6 +919,12 @@ namespace SojaExiles
                 hint = $"Cubierto con film: {cover} % (hace falta {Mathf.RoundToInt(coverage.coverageNeeded * 100f)} %). "
                     + "Pon otra tira al lado, a lo largo de su mano.";
             }
+            if (!isReturn && info.id == StepId.Cubrir && cover < 0 && FirstAidKit.Current != null
+                && StorageFront.IsStored(FirstAidKit.Current.Body))
+            {
+                hint = "El botiquín está en el mueble alto junto al lavadero. " + hint;
+            }
+
             ShowCard($"Paso {index + 1} de {Steps.Length}", title, hint);
             if (speak)
             {
@@ -941,18 +1016,43 @@ namespace SojaExiles
                     }
 
                     break;
+                case StepId.Preparar:
+                    FirstAidKit kitToTake = FirstAidKit.Current;
+                    StorageFront kitHolder = kitToTake != null ? StorageFront.Holder(kitToTake.Body) : null;
+                    if (kitHolder != null && kitHolder.IsOpen)
+                    {
+                        // Mueble abierto: el botiquin entero, para sacarlo.
+                        points.Add(kitToTake.transform.position + Vector3.up * 0.05f);
+                        radius = 0.14f;
+                    }
+                    else if (KitTarget(out Vector3 kitPoint))
+                    {
+                        // Mueble cerrado: su puerta. Ya afuera: la tapa.
+                        points.Add(kitPoint);
+                        radius = 0.06f;
+                    }
+
+                    break;
                 case StepId.Cubrir:
                     foreach (CoverItem item in FindObjectsOfType<CoverItem>())
                     {
+                        // Lo que esta en un cajon cerrado: el tirador del cajon.
+                        StorageFront closed = StorageFront.Holder(item.GetComponent<Rigidbody>());
+                        if (closed != null && !closed.IsOpen)
+                        {
+                            AddOnce(points, closed.HandlePosition);
+                            continue;
+                        }
+
                         Renderer rr = item.GetComponentInChildren<Renderer>();
                         points.Add(rr != null ? rr.bounds.center : item.transform.position);
                     }
 
-                    // La gasa esta en el botiquin: primero el tirador de la
-                    // tapa; abierto, los sobres.
-                    if (FirstAidKit.Current != null && !FirstAidKit.Current.IsOpen)
+                    // La gasa esta en el botiquin: primero la puerta del mueble
+                    // o el tirador de la tapa; abierto, los sobres.
+                    if (KitTarget(out Vector3 kitHandle))
                     {
-                        points.Add(FirstAidKit.Current.HandlePosition);
+                        points.Add(kitHandle);
                     }
                     else
                     {
@@ -964,7 +1064,12 @@ namespace SojaExiles
 
                     foreach (FilmRoll roll in FindObjectsOfType<FilmRoll>())
                     {
-                        if (!roll.GetComponent<Grabbable>().IsHeld)
+                        StorageFront drawer = StorageFront.Holder(roll.GetComponent<Rigidbody>());
+                        if (drawer != null && !drawer.IsOpen)
+                        {
+                            AddOnce(points, drawer.HandlePosition);
+                        }
+                        else if (!roll.GetComponent<Grabbable>().IsHeld)
                         {
                             points.Add(roll.transform.TransformPoint(roll.axisCenter));
                         }
@@ -994,6 +1099,19 @@ namespace SojaExiles
                     IndicatorUtil.SetWorldDiameter(highlights[i].transform, radius * 2f);
                 }
             }
+        }
+
+        private static void AddOnce(List<Vector3> points, Vector3 p)
+        {
+            foreach (Vector3 q in points)
+            {
+                if ((q - p).sqrMagnitude < 1e-4f)
+                {
+                    return;
+                }
+            }
+
+            points.Add(p);
         }
 
         private Transform FindRing()

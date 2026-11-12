@@ -145,6 +145,31 @@ namespace SojaExiles
             }
         }
 
+#if UNITY_EDITOR
+        // Mano simulada, solo en el editor: para probar sin visor (desde el MCP
+        // de Unity) agarrar, tirar de puertas, etc., pasando por el mismo
+        // codigo que las manos reales. Indice 0 = izquierda, 1 = derecha.
+        public static readonly bool[] SimActive = new bool[2];
+        public static readonly Vector3[] SimPosition = new Vector3[2];
+        public static readonly Quaternion[] SimRotation = { Quaternion.identity, Quaternion.identity };
+        public static readonly bool[] SimPressed = new bool[2];
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ClearSimulatedHands()
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                SimActive[i] = false;
+                SimPressed[i] = false;
+            }
+        }
+
+        private bool Simulated(Hand hand)
+        {
+            return SimActive[hand == left ? 0 : 1];
+        }
+#endif
+
         // Pone 'rb' en esa mano del jugador como si la hubiera agarrado (la
         // gasa que sale del sobre queda en la mano que tenia el sobre). Falso
         // si esa mano ya tiene algo o no se esta siguiendo.
@@ -662,6 +687,17 @@ namespace SojaExiles
 
         private void UpdatePose(Hand hand)
         {
+#if UNITY_EDITOR
+            if (Simulated(hand))
+            {
+                int i = hand == left ? 0 : 1;
+                hand.position = SimPosition[i];
+                hand.fingertip = SimPosition[i];
+                hand.rotation = SimRotation[i];
+                hand.poseValid = true;
+                return;
+            }
+#endif
             if (hand.anchor == null && cameraRig != null)
             {
                 hand.anchor = hand == left ? cameraRig.leftHandAnchor : cameraRig.rightHandAnchor;
@@ -804,6 +840,12 @@ namespace SojaExiles
 
         private bool ReadPressed(Hand hand)
         {
+#if UNITY_EDITOR
+            if (Simulated(hand))
+            {
+                return SimPressed[hand == left ? 0 : 1];
+            }
+#endif
             if (OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, hand.controller)
                 || OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, hand.controller))
             {

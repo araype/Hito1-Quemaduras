@@ -6,11 +6,14 @@ namespace SojaExiles
 {
     // Pone en la cocina los objetos del protocolo y los distractores, sin
     // tocar la escena:
-    //   - junto al lavadero: el botiquin (FirstAidKit) con sobres de gasa
+    //   - guardados en los muebles junto al lavadero, como en una casa: el
+    //     botiquin (FirstAidKit) en el mueble alto, con sobres de gasa
     //     esteril (la opcion principal para cubrir: un aposito esteril que
     //     no suelta pelusa, Cruz Roja Britanica), una venda y una pomada
-    //     (distractor); y sueltos, film transparente y bolsa plastica (si no
-    //     hay gasa);
+    //     (distractor); el film transparente y la bolsa plastica (si no hay
+    //     gasa) en el cajon de abajo. Las puertas y el cajon se abren con la
+    //     mano (StorageFront). Si la escena no tiene esos muebles, van sueltos
+    //     en el meson;
     //   - en el sofa de la sala: una manta doblada (para abrigarla); hay que
     //     ir a buscarla, y el jugador puede caminar hasta alli (PlayArea);
     //     si no hay sofa, en la silla mas cercana a la paciente;
@@ -26,6 +29,8 @@ namespace SojaExiles
         public bool remedies = true;
 
         private readonly List<Vector3> taken = new List<Vector3>();
+        private bool kitStored;
+        private Vector3 kitCabinet;
         private float avoidRadius = 0.3f;
 
         private IEnumerator Start()
@@ -71,9 +76,22 @@ namespace SojaExiles
             {
                 WaterTap tap = FindObjectOfType<WaterTap>();
                 Vector3 sink = tap != null ? tap.transform.position : stove;
-                PlaceKit(sink, counter, avoid, patient);
-                Place(BuildFilm(), sink, counter, 0.3f, 0.9f, 0.09f, avoid);
-                Place(BuildBag(), sink, counter, 0.3f, 0.9f, 0.09f, avoid);
+                Vector3 room = patient != null ? patient.transform.position
+                    : (Camera.main != null ? Camera.main.transform.position : sink);
+                // Guardados como en una casa: nadie tiene el botiquin sobre el
+                // meson esperando una quemadura.
+                if (!StoreKitInWallCabinet(sink, counter, avoid, room))
+                {
+                    PlaceKit(sink, counter, avoid, patient);
+                }
+
+                GameObject film = BuildFilm();
+                GameObject bag = BuildBag();
+                if (!StoreInDrawer(sink, counter, avoid, room, film, bag))
+                {
+                    Place(film, sink, counter, 0.3f, 0.9f, 0.09f, avoid);
+                    Place(bag, sink, counter, 0.3f, 0.9f, 0.09f, avoid);
+                }
             }
 
             if (remedies)
@@ -156,6 +174,271 @@ namespace SojaExiles
             Physics.SyncTransforms();
             kit.Fill();
             Debug.Log("[BurnSceneProps] Botiquin en " + spot.ToString("F2"));
+        }
+
+        // ---------------- muebles de la cocina ----------------
+
+        // Puertas (opencloseDoor de la cocina) de un mueble, agrupadas por mueble.
+        private static Dictionary<Transform, List<Transform>> CabinetDoors()
+        {
+            Dictionary<Transform, List<Transform>> doors = new Dictionary<Transform, List<Transform>>();
+            foreach (MonoBehaviour m in FindObjectsOfType<MonoBehaviour>())
+            {
+                if (!(m is opencloseDoor || m is opencloseDoor1) || m.transform.parent == null
+                    || m.GetComponent<StorageFront>() != null)
+                {
+                    continue;
+                }
+
+                Transform cabinet = m.transform.parent;
+                if (!doors.TryGetValue(cabinet, out List<Transform> list))
+                {
+                    list = new List<Transform>();
+                    doors[cabinet] = list;
+                }
+
+                list.Add(m.transform);
+            }
+
+            return doors;
+        }
+
+        private static Bounds RendererBounds(Transform t)
+        {
+            Renderer own = t.GetComponent<Renderer>();
+            if (own != null)
+            {
+                return own.bounds;
+            }
+
+            Bounds b = new Bounds(t.position, Vector3.zero);
+            bool any = false;
+            foreach (Renderer r in t.GetComponentsInChildren<Renderer>())
+            {
+                if (!any)
+                {
+                    b = r.bounds;
+                    any = true;
+                }
+                else
+                {
+                    b.Encapsulate(r.bounds);
+                }
+            }
+
+            return b;
+        }
+
+        // El botiquin, en el mueble alto mas cercano al lavadero (no encima
+        // del lavadero, donde hay repisas abiertas): ahi se guarda en una casa,
+        // seco y fuera del alcance de los ninos. Queda detras de la puerta mas
+        // cercana al lavadero, sobre el fondo del mueble, con el frente hacia
+        // la cocina.
+        private bool StoreKitInWallCabinet(Vector3 sink, float counter, Vector3 avoid, Vector3 room)
+        {
+            // Muebles altos cerca del lavadero, del mas cercano al mas lejano.
+            Dictionary<Transform, List<Transform>> all = CabinetDoors();
+            List<Transform> candidates = new List<Transform>();
+            foreach (KeyValuePair<Transform, List<Transform>> pair in all)
+            {
+                Bounds b = RendererBounds(pair.Key);
+                // Ni sobre la cocina (calor, vapor): ahi no se guarda un botiquin.
+                if (b.min.y < counter + 0.25f || b.size.y < 0.3f || b.min.y > counter + 1.2f
+                    || PropKit.Flat(b.center - sink).magnitude > 1.8f
+                    || PropKit.Flat(b.center - avoid).magnitude < avoidRadius + 0.5f)
+                {
+                    continue;
+                }
+
+                candidates.Add(pair.Key);
+            }
+
+            candidates.Sort((x, y) => PropKit.Flat(RendererBounds(x).center - sink).magnitude
+                .CompareTo(PropKit.Flat(RendererBounds(y).center - sink).magnitude));
+
+            foreach (Transform cabinet in candidates)
+            {
+                Bounds cab = RendererBounds(cabinet);
+                // El frente: el lado delgado del mueble que mira a la cocina.
+                Vector3 across = cab.size.x < cab.size.z ? Vector3.right : Vector3.forward;
+                Vector3 outward = across * Mathf.Sign(Vector3.Dot(room - cab.center, across) + 1e-4f);
+                Vector3 side = Vector3.Cross(Vector3.up, outward);
+
+                // La puerta mas cercana al lavadero y, detras de ella, el fondo.
+                Transform door = null;
+                float nearest = float.MaxValue;
+                foreach (Transform d in all[cabinet])
+                {
+                    float dist = PropKit.Flat(RendererBounds(d).center - sink).magnitude;
+                    if (dist < nearest)
+                    {
+                        nearest = dist;
+                        door = d;
+                    }
+                }
+
+                Vector3 doorCenter = RendererBounds(door).center;
+                Vector3 inner = cab.center + Vector3.Project(doorCenter - cab.center, side);
+                if (!InteriorFloor(cabinet, new Vector3(inner.x, cab.max.y - 0.05f, inner.z), cab.size.y,
+                    outward, out Vector3 floorPoint))
+                {
+                    Debug.Log("[BurnSceneProps] El mueble " + cabinet.name + " no tiene lugar para el botiquin; se prueba otro.");
+                    continue;
+                }
+
+                StorageFront front = null;
+                foreach (Transform d in all[cabinet])
+                {
+                    StorageFront f = StorageFront.Setup(d, StorageFront.Kind.Door, room, -0.75f);
+                    if (d == door)
+                    {
+                        front = f;
+                    }
+                }
+
+                return PutKit(cabinet, cab, front, floorPoint, outward, sink, counter, avoid);
+            }
+
+            Debug.LogWarning("[BurnSceneProps] No hay mueble alto con puertas cerca del lavadero; el botiquin queda en el meson.");
+            return false;
+        }
+
+        // Fondo del mueble bajo el punto, con lugar para la caja (sin repisa
+        // ni otra cosa encima a menos de 20 cm).
+        private static bool InteriorFloor(Transform cabinet, Vector3 probe, float height, Vector3 outward, out Vector3 point)
+        {
+            point = Vector3.zero;
+            bool found = false;
+            foreach (RaycastHit hit in Physics.RaycastAll(probe, Vector3.down, height, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.normal.y > 0.8f && hit.collider.transform.IsChildOf(cabinet) && (!found || hit.point.y > point.y))
+                {
+                    point = hit.point;
+                    found = true;
+                }
+            }
+
+            if (!found)
+            {
+                return false;
+            }
+
+            Vector3 half = new Vector3(FirstAidKit.Width * 0.5f, 0.09f, FirstAidKit.Depth * 0.5f);
+            Quaternion rotation = Quaternion.LookRotation(outward, Vector3.up);
+            return !Physics.CheckBox(point + Vector3.up * 0.105f, half, rotation, ~0, QueryTriggerInteraction.Ignore);
+        }
+
+        private bool PutKit(Transform cabinet, Bounds cab, StorageFront front, Vector3 floorPoint, Vector3 outward,
+            Vector3 sink, float counter, Vector3 avoid)
+        {
+            FirstAidKit kit = FirstAidKit.Build();
+            kit.transform.SetPositionAndRotation(floorPoint + Vector3.up * 0.003f,
+                Quaternion.LookRotation(outward, Vector3.up));
+            Physics.SyncTransforms();
+            kit.Fill();
+            kit.GetComponent<Grabbable>().SetHome();
+            front.Store(kit.Body);
+            kitStored = true;
+            kitCabinet = cab.center;
+            if (PropKit.FindSurfaceSpot(sink, counter, 0.3f, 1.1f, 0.2f, taken, avoid, avoidRadius, out Vector3 spot))
+            {
+                front.OutsideHome = spot + Vector3.up * 0.01f;
+                front.HasOutsideHome = true;
+            }
+
+            Debug.Log("[BurnSceneProps] Botiquin guardado en " + cabinet.name + " (detras de " + front.name + ") en "
+                + kit.transform.position.ToString("F2"));
+            return true;
+        }
+
+        // Film y bolsa, en el cajon de la cocina mas cercano al lavadero (bajo
+        // el meson).
+        private bool StoreInDrawer(Vector3 sink, float counter, Vector3 avoid, Vector3 room, GameObject film, GameObject bag)
+        {
+            Transform best = null;
+            float bestDistance = 1.8f;
+            foreach (Drawer_Pull_X d in FindObjectsOfType<Drawer_Pull_X>())
+            {
+                if (d.GetComponent<StorageFront>() != null)
+                {
+                    continue;
+                }
+
+                Bounds b = RendererBounds(d.transform);
+                if (b.max.y > counter + 0.02f || b.max.y < counter - 0.3f || b.size.y > 0.4f)
+                {
+                    continue;
+                }
+
+                // Junto al mueble del botiquin (todo lo de curar en un mismo
+                // rincon) y lejos de la cocina.
+                Vector3 near = kitStored ? kitCabinet : sink;
+                float dist = PropKit.Flat(b.center - near).magnitude;
+                if (dist < bestDistance && PropKit.Flat(b.center - avoid).magnitude > avoidRadius + 0.3f)
+                {
+                    bestDistance = dist;
+                    best = d.transform;
+                }
+            }
+
+            if (best == null)
+            {
+                Debug.LogWarning("[BurnSceneProps] No hay cajon cerca del lavadero; el film y la bolsa quedan en el meson.");
+                return false;
+            }
+
+            Bounds box = RendererBounds(best);
+            // Primero se prepara (si es un bloque macizo, queda hueco).
+            StorageFront drawer = StorageFront.Setup(best, StorageFront.Kind.Drawer, room, 0f);
+            Physics.SyncTransforms();
+            RaycastHit floor = default;
+            bool found = false;
+            foreach (RaycastHit hit in Physics.RaycastAll(new Vector3(box.center.x, box.max.y - 0.01f, box.center.z),
+                Vector3.down, box.size.y + 0.05f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.normal.y > 0.8f && hit.collider.transform.IsChildOf(best) && (!found || hit.point.y < floor.point.y))
+                {
+                    floor = hit;
+                    found = true;
+                }
+            }
+
+            if (!found)
+            {
+                Debug.LogWarning("[BurnSceneProps] No se encontro el fondo del cajon " + best.name + "; el film y la bolsa quedan en el meson.");
+                return false;
+            }
+
+            Quaternion facing = Quaternion.LookRotation(drawer.Outward, Vector3.up);
+            float depth = Mathf.Abs(Vector3.Dot(box.size, drawer.Outward));
+            // El rollo adelante (atravesado, a lo ancho del cajon) y la bolsa atras.
+            film.transform.SetPositionAndRotation(floor.point + drawer.Outward * (depth * 0.18f) + Vector3.up * 0.003f, facing);
+            bag.transform.SetPositionAndRotation(floor.point - drawer.Outward * (depth * 0.2f) + Vector3.up * 0.003f, facing);
+            Physics.SyncTransforms();
+            foreach (GameObject item in new[] { film, bag })
+            {
+                item.GetComponent<Grabbable>().SetHome();
+                drawer.Store(item.GetComponent<Rigidbody>());
+            }
+
+            if (PropKit.FindSurfaceSpot(sink, counter, 0.3f, 1f, 0.09f, taken, avoid, avoidRadius, out Vector3 spot))
+            {
+                drawer.OutsideHome = spot + Vector3.up * 0.01f;
+                drawer.HasOutsideHome = true;
+            }
+
+            BurnSequenceManager sequence = GetComponent<BurnSequenceManager>();
+            drawer.OnTaken += rb =>
+            {
+                if (sequence != null && sequence.CurrentState != BurnSequenceManager.BurnState.Idle)
+                {
+                    sequence.Report(BurnSequenceManager.BurnEvent.SuppliesReady,
+                        rb.GetComponent<FilmRoll>() != null ? "Film" : "Bolsa");
+                }
+            };
+
+            Debug.Log("[BurnSceneProps] Film y bolsa guardados en el cajon " + best.parent.name + "/" + best.name);
+            return true;
         }
 
         // Asiento de la silla mas cercana a la paciente.

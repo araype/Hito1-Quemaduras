@@ -3,15 +3,18 @@ using UnityEngine;
 
 namespace SojaExiles
 {
-    // Botiquin sobre el meson, junto al lavadero: caja blanca con cruz roja y
-    // tapa con bisagra atras. La tapa se abre tomandola del tirador de
+    // Botiquin: caja blanca con cruz roja y tapa con bisagra atras. Empieza
+    // guardado en el mueble alto junto al lavadero (StorageFront); se toma de
+    // la caja y se lleva con todo adentro (lo de adentro se mueve con ella).
+    // La tapa se abre tomandola del tirador de
     // adelante (boton lateral o pinza) y levantandola; un toque corto en el
     // tirador tambien la abre o la cierra. Adentro: sobres de gasa esteril
     // (GauzePacket: se rasgan con las dos manos), una venda (de adorno) y una
     // pomada, que no se debe usar en una quemadura (HomeRemedy.Pomada).
-    // Con la tapa cerrada no se puede sacar nada de adentro. Cada cosa tiene
-    // su lugar: si se suelta cerca (a menos de slotReach) con la tapa abierta,
-    // vuelve a acomodarse ahi.
+    // Con la tapa cerrada no se puede sacar nada de adentro, y dentro de un
+    // mueble cerrado no se alcanza el tirador. Cada cosa tiene su lugar: si se
+    // suelta cerca (a menos de slotReach) con la tapa abierta, vuelve a
+    // acomodarse ahi.
     // Lo arma BurnSceneProps.
     public class FirstAidKit : MonoBehaviour
     {
@@ -33,7 +36,10 @@ namespace SojaExiles
             public Grabbable grab;
             public Vector3 localPosition;
             public Quaternion localRotation;
+            public Collider[] colliders;
+            public bool inKit = true;
             public bool wasHeld;
+            public float floorTime;
         }
 
         private readonly List<Slot> slots = new List<Slot>();
@@ -50,6 +56,23 @@ namespace SojaExiles
             get { return handle != null ? handle.position : transform.position; }
         }
 
+        // Dentro de un mueble cerrado: no se alcanza.
+        public bool Enclosed
+        {
+            get { return body != null && StorageFront.IsEnclosed(body); }
+        }
+
+        // Fuera del mueble y con la tapa abierta: listo para usar.
+        public bool ReadyToUse
+        {
+            get { return IsOpen && (body == null || !StorageFront.IsStored(body)); }
+        }
+
+        public Rigidbody Body
+        {
+            get { return body; }
+        }
+
         private Transform lid;
         private Transform handle;
         private float angle;
@@ -59,6 +82,10 @@ namespace SojaExiles
         private float dragStartAngle;
         private readonly bool[] wasPressed = new bool[2];
         private bool announcedOpen;
+        private bool reportedReady;
+        private BurnSequenceManager sequence;
+        private Rigidbody body;
+        private Collider[] kitColliders;
 
         public static FirstAidKit Build()
         {
@@ -105,9 +132,18 @@ namespace SojaExiles
             Renderer grip = PropKit.Part(pivot.transform, PrimitiveType.Cube, new Vector3(0f, 0.004f, Depth + 0.012f),
                 new Vector3(0.07f, 0.01f, 0.018f), "Plastico_Gris", new Color(0.55f, 0.57f, 0.6f));
 
+            // Se puede llevar: se toma de cualquier parte de la caja o la tapa.
+            Rigidbody rb = root.AddComponent<Rigidbody>();
+            rb.mass = 1.2f;
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            root.AddComponent<Grabbable>();
+
             FirstAidKit kit = root.AddComponent<FirstAidKit>();
             kit.lid = pivot.transform;
             kit.handle = grip.transform;
+            kit.body = rb;
+            kit.kitColliders = root.GetComponentsInChildren<Collider>(true);
             return kit;
         }
 
@@ -136,13 +172,19 @@ namespace SojaExiles
                 transform.rotation * Quaternion.Euler(0f, yaw, 0f));
             Grabbable grab = item.GetComponent<Grabbable>();
             grab.SetHome();
-            slots.Add(new Slot
+            // Si se cae al piso vuelve al botiquin (UpdateSlots), no al lugar
+            // donde estaba al empezar: el botiquin ya no esta ahi.
+            grab.returnFromFloor = false;
+            Slot slot = new Slot
             {
                 body = item.GetComponent<Rigidbody>(),
                 grab = grab,
+                colliders = item.GetComponentsInChildren<Collider>(true),
                 localPosition = transform.InverseTransformPoint(item.transform.position),
                 localRotation = Quaternion.Inverse(transform.rotation) * item.transform.rotation
-            });
+            };
+            slots.Add(slot);
+            Stow(slot);
             return item;
         }
 
@@ -195,23 +237,44 @@ namespace SojaExiles
             }
         }
 
-        // Apretar en el tirador no agarra otra cosa; con la tapa cerrada no se
-        // saca nada de adentro.
+        // Apretar en el tirador no agarra otra cosa (ni la caja). Con la tapa
+        // cerrada, lo de adentro no tiene colliders: no se puede sacar.
         private bool BlocksGrab(Vector3 point)
         {
-            if (handle != null && Vector3.Distance(point, handle.position) < handleReach)
+            return handle != null && !Enclosed && Vector3.Distance(point, handle.position) < handleReach;
+        }
+
+        // Guardado en su lugar: quieto, se mueve con la caja y no choca con ella.
+        private void Stow(Slot slot)
+        {
+            slot.inKit = true;
+            if (slot.body != null && !slot.body.isKinematic)
             {
-                return true;
+                slot.body.velocity = Vector3.zero;
+                slot.body.angularVelocity = Vector3.zero;
+                slot.body.isKinematic = true;
             }
 
-            if (IsOpen)
+            IgnoreKit(slot, true);
+        }
+
+        private void IgnoreKit(Slot slot, bool ignore)
+        {
+            if (kitColliders == null || slot.colliders == null)
             {
-                return false;
+                return;
             }
 
-            Vector3 local = transform.InverseTransformPoint(point);
-            return Mathf.Abs(local.x) < Width * 0.5f && Mathf.Abs(local.z) < Depth * 0.5f
-                && local.y > 0f && local.y < Height + 0.02f;
+            foreach (Collider a in slot.colliders)
+            {
+                foreach (Collider b in kitColliders)
+                {
+                    if (a != null && b != null)
+                    {
+                        Physics.IgnoreCollision(a, b, ignore);
+                    }
+                }
+            }
         }
 
         private void LateUpdate()
@@ -235,7 +298,7 @@ namespace SojaExiles
                     continue;
                 }
 
-                if (dragHand < 0 && pressed && !wasPressed[h] && !holding
+                if (dragHand < 0 && pressed && !wasPressed[h] && !holding && !Enclosed
                     && Vector3.Distance(point, handle.position) < handleReach)
                 {
                     dragHand = h;
@@ -283,15 +346,34 @@ namespace SojaExiles
                 announcedOpen = true;
                 Hito1FX.PlayAt("perilla_clic", lid.position, 0.5f);
             }
+
+            // Fuera del mueble y abierto: listo para cubrir cuando termine de
+            // enfriar. No suma ni resta puntos (ninguna guia lo pide); queda en
+            // el registro de la sesion.
+            if (!reportedReady && ReadyToUse)
+            {
+                if (sequence == null)
+                {
+                    sequence = FindObjectOfType<BurnSequenceManager>();
+                }
+
+                if (sequence != null && sequence.CurrentState != BurnSequenceManager.BurnState.Idle)
+                {
+                    reportedReady = true;
+                    sequence.Report(BurnSequenceManager.BurnEvent.SuppliesReady, "Botiquin");
+                }
+            }
             else if (!IsOpen && angle < 5f)
             {
                 announcedOpen = false;
             }
         }
 
-        // Lo que se suelta cerca de su lugar, con la tapa abierta, vuelve ahi.
+        // Lo guardado sigue a la caja; lo que se suelta cerca de su lugar, con
+        // la tapa abierta, vuelve ahi.
         private void UpdateSlots()
         {
+            bool reachable = IsOpen && !Enclosed;
             for (int i = slots.Count - 1; i >= 0; i--)
             {
                 Slot slot = slots[i];
@@ -303,18 +385,69 @@ namespace SojaExiles
 
                 bool held = slot.grab.IsHeld;
                 Vector3 home = transform.TransformPoint(slot.localPosition);
-                if (slot.wasHeld && !held && IsOpen && Vector3.Distance(slot.body.position, home) < slotReach)
+                Quaternion homeRotation = transform.rotation * slot.localRotation;
+                if (slot.inKit)
                 {
-                    slot.body.velocity = Vector3.zero;
-                    slot.body.angularVelocity = Vector3.zero;
-                    slot.body.position = home;
-                    slot.body.rotation = transform.rotation * slot.localRotation;
-                    slot.body.transform.SetPositionAndRotation(home, transform.rotation * slot.localRotation);
-                    slot.grab.SetHome();
-                    Hito1FX.PlayAt("perilla_clic", home, 0.3f);
+                    if (held)
+                    {
+                        // Se saco: SimpleGrab ya lo hizo dinamico.
+                        slot.inKit = false;
+                    }
+                    else
+                    {
+                        SetColliders(slot, reachable);
+                        slot.body.position = home;
+                        slot.body.rotation = homeRotation;
+                        slot.body.transform.SetPositionAndRotation(home, homeRotation);
+                    }
+                }
+                else if (slot.wasHeld && !held)
+                {
+                    if (IsOpen && Vector3.Distance(slot.body.position, home) < slotReach)
+                    {
+                        Stow(slot);
+                        slot.body.transform.SetPositionAndRotation(home, homeRotation);
+                        Hito1FX.PlayAt("perilla_clic", home, 0.3f);
+                    }
+                    else
+                    {
+                        // Afuera: vuelve a caer y a chocar con la caja.
+                        IgnoreKit(slot, false);
+                        slot.body.isKinematic = false;
+                        slot.body.useGravity = true;
+                    }
+                }
+                else if (!held && slot.body.position.y < transform.position.y - 0.3f
+                    && slot.body.velocity.sqrMagnitude < 0.01f)
+                {
+                    // Se cayo al piso: despues de un momento vuelve a su lugar
+                    // en el botiquin, este donde este (su lugar de inicio era el
+                    // mueble).
+                    slot.floorTime += Time.deltaTime;
+                    if (slot.floorTime > 1.5f)
+                    {
+                        slot.floorTime = 0f;
+                        Stow(slot);
+                        slot.body.transform.SetPositionAndRotation(home, homeRotation);
+                    }
+                }
+                else
+                {
+                    slot.floorTime = 0f;
                 }
 
                 slot.wasHeld = held;
+            }
+        }
+
+        private static void SetColliders(Slot slot, bool on)
+        {
+            foreach (Collider c in slot.colliders)
+            {
+                if (c != null && !c.isTrigger && c.enabled != on)
+                {
+                    c.enabled = on;
+                }
             }
         }
 
