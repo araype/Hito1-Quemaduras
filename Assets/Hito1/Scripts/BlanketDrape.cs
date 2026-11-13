@@ -33,6 +33,15 @@ namespace SojaExiles
         public float overShoulder = 0.08f;
         [Tooltip("Filas sujetas a la espalda debajo del borde (para que no se voltee al girar).")]
         [Range(0, 5)] public int backPinRows = 2;
+        [Header("Abierta por delante")]
+        [Tooltip("No deja tela delante del pecho entre los hombros: asi no tapa sus manos.")]
+        public bool openFront = true;
+        [Tooltip("Mitad del ancho que queda libre delante del pecho (m, desde el centro).")]
+        public float frontOpenHalfWidth = 0.2f;
+        [Tooltip("Desde cuanto por delante del centro del pecho cuenta como 'delante' (m).")]
+        public float frontOpenDepth = 0.04f;
+        [Tooltip("Hasta que altura sobre el centro del pecho (m): por encima, la tela pasa sobre los hombros.")]
+        public float frontOpenTop = 0.02f;
         public string materialName = "Manta";
         public Color fallbackColor = new Color(0.62f, 0.2f, 0.22f);
 
@@ -568,8 +577,35 @@ namespace SojaExiles
             }
         }
 
+        // Por delante del pecho, entre los hombros y debajo de ellos, no
+        // queda tela: la manta queda abierta como un chal. Antes se cerraba
+        // por delante (sobre todo al girar ella) y tapaba sus brazos y la
+        // mano quemada, y no se podia poner la bolsa ni el film.
+        private Vector3 KeepFrontOpen(Vector3 p, int k, Vector3 origin, Vector3 forward, Vector3 right)
+        {
+            Vector3 d = p - origin;
+            if (d.y > frontOpenTop || Vector3.Dot(d, forward) < frontOpenDepth)
+            {
+                return p;
+            }
+
+            float side = Vector3.Dot(d, right);
+            if (Mathf.Abs(side) >= frontOpenHalfWidth)
+            {
+                return p;
+            }
+
+            // Hacia el costado en que esta; en el medio, segun su columna.
+            float sign = Mathf.Abs(side) > 0.01f ? Mathf.Sign(side) : (k % nx < nx / 2 ? -1f : 1f);
+            return p + right * (sign * frontOpenHalfWidth - side);
+        }
+
         private void Collide(bool applyFriction)
         {
+            bool open = openFront && patient != null && patient.IsReady && chest != null;
+            Vector3 origin = open ? chest.position : Vector3.zero;
+            Vector3 forward = open ? PatientBody.Flat(patient.TorsoForward).normalized : Vector3.forward;
+            Vector3 right = Vector3.Cross(Vector3.up, forward);
             for (int k = 0; k < count; k++)
             {
                 if (invMass[k] == 0f)
@@ -577,7 +613,8 @@ namespace SojaExiles
                     continue;
                 }
 
-                Vector3 p = PushOut(pos[k], out bool touched);
+                Vector3 start = open ? KeepFrontOpen(pos[k], k, origin, forward, right) : pos[k];
+                Vector3 p = PushOut(start, out bool touched);
                 if (p.y < floorY + 0.01f)
                 {
                     p.y = floorY + 0.01f;

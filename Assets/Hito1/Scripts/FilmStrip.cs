@@ -5,16 +5,23 @@ namespace SojaExiles
     // Una tira de film. La crea FilmRoll en el borde del rollo cuando una mano
     // lo sostiene; la otra mano la toma y tira: la tira se estira desde el
     // rollo hasta la mano y, al llegar a su largo, se corta y queda colgando
-    // de la mano. Se suelta sobre la mano quemada, a lo largo (de la muneca a
-    // los dedos), y FilmCoverage la pone sobre la piel. Envolver la mano es un
+    // de la mano. Se apoya sobre la mano quemada, a lo largo (de la muneca a
+    // los dedos), y al soltarla baja a la piel y se asienta (FilmCoverage la
+    // pone sobre la piel): no se pega desde lejos, la tira tiene que estar
+    // tocando la mano. Mientras se acerca con la tira, ella ofrece la mano.
+    // Envolver la mano es un
     // error: soltarla atravesada o dar la vuelta a la mano con la tira la deja
     // envuelta (se ve unos segundos), ella se queja y el narrador corrige.
     [RequireComponent(typeof(Rigidbody))]
     public class FilmStrip : MonoBehaviour
     {
         public float width = 0.06f;
-        [Tooltip("Si se suelta con la tira a menos de esta distancia de la mano quemada, se pone.")]
-        public float attachDistance = 0.15f;
+        [Tooltip("Si se suelta con la tira a menos de esta distancia del eje de la mano quemada (muneca a dedos), se pone (m).")]
+        public float attachDistance = 0.055f;
+        [Tooltip("A esta distancia de su mano, con una tira cortada, ella ofrece la mano (m). Antes 0,4: con la mano medio tapada por la manta no se encontraba.")]
+        public float offerDistance = 1.2f;
+        [Tooltip("Segundos que tarda la tira en bajar a la piel y asentarse.")]
+        public float settleSeconds = 0.3f;
         [Tooltip("Segundos sin tocarla antes de que una tira suelta desaparezca.")]
         public float looseSeconds = 20f;
 
@@ -29,6 +36,9 @@ namespace SojaExiles
         private Vector3 localWide;
         private bool wasHeld;
         private float looseSince = -1f;
+        private bool settling;
+        private BurnSequenceManager burnSequence;
+        private PatientBurnArm arm;
 
         // Gesto de envolver: con la tira en la mano, dar la vuelta alrededor
         // de la mano quemada. Se mide el giro de la mano del jugador alrededor
@@ -124,6 +134,15 @@ namespace SojaExiles
             }
 
             wasHeld = held;
+            if (settling)
+            {
+                return;
+            }
+
+            if (Torn && held)
+            {
+                OfferHand();
+            }
 
             if (Torn && held && TrackWrapGesture())
             {
@@ -233,7 +252,8 @@ namespace SojaExiles
 
             Vector3 a = transform.position;
             Vector3 b = a + WorldDirection * Length;
-            if (DistanceToSegment(hand.position, a, b) > attachDistance)
+            if (!coverage.WorldAxis(out Vector3 handCenter, out Vector3 handAxis, out float handHalf)
+                || DistanceToHand(a, b, handCenter, handAxis, handHalf) > attachDistance)
             {
                 return false;
             }
@@ -270,8 +290,123 @@ namespace SojaExiles
                 burnSequence.ChangeState(BurnSequenceManager.BurnState.Covered);
             }
 
-            Destroy(gameObject);
+            StartCoroutine(Settle(coverage.LastLayer, handCenter, handAxis));
             return true;
+        }
+
+        // La tira baja a la piel, se alinea con el largo de la mano y se
+        // desvanece mientras aparece la capa de film sobre la piel (antes
+        // la capa aparecia de golpe donde estaba la mano).
+        private System.Collections.IEnumerator Settle(Renderer skinLayer, Vector3 handCenter, Vector3 handAxis)
+        {
+            settling = true;
+            body.isKinematic = true;
+            body.useGravity = false;
+            foreach (Collider col in GetComponentsInChildren<Collider>())
+            {
+                col.enabled = false;
+            }
+
+            Transform bone = FilmCoverage.For(FindObjectOfType<PatientBody>()).Hand;
+            Vector3 mid = transform.position + WorldDirection * (Length * 0.5f);
+            float along = Vector3.Dot(mid - handCenter, handAxis);
+            Vector3 onAxis = handCenter + handAxis * along;
+            Vector3 radial = mid - onAxis;
+            Vector3 up = radial.sqrMagnitude > 1e-6f ? radial.normalized : Vector3.up;
+            Vector3 dir = Vector3.Dot(WorldDirection, handAxis) >= 0f ? handAxis : -handAxis;
+            // Encima de la piel (la mano tiene unos 2 cm de medio grosor).
+            Vector3 targetMid = onAxis + up * 0.022f;
+            Quaternion startRot = transform.rotation;
+            Quaternion endRot = Quaternion.FromToRotation(WorldDirection, dir) * startRot;
+            Vector3 startPos = transform.position;
+            // Se sigue a la mano mientras se asienta, por si ella la mueve.
+            Vector3 targetLocal = bone != null ? bone.InverseTransformPoint(targetMid - dir * (Length * 0.5f)) : Vector3.zero;
+
+            Renderer ribbon = GetComponentInChildren<Renderer>();
+            Material ribbonMat = ribbon != null ? ribbon.material : null;
+            Color ribbonColor = ribbonMat != null && ribbonMat.HasProperty("_Color") ? ribbonMat.color : Color.white;
+            Material layerMat = skinLayer != null ? skinLayer.material : null;
+            Color layerColor = layerMat != null && layerMat.HasProperty("_Color") ? layerMat.color : Color.white;
+
+            float t = 0f;
+            float seconds = Mathf.Max(0.05f, settleSeconds);
+            while (t < seconds)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.SmoothStep(0f, 1f, t / seconds);
+                Vector3 target = bone != null ? bone.TransformPoint(targetLocal) : targetMid - dir * (Length * 0.5f);
+                transform.SetPositionAndRotation(Vector3.Lerp(startPos, target, k),
+                    Quaternion.Slerp(startRot, endRot, k));
+                if (ribbonMat != null && ribbonMat.HasProperty("_Color"))
+                {
+                    Color c = ribbonColor;
+                    c.a = ribbonColor.a * (1f - k);
+                    ribbonMat.color = c;
+                }
+
+                if (layerMat != null && layerMat.HasProperty("_Color") && skinLayer != null)
+                {
+                    Color c = layerColor;
+                    c.a = layerColor.a * k;
+                    layerMat.color = c;
+                }
+
+                yield return null;
+            }
+
+            if (layerMat != null && layerMat.HasProperty("_Color") && skinLayer != null)
+            {
+                layerMat.color = layerColor;
+            }
+
+            if (ribbonMat != null)
+            {
+                Destroy(ribbonMat);
+            }
+
+            Destroy(gameObject);
+        }
+
+        // Con una tira cortada cerca de su mano (ya enfriada), ella la ofrece.
+        private void OfferHand()
+        {
+            if (burnSequence == null)
+            {
+                burnSequence = FindObjectOfType<BurnSequenceManager>();
+            }
+
+            if (burnSequence == null || burnSequence.CurrentState != BurnSequenceManager.BurnState.Cooled)
+            {
+                return;
+            }
+
+            if (arm == null)
+            {
+                arm = FindObjectOfType<PatientBurnArm>();
+            }
+
+            FilmCoverage coverage = FilmCoverage.For(FindObjectOfType<PatientBody>());
+            Transform hand = coverage != null ? coverage.Hand : null;
+            if (arm != null && hand != null && arm.Current != PatientBurnArm.Mode.InWater
+                && Vector3.Distance(transform.position, hand.position) < offerDistance)
+            {
+                arm.ShowHand(1.5f);
+            }
+        }
+
+        // Distancia minima entre la tira (a-b) y el eje de la mano quemada
+        // (de la muneca a los dedos), medida en varios puntos de la tira.
+        private static float DistanceToHand(Vector3 a, Vector3 b, Vector3 center, Vector3 axis, float halfLength)
+        {
+            Vector3 from = center - axis * halfLength;
+            Vector3 to = center + axis * halfLength;
+            float best = float.MaxValue;
+            for (int i = 0; i <= 8; i++)
+            {
+                best = Mathf.Min(best, DistanceToSegment(Vector3.Lerp(a, b, i / 8f), from, to));
+            }
+
+            return best;
         }
 
         // True si el gesto de envolver termino (la tira ya se uso).

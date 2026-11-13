@@ -2,9 +2,10 @@ using UnityEngine;
 
 namespace SojaExiles
 {
-    // Llave del grifo: se abre o cierra tocandola con la mano (la esfera
-    // fisica de SimpleGrab, que sigue al control o a la mano trackeada). Un
-    // punto dorado marca donde tocar, como en el prototipo. Con la llave
+    // Llave del grifo: se abre o cierra acercando la mano y apretando (boton
+    // lateral, gatillo o pinza: ver HandPress); antes bastaba con tocarla y
+    // se abria o cerraba al pasar la mano. Si las dos llaves estan al
+    // alcance, cuenta la mas cercana. Un punto marca donde esta. Con la llave
     // cerrada no sale agua y el chorro no cuenta para enfriar o lavar.
     // Un grifo puede tener dos llaves (fria y caliente, 'pair') que comparten
     // el mismo chorro: sale agua si cualquiera esta abierta, y Heat dice si
@@ -28,10 +29,8 @@ namespace SojaExiles
         public Color openColor = new Color(0.3f, 0.75f, 1f, 0.45f);
 
         public float toggleCooldown = 0.8f;
-
-        // La mano tiene que haber salido de la llave al menos este tiempo para
-        // volver a accionarla (evita abrir y cerrar con un solo toque).
-        public float rearmSeconds = 0.3f;
+        [Tooltip("Distancia de la mano a la llave para poder apretarla (m).")]
+        public float pressReach = 0.1f;
 
         public bool IsOpen { get; private set; }
 
@@ -77,16 +76,39 @@ namespace SojaExiles
 
         private Renderer marker;
         private float nextToggleTime;
-        private float lastHandInsideTime = float.NegativeInfinity;
+        private HandPress press;
 
         private void OnEnable()
         {
             All.Add(this);
+            SimpleGrab.AddGrabBlocker(BlocksGrab);
         }
 
         private void OnDisable()
         {
             All.Remove(this);
+            SimpleGrab.RemoveGrabBlocker(BlocksGrab);
+        }
+
+        // Apretar junto a la llave no agarra otra cosa.
+        private bool BlocksGrab(Vector3 point)
+        {
+            return press != null && press.Contains(point, transform.position);
+        }
+
+        // Otra llave queda mas cerca de ese punto que esta.
+        private bool OtherCloser(Vector3 point)
+        {
+            float mine = Vector3.Distance(point, transform.position);
+            foreach (WaterTap tap in All)
+            {
+                if (tap != null && tap != this && Vector3.Distance(point, tap.transform.position) < mine)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void Awake()
@@ -95,6 +117,7 @@ namespace SojaExiles
             own.isTrigger = true;
             marker = IndicatorUtil.CreateSphere("PuntoGrifo", transform, transform.position, markerRadius,
                 indicatorMaterial, closedColor);
+            press = new HandPress(pressReach);
         }
 
         private void Start()
@@ -104,6 +127,16 @@ namespace SojaExiles
 
         private void Update()
         {
+            if (press != null)
+            {
+                press.reach = pressReach;
+                if (press.Update(transform.position, OtherCloser) >= 0 && Time.time >= nextToggleTime)
+                {
+                    nextToggleTime = Time.time + toggleCooldown;
+                    SetOpen(!IsOpen);
+                }
+            }
+
             if (marker == null)
             {
                 return;
@@ -111,36 +144,11 @@ namespace SojaExiles
 
             marker.enabled = IndicatorUtil.HintsVisible;
 
-            // Pulso suave para llamar la atencion mientras esta cerrada.
+            // Pulso suave para llamar la atencion mientras esta cerrada; con
+            // la mano al alcance el punto crece (ya se puede apretar).
             float pulse = IsOpen ? 1f : 1f + 0.15f * Mathf.Sin(Time.time * 4f);
-            IndicatorUtil.SetWorldDiameter(marker.transform, markerRadius * 2f * pulse);
-        }
-
-        // No se cuenta cuantas manos hay adentro con OnTriggerExit: si la
-        // esfera de la mano se apaga (se perdio el tracking) estando dentro,
-        // Unity no siempre avisa la salida y el grifo quedaria trabado.
-        private void OnTriggerEnter(Collider other)
-        {
-            if (!SimpleGrab.IsHandCollider(other))
-            {
-                return;
-            }
-
-            bool rearmed = Time.time - lastHandInsideTime > rearmSeconds;
-            lastHandInsideTime = Time.time;
-            if (rearmed && Time.time >= nextToggleTime)
-            {
-                nextToggleTime = Time.time + toggleCooldown;
-                SetOpen(!IsOpen);
-            }
-        }
-
-        private void OnTriggerStay(Collider other)
-        {
-            if (SimpleGrab.IsHandCollider(other))
-            {
-                lastHandInsideTime = Time.time;
-            }
+            float near = press != null && press.Near >= 0 ? 1.35f : 1f;
+            IndicatorUtil.SetWorldDiameter(marker.transform, markerRadius * 2f * pulse * near);
         }
 
         public void SetOpen(bool open)

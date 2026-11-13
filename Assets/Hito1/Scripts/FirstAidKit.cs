@@ -8,9 +8,11 @@ namespace SojaExiles
     // la caja y se lleva con todo adentro (lo de adentro se mueve con ella).
     // La tapa se abre tomandola del tirador de
     // adelante (boton lateral o pinza) y levantandola; un toque corto en el
-    // tirador tambien la abre o la cierra. Adentro: sobres de gasa esteril
-    // (GauzePacket: se rasgan con las dos manos), una venda (de adorno) y una
-    // pomada, que no se debe usar en una quemadura (HomeRemedy.Pomada).
+    // tirador tambien la abre o la cierra. Adentro solo hay distractores:
+    // curitas y una pomada, que no se deben usar en una quemadura
+    // (HomeRemedy.Curita y Pomada). Para cubrir, las guias piden film o una
+    // bolsa limpia (estan en el cajon de la cocina); la gasa y la venda se
+    // quitaron el 2026-11-12.
     // Con la tapa cerrada no se puede sacar nada de adentro, y dentro de un
     // mueble cerrado no se alcanza el tirador. Cada cosa tiene su lugar: si se
     // suelta cerca (a menos de slotReach) con la tapa abierta, vuelve a
@@ -82,8 +84,6 @@ namespace SojaExiles
         private float dragStartAngle;
         private readonly bool[] wasPressed = new bool[2];
         private bool announcedOpen;
-        private bool reportedReady;
-        private BurnSequenceManager sequence;
         private Rigidbody body;
         private Collider[] kitColliders;
 
@@ -159,9 +159,9 @@ namespace SojaExiles
         {
             List<GameObject> items = new List<GameObject>();
             float floor = Wall + 0.003f;
-            items.Add(Put(GauzePacket.Build(), new Vector3(-0.07f, floor, -0.02f), 15f));
-            items.Add(Put(GauzePacket.Build(), new Vector3(-0.065f, floor + 0.008f, 0.04f), -10f));
-            items.Add(Put(BuildBandage(), new Vector3(0.065f, floor, -0.045f), 90f));
+            items.Add(Put(BuildPlaster(), new Vector3(-0.07f, floor, -0.03f), 15f));
+            items.Add(Put(BuildPlaster(), new Vector3(-0.06f, floor, 0.035f), -10f));
+            items.Add(Put(BuildPlaster(), new Vector3(0.02f, floor, -0.04f), 80f));
             items.Add(Put(BuildOintment(), new Vector3(0.06f, floor, 0.045f), 0f));
             return items;
         }
@@ -188,15 +188,17 @@ namespace SojaExiles
             return item;
         }
 
-        private static GameObject BuildBandage()
+        // Curita (aposito adhesivo de 7 x 2 cm con su almohadilla): un
+        // distractor. Se pega a la piel quemada (NHS, Cruz Roja Britanica).
+        private static GameObject BuildPlaster()
         {
-            GameObject root = PropKit.Grabbable("Venda", Vector3.zero, Quaternion.identity,
-                new Vector3(0.05f, 0.05f, 0.05f), 0.05f);
-            PropKit.Part(root.transform, PrimitiveType.Cylinder, new Vector3(0f, 0.025f, 0f),
-                new Vector3(0.05f, 0.025f, 0.05f), Quaternion.Euler(0f, 0f, 90f), "Gasa_Tejido",
-                new Color(0.97f, 0.96f, 0.92f));
-            // Con la gasa puesta, sirve para fijarla con una vuelta suelta.
-            root.AddComponent<BandageItem>();
+            GameObject root = PropKit.Grabbable("Curita", Vector3.zero, Quaternion.identity,
+                new Vector3(0.072f, 0.01f, 0.03f), 0.005f);
+            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.001f, 0f),
+                new Vector3(0.072f, 0.0015f, 0.02f), "Curita", new Color(0.86f, 0.68f, 0.55f));
+            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.0022f, 0f),
+                new Vector3(0.024f, 0.0012f, 0.014f), "Algodon", new Color(0.98f, 0.97f, 0.95f));
+            root.AddComponent<HomeRemedy>().remedy = HomeRemedy.Remedy.Curita;
             return root;
         }
 
@@ -347,23 +349,10 @@ namespace SojaExiles
                 Hito1FX.PlayAt("perilla_clic", lid.position, 0.5f);
             }
 
-            // Fuera del mueble y abierto: listo para cubrir cuando termine de
-            // enfriar. No suma ni resta puntos (ninguna guia lo pide); queda en
-            // el registro de la sesion.
-            if (!reportedReady && ReadyToUse)
-            {
-                if (sequence == null)
-                {
-                    sequence = FindObjectOfType<BurnSequenceManager>();
-                }
-
-                if (sequence != null && sequence.CurrentState != BurnSequenceManager.BurnState.Idle)
-                {
-                    reportedReady = true;
-                    sequence.Report(BurnSequenceManager.BurnEvent.SuppliesReady, "Botiquin");
-                }
-            }
-            else if (!IsOpen && angle < 5f)
+            // El botiquin ya no tiene con que cubrir (solo distractores): no
+            // avisa SuppliesReady; lo avisan el film y la bolsa al salir del
+            // cajon (BurnSceneProps).
+            if (!IsOpen && angle < 5f)
             {
                 announcedOpen = false;
             }

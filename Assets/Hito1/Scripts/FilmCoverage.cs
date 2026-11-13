@@ -26,6 +26,10 @@ namespace SojaExiles
         public float Coverage { get; private set; }
         public int Strips { get; private set; }
 
+        // Capa de la ultima tira puesta (FilmStrip la hace aparecer de a poco
+        // mientras la tira baja a la piel).
+        public Renderer LastLayer { get; private set; }
+
         // Ya se conto el error de envolver la mano (se cuenta una vez).
         public bool WrapReported { get; set; }
 
@@ -138,6 +142,7 @@ namespace SojaExiles
             }
 
             layers.Add(layer.gameObject);
+            LastLayer = layer;
             strips.Add(inStrip);
             Strips++;
             Measure();

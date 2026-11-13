@@ -180,8 +180,9 @@ namespace SojaExiles
     }
 
     // Panel fijo frente al jugador (menu, decision medica, resumen): lo
-    // sigue sin prisa cuando gira la cabeza, siempre de frente y sin tapar
-    // lo que hay que mirar (PanelPlacement).
+    // sigue sin prisa cuando gira la cabeza o se aleja, siempre de frente y
+    // sin tapar lo que hay que mirar (PanelPlacement). Acercarse o inclinarse
+    // hacia el panel no lo mueve: queda fijo en el mundo para poder tocarlo.
     public class PanelFollow : MonoBehaviour
     {
         public float distance = 0.7f;
@@ -190,8 +191,15 @@ namespace SojaExiles
         [Tooltip("Cuanto puede girar la cabeza antes de que el panel la siga.")]
         public float followAngle = 32f;
 
+        [Tooltip("Cuanto puede alejarse la cabeza (en horizontal) antes de que el panel la siga.")]
+        public float followMove = 0.9f;
+
         private Transform head;
         private Vector3 anchor;
+        // Ojos al ubicar el panel: el panel queda fijo en el mundo respecto de
+        // este punto, asi al acercarse (o inclinarse) para apretar un boton
+        // no retrocede con la cabeza.
+        private Vector3 anchorEye;
         private Vector3 velocity;
         private int choice = -1;
 
@@ -214,8 +222,9 @@ namespace SojaExiles
             }
 
             anchor = Vector3.ProjectOnPlane(head.forward, Vector3.up).normalized;
-            transform.position = PanelPlacement.Choose(head.position, anchor, distance, drop, halfSize, ref choice);
-            transform.rotation = PanelPlacement.Facing(transform.position, head.position);
+            anchorEye = head.position;
+            transform.position = PanelPlacement.Choose(anchorEye, anchor, distance, drop, halfSize, ref choice);
+            transform.rotation = PanelPlacement.Facing(transform.position, anchorEye);
         }
 
         private void LateUpdate()
@@ -233,15 +242,24 @@ namespace SojaExiles
                 return;
             }
 
+            // Solo se reacomoda si el jugador gira mucho la cabeza o se aleja
+            // del lugar: acercarse a la tarjeta no la empuja.
             Vector3 forward = Vector3.ProjectOnPlane(head.forward, Vector3.up);
-            if (forward.sqrMagnitude > 1e-4f && Vector3.Angle(forward, anchor) > followAngle)
+            bool turned = forward.sqrMagnitude > 1e-4f && Vector3.Angle(forward, anchor) > followAngle;
+            bool moved = Vector3.ProjectOnPlane(head.position - anchorEye, Vector3.up).magnitude > followMove;
+            if (turned || moved)
             {
-                anchor = forward.normalized;
+                if (forward.sqrMagnitude > 1e-4f)
+                {
+                    anchor = forward.normalized;
+                }
+
+                anchorEye = head.position;
             }
 
-            Vector3 wanted = PanelPlacement.Choose(head.position, anchor, distance, drop, halfSize, ref choice);
+            Vector3 wanted = PanelPlacement.Choose(anchorEye, anchor, distance, drop, halfSize, ref choice);
             transform.position = Vector3.SmoothDamp(transform.position, wanted, ref velocity, 0.35f);
-            transform.rotation = PanelPlacement.Facing(transform.position, head.position);
+            transform.rotation = PanelPlacement.Facing(transform.position, anchorEye);
         }
 
         private bool HandNear()

@@ -22,8 +22,10 @@ namespace SojaExiles
 
         private const float Cell = 0.25f;
         private static bool[] pathCells;
+        private static bool[] freeCells;
         private static int pathWidth, pathHeight;
         private static Vector2 pathOrigin;
+        private static float pathFloorY;
 
         public static bool HasPlayerPath
         {
@@ -33,6 +35,7 @@ namespace SojaExiles
         public static void FromKitchen()
         {
             pathCells = null;
+            freeCells = null;
             bool any = false;
             Vector2 min = Vector2.zero, max = Vector2.zero;
 
@@ -302,12 +305,177 @@ namespace SojaExiles
             }
 
             pathCells = allowed;
+            freeCells = free;
             pathWidth = w;
             pathHeight = h;
             pathOrigin = lo;
+            pathFloorY = floorY;
             Debug.Log("[PlayArea] Camino del jugador hasta " + target.ToString("F2") + ": " + (steps * Cell).ToString("F1")
                 + " m");
             return true;
+        }
+
+        // Camino por el piso desde 'from' hasta quedar a 'reach' metros de
+        // 'to', solo por donde el jugador puede andar y sin muebles. Lo usa
+        // FloorPathGuide para dibujar flechas. Deja en 'points' las esquinas
+        // del camino (a la altura del piso) y devuelve false si no hay.
+        public static bool FindPath(Vector3 from, Vector3 to, float reach, System.Collections.Generic.List<Vector3> points)
+        {
+            points.Clear();
+            if (freeCells == null)
+            {
+                return false;
+            }
+
+            int w = pathWidth, h = pathHeight;
+            int start = NearestPassable(from, 3);
+            if (start < 0)
+            {
+                return false;
+            }
+
+            Vector2 t = new Vector2(to.x, to.z);
+            int[] parent = new int[w * h];
+            for (int k = 0; k < parent.Length; k++)
+            {
+                parent[k] = -2;
+            }
+
+            System.Collections.Generic.Queue<int> queue = new System.Collections.Generic.Queue<int>();
+            parent[start] = -1;
+            queue.Enqueue(start);
+            int goal = -1;
+            while (queue.Count > 0)
+            {
+                int k = queue.Dequeue();
+                int ci = k % w, cj = k / w;
+                if (Vector2.Distance(CellCenter(ci, cj), t) <= reach)
+                {
+                    goal = k;
+                    break;
+                }
+
+                for (int d = 0; d < 4; d++)
+                {
+                    int ni = ci + (d == 0 ? 1 : d == 1 ? -1 : 0);
+                    int nj = cj + (d == 2 ? 1 : d == 3 ? -1 : 0);
+                    if (ni < 0 || nj < 0 || ni >= w || nj >= h)
+                    {
+                        continue;
+                    }
+
+                    int n = nj * w + ni;
+                    if (parent[n] == -2 && Passable(ni, nj))
+                    {
+                        parent[n] = k;
+                        queue.Enqueue(n);
+                    }
+                }
+            }
+
+            if (goal < 0)
+            {
+                return false;
+            }
+
+            System.Collections.Generic.List<Vector2> cells = new System.Collections.Generic.List<Vector2>();
+            for (int k = goal; k >= 0; k = parent[k])
+            {
+                cells.Add(CellCenter(k % w, k / w));
+            }
+
+            cells.Reverse();
+            cells[0] = new Vector2(from.x, from.z);
+
+            // Se quitan las esquinas de la grilla: desde cada punto se va
+            // directo al mas lejano que se ve sin pasar por un mueble.
+            int i = 0;
+            points.Add(new Vector3(cells[0].x, pathFloorY, cells[0].y));
+            while (i < cells.Count - 1)
+            {
+                int next = i + 1;
+                for (int j = cells.Count - 1; j > i + 1; j--)
+                {
+                    if (ClearLine(cells[i], cells[j]))
+                    {
+                        next = j;
+                        break;
+                    }
+                }
+
+                points.Add(new Vector3(cells[next].x, pathFloorY, cells[next].y));
+                i = next;
+            }
+
+            return true;
+        }
+
+        private static Vector2 CellCenter(int i, int j)
+        {
+            return new Vector2(pathOrigin.x + (i + 0.5f) * Cell, pathOrigin.y + (j + 0.5f) * Cell);
+        }
+
+        // Celda libre de muebles y dentro de la zona del jugador.
+        private static bool Passable(int i, int j)
+        {
+            if (!freeCells[j * pathWidth + i])
+            {
+                return false;
+            }
+
+            Vector2 c = CellCenter(i, j);
+            return Allowed(new Vector3(c.x, 0f, c.y));
+        }
+
+        private static bool PassablePoint(Vector2 p)
+        {
+            int i = Mathf.FloorToInt((p.x - pathOrigin.x) / Cell);
+            int j = Mathf.FloorToInt((p.y - pathOrigin.y) / Cell);
+            return i >= 0 && j >= 0 && i < pathWidth && j < pathHeight && Passable(i, j);
+        }
+
+        private static bool ClearLine(Vector2 a, Vector2 b)
+        {
+            float length = Vector2.Distance(a, b);
+            int samples = Mathf.CeilToInt(length / (Cell * 0.4f));
+            for (int s = 1; s < samples; s++)
+            {
+                if (!PassablePoint(Vector2.Lerp(a, b, s / (float)samples)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // La celda libre mas cercana a 'p' (hasta 'radius' celdas), -1 si no hay.
+        private static int NearestPassable(Vector3 p, int radius)
+        {
+            int ci = Mathf.FloorToInt((p.x - pathOrigin.x) / Cell);
+            int cj = Mathf.FloorToInt((p.z - pathOrigin.y) / Cell);
+            int best = -1;
+            float bestDistance = float.MaxValue;
+            for (int dj = -radius; dj <= radius; dj++)
+            {
+                for (int di = -radius; di <= radius; di++)
+                {
+                    int i = ci + di, j = cj + dj;
+                    if (i < 0 || j < 0 || i >= pathWidth || j >= pathHeight || !Passable(i, j))
+                    {
+                        continue;
+                    }
+
+                    float d = di * di + dj * dj;
+                    if (d < bestDistance)
+                    {
+                        bestDistance = d;
+                        best = j * pathWidth + i;
+                    }
+                }
+            }
+
+            return best;
         }
 
         // Piso a la altura de la cocina y sin muebles ni paredes donde iria

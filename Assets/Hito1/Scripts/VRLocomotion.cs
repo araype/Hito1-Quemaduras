@@ -149,7 +149,18 @@ namespace SojaExiles
             }
 
             standingOnProp = null;
+            Vector3 beforeMove = transform.position;
             controller.Move(clipped);
+            if (ClimbedFurniture(beforeMove))
+            {
+                // Se trepo por el borde de un mueble (la mesa de centro de la
+                // sala): se deshace el paso, como chocar con el. Antes lo
+                // atrapaba GuardAgainstFalling y devolvia al jugador al ultimo
+                // lugar firme, que se sentia como un empujon hacia atras.
+                UndoMove(beforeMove);
+                horizontalVelocity = Vector3.zero;
+            }
+
             PushObjects();
             SlideOffProp();
             KeepHeadOutOfPatient(head);
@@ -656,9 +667,33 @@ namespace SojaExiles
 
             Vector3 before = transform.position;
             controller.Move(offset);
+            if (ClimbedFurniture(before))
+            {
+                // Caminando en el espacio real contra un mueble: el cuerpo no
+                // se sube; la cabeza sigue donde esta.
+                UndoMove(before);
+                return;
+            }
+
             Vector3 moved = transform.position - before;
             moved.y = 0f;
             trackingRoot.position -= moved;
+        }
+
+        // El paso subio la capsula sobre un mueble (mas alto que el piso de
+        // lo que se considera estar parado en el).
+        private bool ClimbedFurniture(Vector3 before)
+        {
+            return hasFloor && transform.position.y > floorY + maxStandAboveFloor
+                && transform.position.y > before.y + 0.05f;
+        }
+
+        private void UndoMove(Vector3 before)
+        {
+            controller.enabled = false;
+            transform.position = before;
+            controller.enabled = true;
+            Physics.SyncTransforms();
         }
 
         private const float HeadFollowThreshold = 0.01f;

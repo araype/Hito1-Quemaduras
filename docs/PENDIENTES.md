@@ -51,21 +51,21 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 
 ## 1. Voces
 
-- Volvió la gasa (sección 16 de `QUEMADURA_INMERSION.md`): `guia_cubrir`,
-  `guia_err_pano` y `guia_err_envolver` ya son de ElevenLabs. Quedan 12 voces
-  TTS por regenerar (`docs/VOCES.md`); mientras tanto no suenan: se usa
-  una frase de ElevenLabs que encaja o solo el texto (`Hito1FX.TtsStandIns`).
-
-- **Regenerar con ElevenLabs las voces que llegaron como TTS** desde
-  `corregir-bugs` (narrador Raúl y tía Sabina), para que no cambie la voz a
-  mitad de la partida, y `op_centro`, que todavía dice "gasa". Lista y
-  textos en `docs/VOCES.md`, sección "Pendientes de regenerar".
-- `guia_anillo` todavía explica el gesto viejo ("mantén apretado"): hay que
-  regrabarla con el nuevo (pellizcar y deslizar; texto en `docs/VOCES.md`).
-- `guia_abrigo` todavía dice "abrígala con la chompa": regrabarla con la
-  manta de la sala (texto en `docs/VOCES.md`). Mientras tanto, solo texto.
-- `guia_preparar` (paso nuevo "Ten lista la gasa") no existe: grabarla
-  (texto en `docs/VOCES.md`). Mientras tanto, solo texto.
+- **Ya dicen lo correcto** (2026-11-12, `QUEMADURA_INMERSION.md`, sección
+  27): las 12 frases del narrador que decían algo incorrecto o faltaban y
+  `op_centro` se regeneraron con las voces de Windows (Sabina para la
+  narradora, Raúl para el operador). Falta **reemplazarlas con ElevenLabs**
+  para que la narradora no cambie de voz: `guia_bienvenida`, `guia_anillo`,
+  `guia_abrigo`, `guia_preparar`, `guia_cubrir`, `guia_err_pano`,
+  `guia_err_curita`, `guia_err_anillo`, `guia_err_calma`,
+  `guia_err_aguantar`, `guia_err_olla`, `guia_err_charco`, `guia_llamar`,
+  `guia_apagar`, `guia_frio_lejos` (sección 29) y `op_centro`
+  (textos en `docs/VOCES.md`).
+- **Voces de la tía que siguen como TTS** (`voz_ansiosa`, `voz_calmada`,
+  `voz_asustada`, `voz_frio`, `voz_aguanto`, `voz_templada`, `voz_aprieta`,
+  `voz_templar_pide`): no dicen nada incorrecto; suena en su lugar una frase
+  de ElevenLabs que encaja o solo el texto (`Hito1FX.TtsStandIns`).
+  Regenerarlas con ElevenLabs.
 
 ## Plan: orden para lo que falta
 
@@ -91,15 +91,20 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
   probarla en el Quest (`PRUEBAS_QUEST.md`, sección 3). Un giro instantáneo
   de la tía (forzado por código) dejó un brazo por fuera; si pasa con los
   giros reales, volver a armar la tela cuando el pecho gire de golpe.
-- **Botiquín guardado (hecho, `QUEMADURA_INMERSION.md`, sección 25), lo
-  que falta:** probar en el Quest abrir la puerta del mueble alto y el cajón
-  con las manos y con controles (el tirador está en el borde libre de la
-  puerta y al frente del cajón; si cuesta encontrarlo, subir
-  `StorageFront.handleReach`), bajar el botiquín al mesón y que el tiempo
-  del enfriamiento alcance para abrigar, llamar y preparar.
-- Cubrir con la bolsa todavía es "soltarla sobre la mano". El film ya se
-  apoya en tiras; si se quiere, la bolsa podría usar el mismo "mantener
-  encima 1 s" con `HoldHint` que tenía la gasa de Araype.
+  Buscarla (sección 28): seguir las flechas del piso hasta la sala, rodear
+  la mesa de centro sin rebotar y, en modo evaluación, oír la pista de la
+  tía; regrabar `voz_pide_manta` y `guia_abrigo` con ElevenLabs.
+- **Muebles y cajón (hecho, `QUEMADURA_INMERSION.md`, secciones 25 y 26),
+  lo que falta:** probar en el Quest abrir la puerta del mueble alto y el
+  cajón con las manos y con controles (el tirador está en el borde libre de
+  la puerta y al frente del cajón; si cuesta encontrarlo, subir
+  `StorageFront.handleReach`) y que el tiempo del enfriamiento alcance para
+  abrigar, llamar y sacar el film o la bolsa del cajón.
+- **Cubrir (hecho, sección 26), lo que falta:** probar en el Quest deslizar
+  la bolsa por su mano y apoyar las tiras de film (`PRUEBAS_QUEST.md`,
+  sección 11). Con la quemadura de Laura, una sola tira bien puesta ya
+  cubrió el 88 % en el editor: revisar en la sección 0 si `coverageNeeded`
+  debe subir para pedir más de una tira.
 
 ## E. Arco del juego
 
@@ -188,7 +193,39 @@ texturas de 1024 por objeto de mano.
   caliente con la fría abierta; el panel tiene ahora 4 respuestas), pisar el
   charco (solo aviso; no se probó), gesto de pausa, que los paneles de la
   tía no estorben mientras se le sostiene el brazo, **la llamada al 106**
-  (llevar el celular a la oreja) y **sacar el anillo** con la mano ofrecida.
+  (tocar "Llamar 106" en la pantalla con la otra mano o llevarlo a la oreja;
+  el altavoz y el panel que acompaña: `QUEMADURA_INMERSION.md`, sección 29)
+  y **sacar el anillo** con la mano ofrecida.
+- **Orden flexible** (sección 29): recorrer la partida haciendo los pasos
+  en otro orden (llamar después de cubrir, la manta al final, el anillo
+  bajo el agua) y revisar que la tarjeta no se vuelva demasiado larga con
+  la línea "Cuando puedas"; si tapa, mostrarla solo en la tarjeta completa
+  o acortar las etiquetas (`BurnGuide.SideLabel`).
+- **Perilla y llaves que se aprietan** (sección 29, solo compilado): con el
+  simulador y en el Quest, con controles y con la pinza, que se accionen al
+  apretar y no al pasar la mano, que con las dos llaves cerca se abra la
+  que se apunta y que el alcance (8 cm, `pressReach`) no sea muy corto.
+- **Llaves con su mano bajo el chorro** (sección 30): en el simulador y en
+  el Quest, abrir la caliente con la fría abierta y cerrar la fría mientras
+  ella tiene la mano en el agua. Si no responde, mirar la línea
+  `[HandPress]` de la consola (dice a cuántos cm se apretó).
+- **Manta abierta por delante** (sección 30, solo compilado): con las
+  capturas del usuario se vio que la manta se cerraba por delante y tapaba
+  sus brazos. Revisar en Play que ahora quede abierta como un chal, que no
+  atraviese los brazos y que no tiemble; ajustar `frontOpenHalfWidth` si
+  hace falta.
+- **Una sola mano en el simulador** (sección 30, solo compilado): A/X con
+  el celular en la mano llama; A/X con el rollo corta una tira y la deja en
+  esa mano. Menú Hito1 > Práctica (F9 pausa, F10 terminar).
+- **Film y bolsa amarillos (a decidir):** son piezas hechas por código y
+  se pintaron de amarillo cuando estaban sueltas en el mesón (en blanco no
+  se veían). Ahora están en el cajón: se podría volver a un aspecto real
+  (film transparente en su caja, bolsa blanca translúcida) o usar modelos
+  (H.1).
+- **Queja del frío lejos de ella** (sección 29): ir por la manta justo al
+  empezar a enfriar y medir si 30 s (`PatientDialog.awayGraceSeconds`)
+  alcanzan para volver caminando con el joystick; ver que al no volver se
+  sume el error del enfriamiento interrumpido.
 - **Botones con el dedo y brazo de la tía** (`QUEMADURA_INMERSION.md`,
   sección 15): con controles y sin ellos, que el círculo del cursor
   coincida con la punta del índice (si no, ajustar

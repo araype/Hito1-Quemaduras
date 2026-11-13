@@ -15,11 +15,11 @@ namespace SojaExiles
     // pausa y cuenta como error.
     // La decision de ir al centro de salud se toma en la llamada al 106
     // (EmergencyCall), en cualquier momento despues del accidente. La
-    // practica termina cuando la quemadura esta cubierta y ya se llamo: revisa
-    // los pasos que faltaron, termina (Success), muestra el resumen
-    // (BurnSummaryPanel) y guarda la sesion en un JSON. Si se cubre sin haber
-    // llamado, espera la llamada un rato ('callGraceSeconds') y, si no llega,
-    // termina con ese paso faltante. Sin celular en la escena, al cubrir
+    // practica termina cuando la quemadura esta cubierta, ya se llamo y esta
+    // abrigada: revisa los pasos que faltaron, termina (Success), muestra el
+    // resumen (BurnSummaryPanel) y guarda la sesion en un JSON. Si se cubre
+    // sin haber llamado o sin abrigarla, espera un rato ('callGraceSeconds',
+    // 'blanketGraceSeconds') y, si no llega, termina con ese paso faltante. Sin celular en la escena, al cubrir
     // pregunta con el panel de antes (MedicalDecisionPanel).
     // Va en el objeto de BurnSequenceManager.
     public class BurnProtocol : MonoBehaviour
@@ -62,6 +62,14 @@ namespace SojaExiles
         [Tooltip("Si se cubre sin haber llamado al 106: segundos que espera la llamada (modo guiado y evaluacion).")]
         public float callGraceSecondsGuided = 90f;
         public float callGraceSeconds = 40f;
+        [Tooltip("Ya se llamo, se cubrio y falta abrigarla: segundos que espera la manta (modo guiado y evaluacion).")]
+        public float blanketGraceSecondsGuided = 60f;
+        public float blanketGraceSeconds = 20f;
+        [Tooltip("Modo evaluacion: segundos reales desde el accidente hasta que la practica termina sola (0 sin limite). En modo guiado no hay limite: para no quedarse atrapado esta 'Terminar y ver resumen' en el menu de pausa.")]
+        public float evaluationTimeLimit = 600f;
+
+        // Por que termino antes de completar todo: "Menu", "Tiempo" o null.
+        public string EndedEarly { get; private set; }
         public bool saveSessionLog = true;
 
         [Header("Puntaje")]
@@ -75,7 +83,7 @@ namespace SojaExiles
             "Enfriar 20 minutos bajo el agua",
             "Retirar el anillo",
             "Abrigar a la persona",
-            "Cubrir con una gasa limpia (o film si no hay)",
+            "Cubrir sin apretar (film o bolsa limpia)",
             "Llamar al 106 y decidir si necesita atención médica"
         };
 
@@ -172,8 +180,10 @@ namespace SojaExiles
                 }
 
                 BurnSequenceManager.BurnState s = burnSequence.CurrentState;
+                // Success no cuenta: la practica puede terminar desde el menu
+                // o por tiempo sin haber enfriado.
                 if (s == BurnSequenceManager.BurnState.Cooled || s == BurnSequenceManager.BurnState.Covered
-                    || s == BurnSequenceManager.BurnState.Success || IsDone(Step.Enfriar))
+                    || IsDone(Step.Enfriar))
                 {
                     return 1f;
                 }
@@ -320,11 +330,7 @@ namespace SojaExiles
                     break;
                 case BurnSequenceManager.BurnState.Covered:
                     Mark(Step.Cubrir);
-                    if (pendingDecision != null)
-                    {
-                        StartCoroutine(FinishSoon(pendingDecision));
-                    }
-                    else if (EmergencyCall.Instance == null)
+                    if (EmergencyCall.Instance == null && pendingDecision == null)
                     {
                         if (!decisionShown)
                         {
@@ -334,7 +340,7 @@ namespace SojaExiles
                     }
                     else
                     {
-                        StartCoroutine(WaitForCall());
+                        StartCoroutine(WaitForRest());
                     }
 
                     break;
@@ -406,10 +412,10 @@ namespace SojaExiles
 
             if (e == BurnSequenceManager.BurnEvent.MedicalDecision && pendingDecision == null)
             {
-                // Con la llamada al 106 se decide antes de cubrir: se termina
-                // recien cuando la quemadura este cubierta.
+                // Se termina recien con la quemadura cubierta (WaitForRest).
+                // Sin celular, el panel se abre al cubrir y termina aqui.
                 pendingDecision = detail;
-                if (burnSequence.CurrentState == BurnSequenceManager.BurnState.Covered)
+                if (burnSequence.CurrentState == BurnSequenceManager.BurnState.Covered && EmergencyCall.Instance == null)
                 {
                     StartCoroutine(FinishSoon(detail));
                 }
@@ -434,17 +440,44 @@ namespace SojaExiles
             Finish(decision);
         }
 
-        // Se cubrio sin haber llamado al 106: se espera la llamada un rato.
-        private IEnumerator WaitForCall()
+        // Ya cubierta. Llamar al 106 y abrigarla se pueden hacer en cualquier
+        // momento, tambien despues de cubrir: si falta alguno se espera un
+        // rato (mas si falta la llamada, que es mas larga) y se termina con
+        // lo que haya. Si ya esta todo, termina enseguida.
+        private IEnumerator WaitForRest()
         {
             bool guided = BurnGuide.Instance == null || BurnGuide.Instance.Guided;
-            float limit = Time.time + (guided ? callGraceSecondsGuided : callGraceSeconds);
-            while (pendingDecision == null && (Time.time < limit || EmergencyCall.InCall))
+            float start = Time.time;
+            while (!finishing)
             {
+                bool called = pendingDecision != null;
+                bool warm = IsDone(Step.Abrigar);
+                if (called && warm)
+                {
+                    break;
+                }
+
+                float grace = !called
+                    ? (guided ? callGraceSecondsGuided : callGraceSeconds)
+                    : (guided ? blanketGraceSecondsGuided : blanketGraceSeconds);
+                if (Time.time - start >= grace && !EmergencyCall.InCall)
+                {
+                    break;
+                }
+
                 yield return null;
             }
 
-            if (pendingDecision == null && !finishing)
+            if (finishing)
+            {
+                yield break;
+            }
+
+            if (pendingDecision != null)
+            {
+                StartCoroutine(FinishSoon(pendingDecision));
+            }
+            else
             {
                 finishing = true;
                 Finish(null);
@@ -501,6 +534,60 @@ namespace SojaExiles
             burnSequence.Report(BurnSequenceManager.BurnEvent.MedicalDecision,
                 goToHealthCenter ? "CentroDeSalud" : "Casa",
                 correct ? BurnSequenceManager.Severity.None : BurnSequenceManager.Severity.Error);
+        }
+
+        // Modo evaluacion: al pasar el limite termina solo (la quemadura no
+        // espera). En la vida real seria mucho mas que esto: el limite solo
+        // evita una practica sin fin.
+        private void Update()
+        {
+            if (Finished || finishing || evaluationTimeLimit <= 0f || burnSequence == null
+                || burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle || EmergencyCall.InCall
+                || BurnGuide.Instance == null || BurnGuide.Instance.Guided)
+            {
+                return;
+            }
+
+            if (SinceBurn() >= evaluationTimeLimit)
+            {
+                EndEarly("Tiempo");
+            }
+        }
+
+        // Termina ya (menu de pausa o limite de tiempo) y muestra el resumen:
+        // lo que falto cuenta como paso no hecho. Desde el menu tambien vale
+        // antes del accidente (la opcion de pasar al final esta siempre).
+        public void EndEarly(string reason)
+        {
+            if (Finished || burnSequence == null)
+            {
+                return;
+            }
+
+            EndedEarly = reason;
+            finishing = true;
+            if (EmergencyCall.Instance != null)
+            {
+                EmergencyCall.Instance.HangUp();
+            }
+
+            Debug.Log("[BurnProtocol] Termina antes: " + reason);
+            if (!IsDone(Step.AguaFria))
+            {
+                Missed(Step.AguaFria);
+            }
+
+            if (!IsDone(Step.Enfriar))
+            {
+                Missed(Step.Enfriar);
+            }
+
+            if (!IsDone(Step.Cubrir))
+            {
+                Missed(Step.Cubrir);
+            }
+
+            Finish(pendingDecision);
         }
 
         private void Finish(string decision)
@@ -569,21 +656,12 @@ namespace SojaExiles
                     return "El agua caliente vuelve a quemar: usa siempre agua fría o tibia.";
                 case BurnSequenceManager.BurnEvent.CoolingInterrupted:
                     return "Sacaste la mano del agua antes de tiempo: hay que enfriar 20 minutos seguidos.";
-                case BurnSequenceManager.BurnEvent.GauzePressed:
-                    return "La gasa se apoya sin apretar: presionar una quemadura duele y daña la piel.";
-                case BurnSequenceManager.BurnEvent.GauzeTouchedCenter:
-                    return "Toma la gasa de los bordes: el centro es lo que va sobre la herida y tiene que quedar limpio.";
-                case BurnSequenceManager.BurnEvent.GauzeOffCenter:
-                    return "La gasa quedó corrida" + (string.IsNullOrEmpty(detail) ? "" : " (cubre el " + detail + " %)")
-                        + ": tiene que cubrir toda la quemadura.";
-                case BurnSequenceManager.BurnEvent.BandageApplied:
-                    return "La venda quedó apretada: al hincharse la mano, aprieta. Se da suelta, solo para sujetar la gasa.";
                 case BurnSequenceManager.BurnEvent.RingStuck:
                     return "La mano se hinchó antes de sacar el anillo: retíralo lo antes posible, apenas empieces a atenderla. Si ya no sale, no lo fuerces.";
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:
                     return "Primero hay que terminar de enfriar la quemadura; después se cubre.";
                 case BurnSequenceManager.BurnEvent.ClothOnBurn:
-                    return "Un paño de cocina suelta pelusa que se pega a la herida: cubre con una gasa limpia o, si no hay, con film.";
+                    return "Un paño de cocina suelta pelusa que se pega a la herida: cubre con film o una bolsa plástica limpia.";
                 case BurnSequenceManager.BurnEvent.FilmWrapped:
                     return "No envuelvas la mano con el film: al hincharse aprieta. Pon las tiras a lo largo, sueltas.";
                 case BurnSequenceManager.BurnEvent.BurnedHandGrabbed:
@@ -616,6 +694,12 @@ namespace SojaExiles
                             return "Abriga a la persona para que no se enfríe mientras enfrías la quemadura.";
                         case "DecisionMedica":
                             return "Pide ayuda: llama al 106 mientras enfrías la quemadura.";
+                        case "AguaFria":
+                            return "Lo primero después de apagar el fuego: agua fría corriente sobre la quemadura.";
+                        case "Enfriar":
+                            return "La quemadura se enfría 20 minutos seguidos bajo agua fría o tibia.";
+                        case "Cubrir":
+                            return "Al terminar de enfriar, cúbrela sin apretar con film o una bolsa limpia.";
                     }
 
                     break;
@@ -644,7 +728,9 @@ namespace SojaExiles
                 case "Algodon":
                     return "El algodón suelta fibras que se pegan a la quemadura.";
                 case "Pomada":
-                    return "Ninguna crema ni pomada va sobre una quemadura recién hecha: guarda el calor. Solo agua fría y después una gasa.";
+                    return "Ninguna crema ni pomada va sobre una quemadura recién hecha: guarda el calor. Solo agua fría y después film o una bolsa limpia.";
+                case "Curita":
+                    return "Las curitas y apósitos adhesivos se pegan a la piel quemada y la dañan al quitarlos: cubre con film o una bolsa limpia.";
             }
 
             return "No se usan remedios caseros sobre una quemadura.";
@@ -666,6 +752,7 @@ namespace SojaExiles
             public string decisionMedica;
             public bool decisionCorrecta;
             public float duracionSeg;
+            public string terminoAntes;
             public List<string> pasosCompletados = new List<string>();
             public List<string> pasosFaltantes = new List<string>();
             public List<string> errorDetalle = new List<string>();
@@ -685,7 +772,8 @@ namespace SojaExiles
                 enfriamientoMin = SimulatedCoolingMinutes,
                 decisionMedica = Decision,
                 decisionCorrecta = DecisionCorrect,
-                duracionSeg = FinishTime
+                duracionSeg = FinishTime,
+                terminoAntes = EndedEarly
             };
 
             foreach (Step step in System.Enum.GetValues(typeof(Step)))

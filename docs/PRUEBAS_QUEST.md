@@ -67,12 +67,17 @@ anótalo debajo del punto (qué pasó y en qué momento) y pásalo a
   hinchó: no fuerces el anillo…".
 - [ ] El anillo suelto queda en el piso (no vuelve a caer en bucle).
 
-## 5. Tarjetas y botones
+## 5. Tarjetas y botones (sección 27 de QUEMADURA_INMERSION)
 
-- [ ] La tarjeta de resultados final se alcanza y se pueden tocar todos sus
-  botones.
-- [ ] En las tarjetas con varias opciones, ninguna se marca sola al bajar la
-  mano hacia otra.
+- [ ] Dejar la mano o el dedo sobre un botón **no** lo aprieta.
+- [ ] Tocar el botón con el dedo y apretar el gatillo (o hacer la pinza) lo
+  aprieta al instante, con clic y vibración.
+- [ ] De lejos, al apuntar a un botón sale un rayo blanco con un punto; el
+  botón se aclara y se aprieta con el gatillo, el botón lateral o la pinza.
+  Con las manos, el rayo sale de la mano (el del menú del Quest).
+- [ ] Con algo en esa mano (la bolsa, el film) el botón no se aprieta.
+- [ ] Apretar sobre un botón no agarra un objeto que esté detrás.
+- [ ] La tarjeta de resultados final y la pausa responden igual.
 - [ ] Las cápsulas más gruesas del torso (16 cm) y la cadera (17 cm) de la
   tía no estorban al acercar las manos (por ejemplo, al poner la gasa).
 
@@ -94,23 +99,15 @@ anótalo debajo del punto (qué pasó y en qué momento) y pásalo a
 - [ ] Las que ya había siguen bien: agua, cerca del fuego, errores,
   aciertos, botones, anillo y al tocar a la tía.
 
-## 8. Botiquín y gasa
+## 8. Botiquín (solo distractores)
 
-- [ ] El botiquín está junto al lavadero, con el rótulo y el tirador hacia
-  la cocina.
-- [ ] La tapa se abre tomando el tirador y levantándola (con controles y con
-  las manos). Un toque corto en el tirador también la abre.
-- [ ] Con la tapa cerrada no se puede sacar nada de adentro.
-- [ ] El rótulo del sobre se lee bien ("GASA ESTÉRIL 10 × 10 cm").
-- [ ] Con el sobre en una mano, pellizcar la esquina roja con la otra y
-  separar las manos lo rasga: suena, vibra y la gasa queda en la mano que
-  tenía el sobre.
-- [ ] La gasa nueva se ve como tela (textura de tejido) y cubre la
-  quemadura igual que antes (mantenerla 1 s encima).
-- [ ] Poner la pomada en la quemadura cuenta como error, con su
-  explicación.
-- [ ] En modo guiado, el paso de cubrir marca el tirador y después los
-  sobres.
+- [ ] El botiquín está en el mueble alto junto al lavadero; la tapa se abre
+  tomando el tirador y levantándola (con controles y con las manos).
+- [ ] Adentro hay tres curitas y una pomada. Poner una curita sobre la
+  quemadura: queda pegada, ella se queja y es error ("Las curitas se pegan
+  a la piel quemada…"). La pomada también es error, con su explicación.
+- [ ] En modo guiado, ningún paso marca el botiquín: el paso "Busca con qué
+  cubrirla" marca el tirador del cajón y, abierto, el film y la bolsa.
 
 ## 9. Manos al agarrar (para decidir las poses de mano)
 
@@ -128,25 +125,24 @@ anótalo debajo del punto (qué pasó y en qué momento) y pásalo a
   (son del narrador). Si se regraba una voz de la tía, volver a correr el
   menú Hito1 > Generar visemas de las voces.
 
-## 11. Poner la gasa (sección 23 de QUEMADURA_INMERSION)
+## 11. Cubrir con la bolsa o el film (sección 26 de QUEMADURA_INMERSION)
 
-- [ ] Tomar la gasa del centro da el aviso "Tómala de los bordes"; de los
-  bordes, no.
-- [ ] Inclinada o corrida, la indicación lo dice ("Ponla plana…",
-  "Céntrala…") y el círculo no se llena.
-- [ ] Apoyarla sin apretar llena el círculo. Empujarla contra la mano de la
-  tía dice "Sin apretar", vibra seco y, si sigues, ella se queja.
-  **Ajustar** si salta muy fácil o nunca: `CoverItem.pressDepth` (1,2 cm) y
-  `HandHalfThickness` (1,8 cm).
-- [ ] Al completarse, la gasa se asienta sobre el dorso (no aparece de
-  golpe) y queda como tela con trama.
-- [ ] Puesta un poco corrida (más de 3 cm), la quemadura asoma y el
-  resumen dice que quedó corrida.
-- [ ] Con la gasa puesta, dar una vuelta holgada con la venda alrededor de
-  su mano la fija; muy pegada, ella se queja y es error. **Ajustar**
-  `BandageItem.tightRadius` (5,5 cm) si cuesta distinguir.
-- [ ] Soltar un sobre o la venda cerca de su lugar en el botiquín (tapa
-  abierta) lo vuelve a acomodar.
+- [ ] Con la bolsa en la mano y ya enfriada, al acercarse ella ofrece la
+  mano y aparece "Pasa la bolsa por sus dedos".
+- [ ] Llevar la mano con la bolsa a la punta de sus dedos y deslizarla hacia
+  la muñeca: la bolsa cubre los dedos y sube por la mano siguiendo la mano
+  del jugador; se oye el roce y vibra suave. Al pasar la muñeca queda
+  puesta, holgada. **Ajustar** si cuesta engancharla: `CoverItem.mouthReach`
+  (7 cm); si se sale sola: `slipRadius` (12 cm).
+- [ ] Soltarla a mitad de camino: se sale de los dedos y cae.
+- [ ] Una tira de film soltada lejos de la mano (más de unos 5 cm) cae; apoyada
+  sobre el dorso, a lo largo, baja a la piel y se asienta en 0,3 s (no
+  aparece de golpe). **Ajustar** `FilmStrip.attachDistance` (5,5 cm).
+- [ ] Con una tira cortada en la mano, ella ofrece la mano (no la deja
+  contra el pecho).
+- [ ] El film puesto se ve como film (transparente). En el editor se ve
+  blanquecino (`Film_Mano`, Standard transparente): decidir si bajarle el
+  brillo.
 
 ## 12. Lo que se agregue después
 

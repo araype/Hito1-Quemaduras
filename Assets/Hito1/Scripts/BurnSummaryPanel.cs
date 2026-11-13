@@ -63,7 +63,9 @@ namespace SojaExiles
             VRPanelKit.Text(t, "PRÁCTICA TERMINADA  ·  " + (guided ? "MODO GUIADO" : "MODO EVALUACIÓN"),
                 new Vector2(left, top), 0.017f, Accent);
             VRPanelKit.Text(t, "<b>RESUMEN DE LA PRÁCTICA</b>", new Vector2(left, top - 0.03f), 0.046f, Color.white);
-            VRPanelKit.Text(t, "Quemadura de " + degree, new Vector2(left, top - 0.09f), 0.02f, Soft);
+            string ended = p.EndedEarly == "Menu" ? "  ·  Terminada desde el menú"
+                : p.EndedEarly == "Tiempo" ? "  ·  Se acabó el tiempo" : "";
+            VRPanelKit.Text(t, "Quemadura de " + degree + ended, new Vector2(left, top - 0.09f), 0.02f, Soft);
 
             Color scoreColor = p.Score >= 80 ? Green : (p.Score >= 50 ? Amber : Red);
             Vector2 chipCenter = new Vector2(right - 0.1f, top - 0.055f);
@@ -151,12 +153,15 @@ namespace SojaExiles
             BurnInjury.BurnDegree other = same == BurnInjury.BurnDegree.Primero
                 ? BurnInjury.BurnDegree.SegundoSuperficial
                 : BurnInjury.BurnDegree.Primero;
-            VRPanelKit.RoundedButton(t, "Repetir práctica", new Vector2(-0.19f, buttonY), new Vector2(0.34f, 0.075f),
-                new Color(0.22f, 0.48f, 0.95f), () => Restart(same));
-            VRPanelKit.RoundedButton(t, "Otro caso", new Vector2(0.19f, buttonY), new Vector2(0.34f, 0.075f),
-                new Color(0.45f, 0.3f, 0.62f), () => Restart(other));
+            // Los dos vuelven al panel de inicio (modo guiado o evaluacion);
+            // cambia solo la quemadura. Antes "Otro caso" parecia otro tipo
+            // de guia.
             string otherName = other == BurnInjury.BurnDegree.Primero ? "primer grado" : "segundo grado";
-            VRPanelKit.Text(t, "Deja la mano sobre un botón. Otro caso: quemadura de " + otherName + ".  ·  Voces: elevenlabs.io",
+            VRPanelKit.RoundedButton(t, "Volver al inicio", new Vector2(-0.19f, buttonY), new Vector2(0.34f, 0.075f),
+                new Color(0.22f, 0.48f, 0.95f), () => Restart(same));
+            VRPanelKit.RoundedButton(t, "Otra quemadura: " + otherName, new Vector2(0.19f, buttonY), new Vector2(0.34f, 0.075f),
+                new Color(0.45f, 0.3f, 0.62f), () => Restart(other));
+            VRPanelKit.Text(t, "Los dos vuelven al inicio para elegir modo guiado o evaluación.  ·  Voces: elevenlabs.io",
                 new Vector2(0f, buttonY - 0.05f), 0.015f, Muted, TextAnchor.UpperCenter, TextAlignment.Center);
 
             // El credito que pide el plan gratis de ElevenLabs (docs/VOCES.md)

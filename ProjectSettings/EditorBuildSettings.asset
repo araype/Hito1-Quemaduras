@@ -6,10 +6,10 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Hito1/Escenas/Prueba_LuzHorneada.unity
+    path: Assets/Hito1/Escenas/Escenario_Quemadura.unity
     guid: 365b01d84ea55d147b117240d4e057e2
   - enabled: 0
-    path: Assets/Hito1/Escenas/Escenario_Quemadura.unity
+    path: Assets/Hito1/Escenas/Escenario_Quemadura_Previa.unity
     guid: dec5ee3d03a1eae4d8400a7b7cbf882b
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: dc1e050a0cc1c414e878d92129801bcc, type: 2}

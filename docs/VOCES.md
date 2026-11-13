@@ -9,6 +9,18 @@ poner el audio nuevo con el mismo nombre y borrar el anterior (si quedan
 Los textos se sacaron transcribiendo los audios originales (TTS) el
 2026-11-06 y se corrigieron a mano.
 
+**Regeneradas con la voz de Windows (2026-11-12):** las frases del
+narrador que decían algo incorrecto (gasa, chompa, "deja la mano sobre el
+botón", el gesto viejo del anillo) o que faltaban se generaron con
+"Microsoft Sabina" (narradora) y `op_centro` con "Microsoft Raul"
+(operador), con los textos de este guion, a 44,1 kHz mono y al volumen de
+las demás: `guia_bienvenida`, `guia_anillo`, `guia_abrigo`,
+`guia_preparar`, `guia_cubrir`, `guia_err_pano`, `guia_err_curita`,
+`guia_err_anillo`, `guia_err_calma`, `guia_err_aguantar`, `guia_err_olla`,
+`guia_err_charco` y `op_centro`. Después (mismo día) `guia_abrigo` con
+texto nuevo y `voz_pide_manta` (tía, Sabina con tono más grave). Dicen lo correcto pero suenan menos
+naturales y con otra voz: **reemplazarlas con ElevenLabs** (mismo nombre).
+
 **Estado:** las 45 frases y tres quejidos nuevos (`voz_dolor_3` a `voz_dolor_5`)
 se generaron con ElevenLabs (plan gratis) y se pasaron al juego el
 2026-11-06: convertidos a `.wav` 44,1 kHz mono con el mismo nombre (se
@@ -55,6 +67,7 @@ Mujer adulta (50 a 60 años), voz cálida; con dolor real, no actuado.
 | `voz_anillo_sale` | Le sacan el anillo | Ay, mi anillo… gracias, ya se me estaba hinchando. | `[relieved] Ay, mi anillo… gracias, ya se me estaba hinchando.` |
 | `voz_anillo_atorado` | El anillo ya no sale | ¡Ay! No sale, ya se me hinchó el dedo. | `[in pain] ¡Ay! No sale, ya se me hinchó el dedo.` |
 | `voz_abrigo` | Le ponen la manta | Gracias, me estaba dando frío. | `[shivering] Gracias, me estaba dando frío.` |
+| `voz_pide_manta` | Modo evaluación: tiene frío y el jugador no fue a la sala | Uy, con el agua me está dando frío… En el sofá de la sala hay una manta. | `[shivering] Uy, con el agua me está dando frío… En el sofá de la sala hay una manta.` |
 | `voz_enfriada` | Terminó de enfriar | Ya se siente un poco mejor. | `[tired] Ya se siente un poco mejor.` |
 | `voz_pista_pano` | Pista: cubrir la quemadura | ¿Me la cubres con algo limpio? | `[softly] ¿Me la cubres con algo limpio?` |
 | `voz_pregunta_medico` | Antes de la decisión médica | ¿Crees que tengo que ir al médico? | `[worried] ¿Crees que tengo que ir al médico?` |
@@ -69,26 +82,28 @@ en una emergencia).
 
 | Archivo | Cuándo suena | Texto |
 |---|---|---|
-| `guia_bienvenida` | Menú de inicio | Hola. Vas a practicar qué hacer si alguien se quema en la cocina. Elige un modo: guiado, si quieres que te indique cada paso, o evaluación, si prefieres hacerlo solo. Deja la mano sobre el botón hasta que se llene. |
+| `guia_bienvenida` | Menú de inicio | Hola. Vas a practicar qué hacer si alguien se quema en la cocina. Elige un modo: guiado, si quieres que te indique cada paso, o evaluación, si prefieres hacerlo solo. Apunta al botón y aprieta el gatillo, o junta el pulgar y el índice. (Cambió el 2026-11-12: los botones ya no se aprietan dejando la mano.) |
 | `guia_intro` | Inicio del tutorial | Estás de visita en la casa de tu tía Rosa. Ella está preparando el almuerzo. |
 | `guia_agarrar` | Tutorial 1 | Para agarrar algo, acerca la mano y aprieta el botón lateral del control, o junta el pulgar y el índice. Agarra la taza del mesón. |
 | `guia_caminar` | Tutorial 2 | Para caminar, usa el joystick izquierdo. Llévale la taza a tu tía. |
 | `guia_bien` | Fin del tutorial | Muy bien. Ya sabes agarrar y caminar. Quédate cerca de ella. |
 | `guia_accidente` | Accidente (modo guiado) | Se le volcó la olla. Se quemó la mano con agua hirviendo. Mantén la calma: vamos paso a paso. |
 | `guia_evaluacion` | Accidente (modo evaluación) | Se quemó la mano con agua hirviendo. Atiéndela como aprendiste. |
-| `guia_apagar` | Paso 1 | Primero, apaga la hornilla para que nadie más se queme. Toca la perilla que brilla. |
+| `guia_apagar` | Paso 1 | Primero, apaga la hornilla para que nadie más se queme. Acerca la mano a la perilla que brilla y apriétala. (Regrabada el 2026-11-12 con Sabina: antes decía "toca"; falta ElevenLabs.) |
+| `guia_frio_lejos` | La tía se queja del frío y el jugador está lejos | Tu tía se queja de que el agua está muy fría. Vuelve con ella antes de que saque la mano. (Nueva, 2026-11-12, Sabina; falta ElevenLabs.) |
 | `guia_agua` | Paso 2 | Ahora abre la llave de agua fría, la del punto azul. |
 | `guia_llevar` | Paso 3 | Tómala del antebrazo, no de la mano quemada, y llévala hasta el chorro. Suelta su mano cerca del agua y ella la pondrá debajo. |
 | `guia_anillo` | Paso 4 | Quítale el anillo antes de que la mano se hinche. Pellizca el punto dorado con tu mano libre, con el botón lateral o juntando el pulgar y el índice, y deslízalo hacia la punta de su dedo. (**Regrabar**, 2026-11-09: el audio actual todavía dice "mantén apretado".) |
-| `guia_abrigo` | Paso 5 | El agua fría también le enfría el cuerpo. Trae la manta del sofá de la sala y échasela sobre los hombros. (**Regrabar**, 2026-11-10: el audio actual dice "abrígala con la chompa"; mientras tanto solo se muestra el texto.) |
-| `guia_preparar` | Paso 7 (durante el enfriamiento) | Mientras se enfría, saca el botiquín del mueble alto junto al lavadero, déjalo en el mesón y ábrelo. (**Nueva**, 2026-11-12: todavía no existe; mientras tanto solo se muestra el texto.) |
+| `guia_abrigo` | Paso 5 | El agua fría también le enfría el cuerpo. Sal de la cocina hacia la sala: la manta está doblada en el sofá, detrás de la mesa de centro. Sigue las flechas del piso y suéltala sobre sus hombros. (Regrabada el 2026-11-12 con Sabina: ahora dice dónde está la sala.) |
+| `guia_preparar` | Paso 7 (durante el enfriamiento) | Mientras se enfría, abre el cajón bajo el mesón junto al lavadero y saca el film o la bolsa plástica. (**Nueva**, 2026-11-12: todavía no existe; mientras tanto solo se muestra el texto.) |
 | `guia_esperar` | Paso 6 | Bien hecho. Ahora espera a que el reloj complete los 20 minutos, sin sacar su mano del agua. |
-| `guia_cubrir` | Paso 7 | Ya está enfriada. Cubre la quemadura con una gasa limpia, sin apretar. Si no hay gasa, usa film. (ElevenLabs, recuperada de `experiencia-inmersiva`.) |
+| `guia_cubrir` | Paso 9 | Ya está enfriada. Cúbrela sin apretar: desliza la bolsa por su mano hasta la muñeca, o apoya tiras de film a lo largo. (**Regrabar**, 2026-11-12: el audio actual dice "gasa"; mientras tanto solo el texto.) |
 | `guia_decidir` | Paso 8 | Por último, decide si necesita atención médica. Mira bien la quemadura. |
 | `guia_volver` | Sacó la mano del agua | Su mano salió del agua y el reloj se pausó. Vuelve a ponerla bajo el chorro. |
 | `guia_err_caliente` | Error: agua caliente | Esa es la llave caliente. Ciérrala y usa la del punto azul. |
 | `guia_err_mano` | Error: la toma de la mano | Sujétala del antebrazo: tocar la quemadura le duele. |
-| `guia_err_pano` | Error: paño de cocina | El paño de cocina suelta pelusa. Usa una gasa limpia o, si no hay, film. (ElevenLabs, recuperada.) |
+| `guia_err_pano` | Error: paño de cocina | El paño de cocina suelta pelusa. Usa film o una bolsa limpia. (**Regrabar**, 2026-11-12: el audio actual dice "gasa"; mientras tanto solo el texto.) |
+| `guia_err_curita` | Error: curita sobre la quemadura | Las curitas se pegan a la piel quemada. Cúbrela con film o una bolsa limpia. (**Nueva**, 2026-11-12; mientras tanto solo el texto.) |
 | `guia_err_remedio` | Error: remedio casero | No le pongas nada en la quemadura. Solo agua fría corriente. |
 | `guia_err_temprano` | Error: cubre antes de tiempo | Todavía no. Primero termina de enfriar la quemadura. |
 
@@ -113,12 +128,12 @@ Usa `[calm]` en todas; en `op_agua_no`, `[firm]`.
 | `op_agua_si` | Ya está bajo el agua | `[calm] Muy bien. Manténgala bajo el agua unos veinte minutos.` |
 | `op_agua_no` | Todavía no | `[firm] Póngala ya bajo agua fría corriente, sin hielo, y manténgala ahí.` |
 | `op_ampollas` | Pide mirar la quemadura | `[calm] Mire bien la quemadura. ¿Tiene ampollas?` |
-| `op_centro` | Con ampollas | `[calm] Con ampollas en la mano, debe verla un médico. Cuando termine de enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.` (ElevenLabs; coincide con la gasa como opción principal) |
+| `op_centro` | Con ampollas | `[calm] Con ampollas en la mano, debe verla un médico. Cuando termine de enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.` (El texto del panel ya coincide; revisar que el audio no diga "gasa".) |
 | `op_casa` | Sin ampollas | `[calm] Si solo está roja y es pequeña, puede cuidarla en casa. Si salen ampollas o empeora, llévela al centro de salud.` |
 | `op_decidir_centro` | Tras recomendar el centro de salud | `[calm] ¿Puede llevarla al centro de salud?` |
 | `op_decidir_casa` | Tras recomendar cuidarla en casa | `[calm] ¿Podrá cuidarla en casa?` |
 | `op_cierre` | Antes de colgar | `[warmly] De acuerdo. Si empeora o tiene dudas, vuelva a llamar. Cuídela mucho.` |
-| `guia_llamar` | Narrador: paso "Llama al 106" | `[calm] Mientras se enfría, pide ayuda. Toma el celular del mesón, llévalo a tu oreja y responde lo que te pregunten.` |
+| `guia_llamar` | Narrador: paso "Llama al 106" | `[calm] Mientras se enfría, pide ayuda. Toma el celular del mesón y toca Llamar ciento seis en su pantalla. La llamada sale en altavoz: puedes dejarlo en el mesón y seguir atendiéndola.` (Regrabada el 2026-11-12 con Sabina: antes decía "llévalo a tu oreja"; falta ElevenLabs.) |
 
 Tía Rosa (con la misma voz que sus otras frases):
 
@@ -150,7 +165,7 @@ en el mismo momento o nada (el texto sigue en la tarjeta o en el panel):
 | `voz_frio` | `voz_hielo_duele` ("¡Ay! Está helado, me duele más.") |
 | `voz_aguanto` | `voz_enfriada` ("Ya se siente un poco mejor.") |
 | `voz_aprieta` | `voz_remedio_no` ("No, eso no me pongas, por favor.") |
-| `voz_templar_pide`, `guia_err_calma`, `guia_err_aguantar`, `guia_err_olla`, `guia_err_charco`, `guia_abrigo`, `guia_preparar` | Nada (solo el texto) |
+| `voz_templar_pide`, `guia_err_calma`, `guia_err_aguantar`, `guia_err_olla`, `guia_err_charco`, `guia_abrigo`, `guia_preparar`, `guia_cubrir`, `guia_err_pano`, `guia_err_curita` | Nada (solo el texto) |
 
 Al regenerar una voz con ElevenLabs, reemplazar el `.wav` y quitar su línea de
 `TtsStandIns`.
@@ -162,12 +177,11 @@ Al regenerar una voz con ElevenLabs, reemplazar el `.wav` y quitar su línea de
 | `guia_err_olla` | Narradora | `[firm] No toques la olla: sigue caliente y también te quemarías.` |
 | `guia_err_charco` | Narradora | `[calm] El piso mojado resbala: rodea el agua derramada.` |
 | `guia_err_anillo` | Narradora | `[calm] Su mano ya se hinchó: no fuerces el anillo. Sigue con el agua fría; en el centro de salud se lo sacarán.` (Nueva, 2026-11-09: todavía no existe, mientras tanto solo el texto.) |
-| `guia_err_apretar` | Narradora | `[calm] Apóyala sin apretar: solo tiene que quedar encima.` (Nueva, 2026-11-09.) |
-| `guia_err_centro_gasa` | Narradora | `[calm] Tómala de los bordes: el centro va sobre la herida y debe quedar limpio.` (Nueva, 2026-11-09.) |
-| `guia_err_gasa_corrida` | Narradora | `[calm] La gasa quedó corrida: la próxima vez céntrala para cubrir toda la quemadura.` (Nueva, 2026-11-09.) |
-| `guia_err_venda` | Narradora | `[firm] La venda va suelta: al hincharse la mano, una venda apretada le corta la circulación.` (Nueva, 2026-11-09.) |
-| `guia_abrigo` | Narradora | `[calm] El agua fría también le enfría el cuerpo. Trae la manta del sofá de la sala y échasela sobre los hombros.` (Regrabar, 2026-11-10: el audio actual dice "chompa".) |
-| `guia_preparar` | Narradora | `[calm] Mientras se enfría, saca el botiquín del mueble alto junto al lavadero, déjalo en el mesón y ábrelo.` (Nueva, 2026-11-12.) |
+| `guia_cubrir` | Narradora | `[calm] Ya está enfriada. Cúbrela sin apretar: desliza la bolsa por su mano hasta la muñeca, o apoya tiras de film a lo largo.` (Regrabar, 2026-11-12: se quitó la gasa.) |
+| `guia_err_pano` | Narradora | `[calm] El paño de cocina suelta pelusa. Usa film o una bolsa limpia.` (Regrabar, 2026-11-12.) |
+| `guia_err_curita` | Narradora | `[firm] Las curitas se pegan a la piel quemada. Cúbrela con film o una bolsa limpia.` (Nueva, 2026-11-12.) |
+| `guia_abrigo` | Narradora | `[calm] El agua fría también le enfría el cuerpo. Sal de la cocina hacia la sala: la manta está doblada en el sofá, detrás de la mesa de centro. Sigue las flechas del piso y suéltala sobre sus hombros.` (Regrabada el 2026-11-12 con Sabina; falta ElevenLabs.) |
+| `guia_preparar` | Narradora | `[calm] Mientras se enfría, abre el cajón bajo el mesón junto al lavadero y saca el film o la bolsa plástica.` (Nueva, 2026-11-12; cambió el texto: ya no es el botiquín.) |
 | `voz_aprieta` | Tía | `[in pain] ¡Ay, me aprieta! No me envuelvas la mano, por favor.` |
 | `voz_templar_pide` | Tía | `[worried] Ya, pero ábrela solo un poquito, que la caliente quema.` |
 | `voz_templada` | Tía | `[relieved] Ay, así está mejor. Aguanto.` |

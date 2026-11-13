@@ -7,11 +7,10 @@ namespace SojaExiles
     // Pone en la cocina los objetos del protocolo y los distractores, sin
     // tocar la escena:
     //   - guardados en los muebles junto al lavadero, como en una casa: el
-    //     botiquin (FirstAidKit) en el mueble alto, con sobres de gasa
-    //     esteril (la opcion principal para cubrir: un aposito esteril que
-    //     no suelta pelusa, Cruz Roja Britanica), una venda y una pomada
-    //     (distractor); el film transparente y la bolsa plastica (si no hay
-    //     gasa) en el cajon de abajo. Las puertas y el cajon se abren con la
+    //     botiquin (FirstAidKit) en el mueble alto, solo con distractores
+    //     (curitas y una pomada); el film transparente y la bolsa plastica,
+    //     con lo que se cubre (NHS, Cruz Roja Britanica), en el cajon de
+    //     abajo. Las puertas y el cajon se abren con la
     //     mano (StorageFront). Si la escena no tiene esos muebles, van sueltos
     //     en el meson;
     //   - en el sofa de la sala: una manta doblada (para abrigarla); hay que
@@ -27,6 +26,8 @@ namespace SojaExiles
         public bool coverItems = true;
         public bool blanket = true;
         public bool remedies = true;
+        [Tooltip("Cuanto queda abierta la puerta del mueble del botiquin al empezar (0 cerrada, 0,4 maximo: mas alla ya cuenta como abierta).")]
+        [Range(0f, 0.4f)] public float kitDoorAjar = 0.25f;
 
         private readonly List<Vector3> taken = new List<Vector3>();
         private bool kitStored;
@@ -346,6 +347,10 @@ namespace SojaExiles
                 front.HasOutsideHome = true;
             }
 
+            // Puerta entreabierta: se nota que ahi hay algo (cerrada nadie lo
+            // encontraba). Adentro solo hay curitas y pomada, que no sirven.
+            front.SetAjar(kitDoorAjar);
+
             Debug.Log("[BurnSceneProps] Botiquin guardado en " + cabinet.name + " (detras de " + front.name + ") en "
                 + kit.transform.position.ToString("F2"));
             return true;
@@ -588,7 +593,7 @@ namespace SojaExiles
 
         private static readonly Quaternion Lying = Quaternion.Euler(0f, 0f, 90f);
 
-        // Gasa, film y bolsa en amarillo: en blanco se perdian sobre el meson.
+        // Film y bolsa en amarillo: en blanco se perdian sobre el meson.
         private static readonly Color Yellow = new Color(1f, 0.82f, 0.1f);
 
         private static void Amarillo(GameObject root, string part, float alpha)
@@ -624,25 +629,9 @@ namespace SojaExiles
             return root;
         }
 
-        // Gasa esteril ya sacada de su sobre (GauzePacket): un cuadrado de
-        // tejido de algodon doblado. Se apoya sobre la quemadura ya enfriada y
-        // se mantiene encima 1 s (CoverItem). Es la opcion principal.
-        public static GameObject BuildGauze()
-        {
-            GameObject root = PropKit.Grabbable("GasaEsteril", Vector3.zero, Quaternion.identity,
-                new Vector3(0.1f, 0.012f, 0.1f), 0.01f);
-            Color cotton = new Color(0.97f, 0.96f, 0.93f);
-            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.003f, 0f),
-                new Vector3(0.1f, 0.005f, 0.1f), "Gasa_Tejido", cotton);
-            // El doblez de arriba, un poco corrido, como al desdoblarla.
-            PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0.004f, 0.0068f, 0.025f),
-                new Vector3(0.096f, 0.003f, 0.05f), Quaternion.Euler(0f, 2f, 0f), "Gasa_Tejido", cotton);
-            root.AddComponent<CoverItem>().kind = CoverItem.Kind.Gasa;
-            return root;
-        }
-
         // Bolsa plastica limpia, doblada: para una mano quemada sirve como
-        // cubierta holgada (NHS).
+        // cubierta holgada (Cruz Roja Britanica). Se pone deslizandola de los
+        // dedos a la muneca (CoverItem).
         private static GameObject BuildBag()
         {
             GameObject root = PropKit.Grabbable("BolsaPlastica", Vector3.zero, Quaternion.identity,

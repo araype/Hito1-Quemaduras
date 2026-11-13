@@ -252,6 +252,105 @@ namespace SojaExiles
             return false;
         }
 
+        // Punto de la mano real, sin el freno visual de PatientHandLimiter
+        // (la mano que se ve se queda en la superficie de la paciente). Con
+        // su mano bajo el chorro, la mano visible chocaba con la de ella
+        // antes de llegar a la llave del grifo, que esta a 3 cm.
+        public static bool TryGetRawHandPoint(bool leftHand, out Vector3 position)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                SimpleGrab grab = Instances[i];
+                Hand hand = leftHand ? grab.left : grab.right;
+                if (!hand.poseValid)
+                {
+                    continue;
+                }
+
+                position = hand.position;
+#if UNITY_EDITOR
+                if (grab.Simulated(hand))
+                {
+                    return true;
+                }
+#endif
+                if (hand.trackedHand != null && hand.trackedHand.IsTracked && grab.TryGetPinchPoint(hand, out Vector3 pinch))
+                {
+                    position = pinch;
+                }
+                else if (hand.anchor != null && OVRInput.IsControllerConnected(hand.controller))
+                {
+                    position = hand.anchor.TransformPoint(grab.controllerGrabOffset);
+                }
+
+                return true;
+            }
+
+            position = Vector3.zero;
+            return false;
+        }
+
+        // Rayo para apuntar a los botones de los paneles (ButtonPointer) y si
+        // esa mano aprieta (gatillo, boton lateral o pinza). Con manos, el
+        // rayo del sistema (OVRHand.PointerPose); con controles, hacia donde
+        // apunta el control. Se lee aqui y no del estado de agarre porque en
+        // pausa los botones tambien deben responder.
+        public static bool TryGetPointer(bool leftHand, out Ray ray, out bool pressed, out bool holding)
+        {
+            ray = default;
+            pressed = false;
+            holding = false;
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                SimpleGrab grab = Instances[i];
+                Hand hand = leftHand ? grab.left : grab.right;
+                holding = hand.held != null;
+#if UNITY_EDITOR
+                if (grab.Simulated(hand))
+                {
+                    int s = leftHand ? 0 : 1;
+                    ray = new Ray(SimPosition[s], SimRotation[s] * Vector3.forward);
+                    pressed = SimPressed[s];
+                    return true;
+                }
+#endif
+                if (hand.anchor == null)
+                {
+                    continue;
+                }
+
+                if (hand.trackedHand != null && hand.trackedHand.IsTracked)
+                {
+                    if (!hand.trackedHand.IsPointerPoseValid || hand.trackedHand.PointerPose == null)
+                    {
+                        return false;
+                    }
+
+                    // PointerPose queda en la raiz de la escena con valores del
+                    // espacio de seguimiento: si el rig se movio (inicio,
+                    // teletransporte), el rayo salia lejos de la mano. Se pasa
+                    // por el TrackingSpace (padre de los anchors).
+                    Transform pose = hand.trackedHand.PointerPose;
+                    Transform space = pose.parent == null ? hand.anchor.parent : null;
+                    ray = space != null
+                        ? new Ray(space.TransformPoint(pose.position), space.TransformDirection(pose.forward))
+                        : new Ray(pose.position, pose.forward);
+                    pressed = hand.trackedHand.GetFingerPinchStrength(OVRHand.HandFinger.Index) >= grab.pinchGrabThreshold;
+                    return true;
+                }
+
+                if (OVRInput.IsControllerConnected(hand.controller))
+                {
+                    ray = new Ray(hand.anchor.position, hand.anchor.forward);
+                    pressed = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, hand.controller)
+                        || OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, hand.controller);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         // Zonas donde apretar no agarra nada (la accion la maneja otro
         // script). Cada funcion recibe el punto de agarre y devuelve true si
         // lo reclama.

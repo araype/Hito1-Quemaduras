@@ -133,9 +133,10 @@ namespace SojaExiles
                     break;
 
                 case BurnSequenceManager.BurnEvent.RemedyNear:
-                    // El algodon no le parece mal (el error es que suelta
-                    // pelusa); de lo demas aparta la mano.
-                    if (detail == HomeRemedy.Remedy.Algodon.ToString())
+                    // El algodon y la curita no le parecen mal (el error es
+                    // que se pegan a la herida); de lo demas aparta la mano.
+                    if (detail == HomeRemedy.Remedy.Algodon.ToString()
+                        || detail == HomeRemedy.Remedy.Curita.ToString())
                     {
                         break;
                     }
@@ -147,6 +148,13 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnEvent.RemedyApplied:
                     if (severity != BurnSequenceManager.Severity.Critical)
                     {
+                        // La curita pegada sobre la piel quemada le duele.
+                        if (detail == HomeRemedy.Remedy.Curita.ToString())
+                        {
+                            Say("voz_dolor_1", true);
+                            Hurt(0.4f);
+                        }
+
                         break;
                     }
 
@@ -156,21 +164,6 @@ namespace SojaExiles
 
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:
                     Say("voz_saco_agua", true);
-                    break;
-
-                // Le aprietan la gasa o la venda sobre la quemadura.
-                case BurnSequenceManager.BurnEvent.GauzePressed:
-                    Say("voz_dolor_4", true);
-                    Hurt(0.5f);
-                    break;
-
-                case BurnSequenceManager.BurnEvent.BandageApplied:
-                    if (severity != BurnSequenceManager.Severity.None)
-                    {
-                        Say("voz_dolor_3", true);
-                        Hurt(0.4f);
-                    }
-
                     break;
 
                 case BurnSequenceManager.BurnEvent.BurnedHandGrabbed:

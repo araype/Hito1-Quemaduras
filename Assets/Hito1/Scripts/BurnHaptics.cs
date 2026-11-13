@@ -12,8 +12,7 @@ namespace SojaExiles
     //   - un toque leve al hacer algo bien;
     //   - un toque corto en la mano que agarra algo (como sentir el objeto);
     //   - aspera en las dos manos al cortar una tira de film (FilmStrip);
-    //   - suave y creciente mientras se sostiene la gasa sobre la quemadura
-    //     (CoverItem).
+    //   - suave mientras se desliza la bolsa por la mano quemada (CoverItem).
     // Con seguimiento de manos (sin controles) no hace nada.
     public class BurnHaptics : MonoBehaviour
     {

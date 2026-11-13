@@ -18,6 +18,11 @@ namespace SojaExiles
         // suena una frase de ElevenLabs que encaja en el mismo momento o, si
         // no hay ninguna (""), nada: el texto sigue en la tarjeta o el panel.
         // Al regenerar una voz, se quita de aqui.
+        // Las frases del narrador que decian algo incorrecto (gasa, chompa,
+        // "deja la mano sobre el boton") o faltaban se regeneraron el
+        // 2026-11-12 con la voz de Windows "Microsoft Sabina" (y op_centro con
+        // "Microsoft Raul"): suenan menos naturales que las de ElevenLabs,
+        // pero dicen lo correcto. Se reemplazan con ElevenLabs cuando esten.
         private static readonly Dictionary<string, string> TtsStandIns = new Dictionary<string, string>
         {
             { "voz_ansiosa", "voz_dolor_1" },         // "Me arde... me arde mucho."
@@ -27,16 +32,7 @@ namespace SojaExiles
             { "voz_aguanto", "voz_enfriada" },        // "Ya se siente un poco mejor."
             { "voz_templada", "voz_alivio_agua" },
             { "voz_aprieta", "voz_remedio_no" },      // "No, eso no me pongas, por favor."
-            { "voz_templar_pide", "" },
-            { "guia_err_calma", "" },
-            { "guia_err_aguantar", "" },
-            { "guia_err_olla", "" },
-            { "guia_err_charco", "" },
-            // Dice "abrigala con la chompa": ahora es una manta en la sala.
-            // Solo texto hasta regrabarla (docs/VOCES.md).
-            { "guia_abrigo", "" },
-            // Paso nuevo (botiquin guardado): falta grabarla (docs/VOCES.md).
-            { "guia_preparar", "" }
+            { "voz_templar_pide", "" }
         };
 
         public static AudioClip Clip(string name)

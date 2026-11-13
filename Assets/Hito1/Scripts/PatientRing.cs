@@ -19,6 +19,11 @@ namespace SojaExiles
     // Si la mano ya se hincho demasiado (BurnInjury), el anillo no sale.
     // Al salir queda como objeto suelto que se puede agarrar.
     // Va en el paciente (el objeto con PatientBody).
+    // Corre despues de PatientBody (300): antes leia el dedo en la pose de la
+    // animacion, antes de que la cinematica inversa lo llevara a donde se ve,
+    // y al pellizcar el anillo visible no avanzaba (la mano quedaba lejos del
+    // anillo "real").
+    [DefaultExecutionOrder(310)]
     [RequireComponent(typeof(PatientBody))]
     public class PatientRing : MonoBehaviour
     {
@@ -219,10 +224,24 @@ namespace SojaExiles
 
         // Apretar junto al anillo no agarra la mano de la paciente: tira
         // del anillo.
+        // Mientras una mano esta en el anillo, la otra tampoco agarra la mano
+        // quemada (en el simulador las dos pellizcan a la vez y la otra la
+        // tomaba de la mano: "De la mano no, me duele mucho").
         private bool ClaimsGrab(Vector3 point)
         {
-            return Active && Vector3.Distance(point, ring.position) < grabZone;
+            if (!Active)
+            {
+                return false;
+            }
+
+            float distance = Vector3.Distance(point, ring.position);
+            return distance < grabZone || (handAtRing && distance < engagedZone);
         }
+
+        [Tooltip("Con una mano en el anillo, hasta donde la otra no agarra la mano (m).")]
+        public float engagedZone = 0.17f;
+        // Una mano libre esta junto al anillo (cuadro anterior).
+        private bool handAtRing;
 
         private void LateUpdate()
         {
@@ -236,6 +255,7 @@ namespace SojaExiles
             Vector3 pullPoint = Vector3.zero;
             bool hovering = false;
             bool near = false;
+            bool atRing = false;
             if (active)
             {
                 for (int h = 0; h < 2; h++)
@@ -248,6 +268,7 @@ namespace SojaExiles
 
                     float distance = Vector3.Distance(point, ring.position);
                     near |= distance < offerDistance;
+                    atRing |= distance < grabZone;
                     if (pressed && distance < grabZone)
                     {
                         pulling = h;
@@ -260,6 +281,7 @@ namespace SojaExiles
                 }
             }
 
+            handAtRing = atRing;
             if (pulling >= 0)
             {
                 // Lo que la mano avanzo hacia la punta del dedo desde el

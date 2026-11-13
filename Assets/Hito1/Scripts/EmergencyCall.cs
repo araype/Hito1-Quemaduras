@@ -8,8 +8,12 @@ namespace SojaExiles
     // panel de decision medica: en vez de dos botones al final, el jugador
     // pide ayuda como en la vida real, idealmente mientras la mano se enfria
     // (antes ese minuto quedaba sin nada que hacer).
-    //   1. Despues del accidente, tomar el celular y llevarlo a la oreja: suena
-    //      el timbre y contesta el operador (su voz sale del celular).
+    //   1. Despues del accidente, tomar el celular: en su pantalla aparece el
+    //      boton "Llamar 106", que se toca con la otra mano (dedo y gatillo o
+    //      pinza, o el rayo). Llevarlo a la oreja tambien llama. Suena el
+    //      timbre y contesta el operador en altavoz: el celular se puede
+    //      dejar en el meson y seguir atendiendola mientras se habla (antes
+    //      habia que tenerlo en la oreja y en el simulador no se podia).
     //   2. El operador pregunta que paso, si la mano ya esta bajo agua fria y
     //      si la quemadura tiene ampollas. Las respuestas son botones frente al
     //      jugador (se tocan con la mano libre). Para contestar bien hay que
@@ -17,7 +21,9 @@ namespace SojaExiles
     //   3. Recomienda segun lo que le dijeron (el operador no ve la cocina) y
     //      pregunta si pueden seguir esa recomendacion: el jugador decide si
     //      la lleva al centro de salud o la cuida en casa (BurnProtocol.Decide).
-    // El panel queda abajo y a un costado (no tapa la mano). Mientras dura la
+    // El panel queda abajo y a un costado (no tapa la mano) y acompana al
+    // jugador si se da vuelta. Si se aleja mas de 'speakerDistance' del
+    // celular, la llamada queda en espera hasta que vuelva. Mientras dura la
     // llamada la paciente no se queja ni saca la mano del agua.
     // Las frases del operador son op_*.wav de Resources/Hito1Audio; si falta
     // alguna, igual se lee en el panel (subtitulo).
@@ -30,6 +36,8 @@ namespace SojaExiles
         public float operatorVolume = 1f;
         [Tooltip("Segundos de timbre antes de que conteste el operador.")]
         public float ringSeconds = 3.5f;
+        [Tooltip("En altavoz: distancia de la cabeza al celular a partir de la cual ya no se oye y la llamada queda en espera (m).")]
+        public float speakerDistance = 3f;
 
         public static EmergencyCall Instance { get; private set; }
 
@@ -55,10 +63,10 @@ namespace SojaExiles
         private Transform panel;
         private int answer = -1;
 
-        // Llamada en espera: si se suelta el celular o se aleja de la oreja,
-        // el operador se pausa (antes seguia hablando desde donde quedo el
-        // celular y apenas se oia) y un aviso pide volver a tomarlo.
-        [Tooltip("Segundos con el celular lejos de la oreja antes de poner la llamada en espera.")]
+        // Llamada en espera: la llamada va en altavoz, asi que soltar el
+        // celular no la corta; solo si el jugador se aleja demasiado (otro
+        // cuarto) el operador se pausa y un aviso pide volver junto a el.
+        [Tooltip("Segundos lejos del celular antes de poner la llamada en espera.")]
         public float holdAfterSeconds = 0.8f;
         private bool onHold;
         private float awayTime;
@@ -111,9 +119,14 @@ namespace SojaExiles
         private void Update()
         {
             UpdateScreen();
+            UpdateCallButton();
             if (inCall)
             {
                 UpdateHold();
+                if (!onHold)
+                {
+                    FollowCallPanel();
+                }
             }
 
             // Si la tia esta preguntando algo (PatientDialog), la llamada
@@ -129,11 +142,53 @@ namespace SojaExiles
                 head = VRPanelKit.Head();
             }
 
+            // Con una sola mano: el boton A o X del control que lo sostiene es
+            // el pulgar tocando la pantalla (en el simulador mover las dos
+            // manos a la vez cuesta mucho).
+            if (SimpleGrab.IsHeldObject(phone) && OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.Touch))
+            {
+                StartCall();
+                return;
+            }
+
+            // Llevarlo a la oreja tambien llama (en el visor sale natural).
             if (head != null && SimpleGrab.IsHeldObject(phone)
                 && Vector3.Distance(phone.worldCenterOfMass, head.position) < earDistance)
             {
-                started = true;
-                StartCoroutine(Call());
+                StartCall();
+            }
+        }
+
+        // Lo llama el boton de la pantalla o llevarlo a la oreja.
+        private void StartCall()
+        {
+            if (started || phone == null || burnSequence == null
+                || burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle || PatientDialog.IsOpen)
+            {
+                return;
+            }
+
+            started = true;
+            UpdateCallButton();
+            StartCoroutine(Call());
+        }
+
+        // El boton "Llamar 106" se ve en la pantalla solo con el celular en la
+        // mano (asi apretar junto al celular en el meson lo agarra, no llama)
+        // y despues del accidente.
+        private void UpdateCallButton()
+        {
+            if (callButton == null)
+            {
+                return;
+            }
+
+            bool show = !started && phone != null && burnSequence != null
+                && burnSequence.CurrentState != BurnSequenceManager.BurnState.Idle
+                && SimpleGrab.IsHeldObject(phone) && !PatientDialog.IsOpen;
+            if (callButton.activeSelf != show)
+            {
+                callButton.SetActive(show);
             }
         }
 
@@ -142,8 +197,15 @@ namespace SojaExiles
         private IEnumerator Call()
         {
             inCall = true;
+            if (head == null)
+            {
+                head = VRPanelKit.Head();
+            }
+
             PlacePanel();
             burnSequence.Report(BurnSequenceManager.BurnEvent.EmergencyCalled);
+            // Altavoz: se oye bien a un par de metros.
+            speaker.minDistance = 1.2f;
             speaker.clip = Ringback();
             speaker.loop = false;
             speaker.Play();
@@ -211,7 +273,7 @@ namespace SojaExiles
             if (advisedCenter)
             {
                 yield return Say("op_centro", "Con ampollas en la mano, debe verla un médico. Cuando termine de " +
-                    "enfriarla, cúbrala con una gasa limpia, sin apretar. Si no tiene gasa, sirve film de cocina.");
+                    "enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.");
                 yield return Ask("op_decidir_centro", "¿Puede llevarla al centro de salud?",
                     "Sí, la llevo", "Prefiero cuidarla en casa");
                 goToHealthCenter = answer == 0;
@@ -244,25 +306,56 @@ namespace SojaExiles
             inCall = false;
         }
 
+        // Corta la llamada sin terminarla (la practica termino desde el menu).
+        public void HangUp()
+        {
+            if (!inCall)
+            {
+                return;
+            }
+
+            StopAllCoroutines();
+            ClosePanel();
+            if (speaker != null)
+            {
+                speaker.Stop();
+            }
+
+            if (holdMarker != null)
+            {
+                Destroy(holdMarker.gameObject);
+                holdMarker = null;
+            }
+
+            onHold = false;
+            inCall = false;
+        }
+
         // ---------------- llamada en espera ----------------
 
-        private bool PhoneAtEar(float distance)
+        // El jugador esta a menos de 'distance' del celular (en la mano
+        // siempre cuenta).
+        private bool PhoneInEarshot(float distance)
         {
             if (head == null)
             {
                 head = VRPanelKit.Head();
             }
 
-            return head != null && phone != null && SimpleGrab.IsHeldObject(phone)
-                && Vector3.Distance(phone.worldCenterOfMass, head.position) < distance;
+            if (head == null || phone == null)
+            {
+                return true;
+            }
+
+            return SimpleGrab.IsHeldObject(phone)
+                || Vector3.Distance(phone.worldCenterOfMass, head.position) < distance;
         }
 
         private void UpdateHold()
         {
             if (!onHold)
             {
-                // Un poco mas de margen para no cortar al mover la cabeza.
-                awayTime = PhoneAtEar(earDistance * 1.6f) ? 0f : awayTime + Time.deltaTime;
+                awayTime = PhoneInEarshot(speakerDistance) ? 0f : awayTime + Time.deltaTime;
                 if (awayTime > holdAfterSeconds)
                 {
                     EnterHold();
@@ -271,7 +364,8 @@ namespace SojaExiles
                 return;
             }
 
-            if (PhoneAtEar(earDistance))
+            // Algo mas cerca para volver (no entra y sale en el borde).
+            if (PhoneInEarshot(speakerDistance * 0.8f))
             {
                 ExitHold();
                 return;
@@ -316,7 +410,7 @@ namespace SojaExiles
             VRPanelKit.CardPanel(panel, Vector2.zero, new Vector2(width, height));
             VRPanelKit.Text(panel, "Llamada al 106  ·  En espera", new Vector2(left, height * 0.5f - 0.025f), 0.016f,
                 VRPanelKit.CardLabelColor);
-            VRPanelKit.BoldText(panel, "Recoge el celular y llévalo\na tu oreja para seguir la llamada",
+            VRPanelKit.BoldText(panel, "Desde aquí no oyes el altavoz:\nvuelve junto al celular",
                 new Vector2(left, height * 0.5f - 0.05f), 0.022f, Color.white);
 
             if (holdMarker == null && phone != null)
@@ -514,6 +608,45 @@ namespace SojaExiles
             panelRotation = Quaternion.LookRotation(panelPosition - eyePos, Vector3.up);
         }
 
+        // El panel de la llamada se queda quieto mientras se ve (para tocar
+        // los botones sin que se mueva), pero si el jugador se da vuelta o
+        // camina con el altavoz, se reacomoda a su costado.
+        private bool panelGliding;
+
+        private void FollowCallPanel()
+        {
+            if (panel == null || head == null)
+            {
+                return;
+            }
+
+            Vector3 forward = Vector3.ProjectOnPlane(head.forward, Vector3.up);
+            Vector3 toPanel = Vector3.ProjectOnPlane(panel.position - head.position, Vector3.up);
+            if (forward.sqrMagnitude < 1e-4f || toPanel.sqrMagnitude < 1e-4f)
+            {
+                return;
+            }
+
+            if (!panelGliding && (Vector3.Angle(forward, toPanel) > 65f || toPanel.magnitude > 0.9f))
+            {
+                panelGliding = true;
+            }
+
+            if (!panelGliding)
+            {
+                return;
+            }
+
+            PlacePanel();
+            float k = 1f - Mathf.Exp(-4f * Time.deltaTime);
+            panel.SetPositionAndRotation(Vector3.Lerp(panel.position, panelPosition, k),
+                Quaternion.Slerp(panel.rotation, panelRotation, k));
+            if (Vector3.Distance(panel.position, panelPosition) < 0.02f)
+            {
+                panelGliding = false;
+            }
+        }
+
         private void ClosePanel()
         {
             if (panel != null)
@@ -535,8 +668,16 @@ namespace SojaExiles
                 return;
             }
 
+            if (inCall)
+            {
+                // En llamada: pantalla verde (altavoz); azul en espera.
+                IndicatorUtil.SetColor(screen, onHold ? ScreenIdle : Green);
+                return;
+            }
+
             bool hint = !started && BurnGuide.Instance != null && !BurnGuide.Instance.Guided
-                && burnSequence.CurrentState != BurnSequenceManager.BurnState.Idle;
+                && burnSequence.CurrentState != BurnSequenceManager.BurnState.Idle
+                && !SimpleGrab.IsHeldObject(phone);
             float since = Time.time - burnSequence.BurnTime;
             bool blinking = hint && since > 8f && since % 30f > 8f && since % 30f < 12f;
             float k = blinking ? 0.5f + 0.5f * Mathf.Sin(Time.time * 9f) : 0f;
@@ -545,6 +686,7 @@ namespace SojaExiles
 
         private static readonly Color ScreenIdle = new Color(0.16f, 0.42f, 0.78f);
         private Renderer screen;
+        private GameObject callButton;
 
         private Rigidbody BuildPhone()
         {
@@ -577,6 +719,18 @@ namespace SojaExiles
             screen = PropKit.Part(t, PrimitiveType.Cube, new Vector3(0f, 0.0118f, 0f),
                 new Vector3(0.066f, 0.001f, 0.14f), "Panel_Boton", ScreenIdle);
             go.GetComponent<Grabbable>().SetHome();
+
+            // Boton de la pantalla. Los paneles miran hacia -Z local: girado
+            // 90 grados en X, su frente queda hacia arriba (la pantalla).
+            GameObject face = new GameObject("PantallaCelular");
+            face.AddComponent<NoAutoCollider>();
+            face.transform.SetParent(t, false);
+            face.transform.localPosition = new Vector3(0f, 0.0128f, 0.02f);
+            face.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            VRPanelKit.RoundedButton(face.transform, "Llamar 106", Vector2.zero, new Vector2(0.058f, 0.032f), Green,
+                StartCall);
+            callButton = face;
+            face.SetActive(false);
 
             speaker = go.AddComponent<AudioSource>();
             speaker.playOnAwake = false;

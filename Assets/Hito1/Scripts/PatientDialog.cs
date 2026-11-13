@@ -11,7 +11,9 @@ namespace SojaExiles
     //     tarjeta salia mientras el narrador pedia llamar al 106 y aportaba
     //     poco (prueba en el Quest, 2026-11-09).
     //   - Hacia el minuto 9 el agua ya le parece muy fria y empieza a sacar
-    //     la mano. Hay dos respuestas correctas: convencerla de aguantar o
+    //     la mano. Se queja este donde este el jugador, pero las opciones
+    //     salen solo con el a su lado; si esta lejos (la manta), aguanta
+    //     'awayGraceSeconds' y, si no vuelve, la saca (error). Hay dos respuestas correctas: convencerla de aguantar o
     //     templar un poco el agua (abrir tambien la llave caliente: con las
     //     dos abiertas sale tibia; NHS y Cruz Roja: agua fresca o tibia, no
     //     helada). Templarla se puede elegir en el panel (y luego hay que
@@ -40,6 +42,10 @@ namespace SojaExiles
         public float hesitateLift = 0.02f;
         [Tooltip("Segundos que espera a que se temple el agua si se le ofrecio.")]
         public float temperSeconds = 12f;
+        [Tooltip("Las opciones de la queja del frio salen con el jugador a esta distancia de ella (m).")]
+        public float resistNearDistance = 2.5f;
+        [Tooltip("Si el jugador esta lejos al quejarse del frio (por ejemplo, en la sala por la manta), segundos reales que ella aguanta antes de sacar la mano.")]
+        public float awayGraceSeconds = 30f;
 
         public static bool IsOpen
         {
@@ -94,6 +100,7 @@ namespace SojaExiles
 
         private void OnDestroy()
         {
+            WaitingForPlayer = false;
             if (open != null)
             {
                 Destroy(open.gameObject);
@@ -133,6 +140,32 @@ namespace SojaExiles
                 resistDone = true;
                 StartCoroutine(Resist());
             }
+        }
+
+        // Se quejo del frio y espera que el jugador vuelva junto a ella para
+        // preguntarle (BurnGuide lo avisa en modo guiado).
+        public static bool WaitingForPlayer { get; private set; }
+
+        private BlanketItem blanket;
+
+        // El jugador esta junto a ella y con las manos libres de la manta (si
+        // la trae, primero se la pone). Antes la pregunta salia mientras el
+        // jugador estaba en la sala buscando la manta.
+        private bool PlayerAttending()
+        {
+            Transform head = VRPanelKit.Head();
+            if (head != null && PatientBody.Flat(head.position - transform.position).magnitude > resistNearDistance)
+            {
+                return false;
+            }
+
+            if (blanket == null)
+            {
+                blanket = FindObjectOfType<BlanketItem>();
+            }
+
+            Grabbable grab = blanket != null ? blanket.GetComponent<Grabbable>() : null;
+            return grab == null || !grab.IsHeld;
         }
 
         // ---------------- minuto 3: calmarla ----------------
@@ -187,19 +220,21 @@ namespace SojaExiles
                 arm.Hesitate(hesitateLift);
             }
 
-            yield return new WaitForSeconds(1.2f);
-            int left = Mathf.Max(1, Mathf.CeilToInt(protocol.simulatedMinutes - protocol.SimulatedCoolingMinutes));
-            Ask("Quiere sacar la mano del agua. ¿Qué le dices?",
-                new Option { id = 0, text = $"Aguanta un poco más: faltan {left} minutos y así no se hace más profunda." },
-                new Option { id = 3, text = "Espera, te templo un poco el agua con la llave caliente." },
-                new Option { id = 1, text = "Sácala un rato y luego la volvemos a poner." },
-                new Option { id = 2, text = "Mejor te pongo hielo, enfría más rápido." });
-
-            float limit = Time.time + answerSeconds;
+            // Ella reacciona al frio este donde este el jugador, pero las
+            // opciones solo salen con el jugador a su lado (antes salian
+            // mientras buscaba la manta en la sala). Si no vuelve en
+            // 'awayGraceSeconds', saca la mano: es la consecuencia de dejarla
+            // sola, con margen para ir por la manta y volver. Durante la
+            // llamada al 106 el plazo no corre (ella espera).
+            answer = -1;
             bool tempered = false;
-            while (answer < 0 && Time.time < limit && protocol.IsCooling)
+            bool gaveUp = false;
+            float waited = 0f;
+            bool complainedAgain = false;
+            WaitingForPlayer = true;
+            while (!PlayerAttending() && protocol.IsCooling)
             {
-                // Templar el agua sin tocar el panel tambien vale.
+                // Templar el agua (desde el lavadero) tambien la calma.
                 if (WaterTempered())
                 {
                     tempered = true;
@@ -207,10 +242,59 @@ namespace SojaExiles
                     break;
                 }
 
+                if (!EmergencyCall.InCall)
+                {
+                    waited += Time.deltaTime;
+                }
+
+                if (!complainedAgain && waited > awayGraceSeconds * 0.5f)
+                {
+                    complainedAgain = true;
+                    Say("voz_frio");
+                }
+
+                if (waited >= awayGraceSeconds)
+                {
+                    gaveUp = true;
+                    break;
+                }
+
                 yield return null;
             }
 
-            Close();
+            WaitingForPlayer = false;
+            if (!tempered && !gaveUp && protocol.IsCooling)
+            {
+                // Durante la llamada la pregunta espera a que se cuelgue.
+                while (EmergencyCall.InCall && protocol.IsCooling)
+                {
+                    yield return null;
+                }
+
+                yield return new WaitForSeconds(waited > 0.5f ? 0.4f : 1.2f);
+                int left = Mathf.Max(1, Mathf.CeilToInt(protocol.simulatedMinutes - protocol.SimulatedCoolingMinutes));
+                Ask("Quiere sacar la mano del agua. ¿Qué le dices?",
+                    new Option { id = 0, text = $"Aguanta un poco más: faltan {left} minutos y así no se hace más profunda." },
+                    new Option { id = 3, text = "Espera, te templo un poco el agua con la llave caliente." },
+                    new Option { id = 1, text = "Sácala un rato y luego la volvemos a poner." },
+                    new Option { id = 2, text = "Mejor te pongo hielo, enfría más rápido." });
+
+                float limit = Time.time + answerSeconds;
+                while (answer < 0 && Time.time < limit && protocol.IsCooling)
+                {
+                    // Templar el agua sin tocar el panel tambien vale.
+                    if (WaterTempered())
+                    {
+                        tempered = true;
+                        answer = 3;
+                        break;
+                    }
+
+                    yield return null;
+                }
+
+                Close();
+            }
 
             // Se le ofrecio templar el agua: espera con la mano en el agua a
             // que se abra tambien la llave caliente.

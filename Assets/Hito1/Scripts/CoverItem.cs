@@ -1,30 +1,24 @@
-using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SojaExiles
 {
-    // Material para cubrir la quemadura despues de enfriarla:
-    //   - Gasa esteril (la opcion principal: aposito esteril que no suelta
-    //     pelusa, Cruz Roja Britanica). Sale de su sobre (GauzePacket). Se
-    //     toma de los bordes (el centro va sobre la herida: tomarla del
-    //     centro es un error leve), se apoya plana y centrada sobre la
-    //     quemadura, sin apretar, y se mantiene 1 s (un circulo se llena,
-    //     HoldHint). Si se aprieta contra la mano, ella se queja y no avanza.
-    //     Al completarse se asienta sobre el dorso de la mano (medio segundo)
-    //     y queda una capa de gasa donde se apoyo: si quedo corrida y no
-    //     cubre al menos el 85 % de la quemadura, es un error. Mientras se
-    //     acerca, la paciente ofrece la mano. Despues se puede fijar con la
-    //     venda (BandageItem).
-    //   - Bolsa plastica limpia (para una mano, NHS): se suelta sobre la mano
-    //     quemada y la cubre holgada hasta la muneca.
-    // Las dos pasan a Covered. Si se intenta antes de terminar de enfriar, no
-    // se pone: es un error y la paciente se queja. La gasa y la bolsa se usan
-    // (desaparecen). La gasa tambien se pone si se suelta sobre la mano.
-    // El film no usa este componente: se cubre con tiras (FilmRoll y
-    // FilmStrip). Kind.Film queda sin uso por las escenas que guardan el
-    // numero.
+    // Bolsa plastica limpia para cubrir la mano quemada ya enfriada (Cruz Roja
+    // Britanica: "loosely cover it with cling film or a clean plastic bag";
+    // para una mano, la bolsa la cubre entera y holgada).
+    // Se pone como en la vida real, no se pega sola al acercarla: con la bolsa
+    // en la mano, se lleva su boca a la punta de los dedos de ella y se
+    // desliza hacia la muneca. La bolsa va subiendo por la mano mientras se
+    // avanza (se ve cubrir de los dedos a la muneca) y, si se retrocede,
+    // baja. Al pasar la muneca queda puesta, suelta. Si se suelta antes o se
+    // aparta la mano de su eje, la bolsa se sale de los dedos y cae. Mientras
+    // se acerca, ella ofrece la mano. Si se intenta antes de terminar de
+    // enfriar, ella no la saca del agua: es un error.
+    // Gasa y Film quedan en el enum sin uso (las escenas guardan el numero):
+    // la gasa se quito (2026-11-12, las guias piden film o bolsa) y el film va
+    // en tiras (FilmRoll, FilmStrip).
     [RequireComponent(typeof(Rigidbody))]
-    public partial class CoverItem : MonoBehaviour
+    public class CoverItem : MonoBehaviour
     {
         public enum Kind
         {
@@ -33,247 +27,259 @@ namespace SojaExiles
             Bolsa
         }
 
-        public Kind kind;
+        public Kind kind = Kind.Bolsa;
         public BurnSequenceManager burnSequence;
-        [Tooltip("Si se suelta a menos de esta distancia de la mano quemada, la cubre.")]
-        public float attachDistance = 0.15f;
-
-        [Header("Gasa")]
-        [Tooltip("Distancia de la gasa al centro de la quemadura para que cuente como apoyada encima (m).")]
-        public float placeDistance = 0.1f;
-        [Tooltip("Segundos que hay que mantener la gasa encima de la quemadura.")]
-        public float holdSeconds = 1f;
-        [Tooltip("A esta distancia de la quemadura, con la gasa en la mano, ella ofrece la mano (m).")]
+        [Tooltip("Distancia de la boca de la bolsa (la mano que la sostiene) a la punta de sus dedos para empezar a ponerla (m).")]
+        public float mouthReach = 0.07f;
+        [Tooltip("Si la mano que la desliza se aparta mas que esto del eje de su mano, la bolsa se sale (m).")]
+        public float slipRadius = 0.12f;
+        [Tooltip("Cuanto mas alla de la muneca hay que llevarla (m).")]
+        public float wristMargin = 0.03f;
+        [Tooltip("Fraccion del recorrido (dedos a muneca) con que queda puesta.")]
+        [Range(0.5f, 1f)] public float completeAt = 0.92f;
+        [Tooltip("A esta distancia de sus dedos, con la bolsa en la mano, ella ofrece la mano (m).")]
         public float offerDistance = 0.4f;
-        [Tooltip("Corrimiento maximo del centro de la gasa respecto al de la quemadura, sobre la piel (m).")]
-        public float centerTolerance = 0.045f;
-        [Tooltip("Grados que puede estar inclinada respecto al dorso de la mano.")]
-        public float flatTolerance = 50f;
-        [Tooltip("Cuanto puede hundirse la mano del jugador bajo la piel antes de contar como apretar (m).")]
-        public float pressDepth = 0.012f;
-        [Tooltip("Medio lado de la gasa (m).")]
-        public float gauzeHalfSize = 0.05f;
-        [Tooltip("Medio lado del centro de la gasa que no se debe tocar (m).")]
-        public float sterileHalfSize = 0.028f;
-        [Range(0f, 1f)] public float coverageNeeded = 0.85f;
-
-        // La gasa puesta en la mano (para la venda): centro sobre la piel en
-        // el espacio del hueso de la mano y si ya esta puesta.
-        public static bool GauzeOnHand { get; private set; }
-        public static Vector3 GauzeCenterLocal { get; private set; }
+        [Tooltip("Con la bolsa en la mano a esta distancia de su mano (m), ella la saca y la ofrece.")]
+        public float approachDistance = 1.2f;
 
         private Grabbable grabbable;
         private Rigidbody body;
-        private Collider[] colliders;
-        private bool wasHeld;
+        private Renderer[] renderers;
         private bool used;
+        private bool sliding;
+        private float progress;
+        private float lastSound;
+        private float nextEngage;
+        private float nextEarlyReport;
         private PatientBody patient;
         private PatientBurnArm arm;
-        private BurnSkinOverlay burnOverlay;
         private HoldHint hint;
-        private float progress;
-        private float nextEarlyReport;
-        private float pressedTime;
-        private float nextPressReport;
-        private bool centerReported;
+        private Transform middle2, middle3;
+
+        // Capa de la bolsa sobre la mano y sus triangulos ordenados de los
+        // dedos a la muneca (se muestran los que ya cubrio la bolsa).
+        private SkinnedMeshRenderer layer;
+        private readonly List<int> sortedTriangles = new List<int>();
+        private float[] triangleAt;
+        private int shownTriangles = -1;
 
         private void Start()
         {
             grabbable = GetComponent<Grabbable>();
             body = GetComponent<Rigidbody>();
-            colliders = GetComponentsInChildren<Collider>();
+            renderers = GetComponentsInChildren<Renderer>();
             if (burnSequence == null)
             {
                 burnSequence = FindObjectOfType<BurnSequenceManager>();
             }
 
-            if (kind == Kind.Gasa)
-            {
-                hint = new HoldHint("IndicacionGasa", 0.05f);
-                SimpleGrab.OnGrabbed += HandleGrab;
-            }
-        }
-
-        // Tomarla del centro toca el lado que va sobre la herida.
-        private void HandleGrab(Collider touched, Rigidbody rb, bool left)
-        {
-            if (rb != body || used || centerReported || burnSequence == null
-                || !SimpleGrab.TryGetHand(left, out Vector3 point, out bool _))
-            {
-                return;
-            }
-
-            Vector3 local = transform.InverseTransformPoint(point);
-            if (Mathf.Abs(local.x) < sterileHalfSize && Mathf.Abs(local.z) < sterileHalfSize)
-            {
-                centerReported = true;
-                burnSequence.Report(BurnSequenceManager.BurnEvent.GauzeTouchedCenter, null,
-                    BurnSequenceManager.Severity.Error);
-            }
+            hint = new HoldHint("IndicacionBolsa", 0.05f);
         }
 
         private void OnDestroy()
         {
-            SimpleGrab.OnGrabbed -= HandleGrab;
             if (hint != null)
             {
                 hint.Destroy();
+            }
+
+            if (!used && layer != null)
+            {
+                if (layer.sharedMesh != null)
+                {
+                    Destroy(layer.sharedMesh);
+                }
+
+                Destroy(layer.gameObject);
             }
         }
 
         private void Update()
         {
-            if (used)
+            if (used || kind != Kind.Bolsa || burnSequence == null || !Patient(out Transform hand))
             {
                 return;
             }
 
             bool held = grabbable != null && grabbable.IsHeld;
-            if (wasHeld && !held)
+            if (sliding)
             {
-                Released();
+                UpdateSlide(held, hand);
             }
-
-            wasHeld = held;
-            if (!used && kind == Kind.Gasa)
+            else if (held)
             {
-                UpdateGauze(held);
+                UpdateApproach(hand);
+            }
+            else
+            {
+                hint.Hide();
             }
         }
 
-        // La gasa se apoya encima de la quemadura y se mantiene 1 s.
-        private void UpdateGauze(bool held)
+        // Con la bolsa en la mano, cerca de sus dedos.
+        private void UpdateApproach(Transform hand)
         {
-            if (burnSequence == null || !Patient(out Transform hand))
-            {
-                return;
-            }
-
             BurnSequenceManager.BurnState state = burnSequence.CurrentState;
-            Vector3 burn = BurnCenter(hand);
-            float distance = Vector3.Distance(GauzeCenter, burn);
-            bool early = state == BurnSequenceManager.BurnState.Burned || state == BurnSequenceManager.BurnState.Cooling;
-            bool ready = state == BurnSequenceManager.BurnState.Cooled;
+            Vector3 mouth = Mouth();
+            Vector3 tip = Fingertip(hand);
+            float distance = Mathf.Min(Vector3.Distance(mouth, tip), Vector3.Distance(mouth, hand.position));
 
-            if (held && early && distance < placeDistance)
+            if (state == BurnSequenceManager.BurnState.Burned || state == BurnSequenceManager.BurnState.Cooling)
             {
                 // Todavia no: primero hay que terminar de enfriar.
-                if (Time.time >= nextEarlyReport)
+                if (distance < 0.12f && Time.time >= nextEarlyReport)
                 {
                     nextEarlyReport = Time.time + 8f;
                     burnSequence.Report(BurnSequenceManager.BurnEvent.CoveredTooEarly, kind.ToString(),
                         BurnSequenceManager.Severity.Error);
                 }
 
-                progress = 0f;
                 hint.Hide();
                 return;
             }
 
-            if (held && ready && distance < offerDistance)
+            if (state != BurnSequenceManager.BurnState.Cooled || distance > offerDistance)
             {
-                if (arm != null && arm.Current != PatientBurnArm.Mode.InWater)
+                // Al acercarse con la bolsa ella ya saca la mano de debajo de
+                // la manta: antes la ofrecia recien a 40 cm de la mano, y con
+                // la mano medio tapada no se encontraba.
+                if (state == BurnSequenceManager.BurnState.Cooled && arm != null
+                    && arm.Current != PatientBurnArm.Mode.InWater
+                    && Vector3.Distance(transform.position, hand.position) < approachDistance)
                 {
                     arm.ShowHand(1.5f);
                 }
 
-                Placement(hand, out float offset, out float tilt, out float depth);
-                bool centered = offset < centerTolerance;
-                bool flat = tilt < flatTolerance;
-                bool pressing = centered && depth < -pressDepth;
-                bool resting = centered && flat && !pressing && depth < 0.04f;
+                hint.Hide();
+                return;
+            }
 
-                // Apretar: no avanza y, si sigue, ella se queja.
-                pressedTime = pressing ? pressedTime + Time.deltaTime : 0f;
-                if (pressedTime > 0.35f && Time.time >= nextPressReport)
-                {
-                    nextPressReport = Time.time + 8f;
-                    burnSequence.Report(BurnSequenceManager.BurnEvent.GauzePressed, null,
-                        BurnSequenceManager.Severity.Error);
-                }
+            if (arm != null && arm.Current != PatientBurnArm.Mode.InWater)
+            {
+                arm.ShowHand(1.5f);
+            }
 
-                progress = resting ? progress + Time.deltaTime / Mathf.Max(0.1f, holdSeconds)
-                    : Mathf.MoveTowards(progress, 0f, Time.deltaTime * 2f);
-                string words = pressing ? "Sin apretar:\nsolo apóyala"
-                    : distance < placeDistance && !centered ? "Céntrala sobre\nla quemadura"
-                    : distance < placeDistance && !flat ? "Ponla plana\nsobre la quemadura"
-                    : "Mantén encima\nde la quemadura";
-                hint.Show(burn, words, progress);
-                // Vibra suave en la mano que la sostiene y crece al llenarse;
-                // apretando, un golpe seco.
-                if (BurnHaptics.Current != null && (resting || pressing))
-                {
-                    int h = SimpleGrab.IsHeldBy(body, true) ? 0 : 1;
-                    BurnHaptics.Current.Buzz(h, pressing ? 0.6f : 0.1f + 0.3f * progress, 0.05f, 0f,
-                        pressing ? 1f : 0.5f);
-                }
+            hint.Show(tip, "Pasa la bolsa\npor sus dedos", 0f);
+            if (Time.time >= nextEngage && Vector3.Distance(mouth, tip) < mouthReach)
+            {
+                StartSlide(hand, tip);
+            }
+        }
 
-                if (progress >= 1f)
+        private void StartSlide(Transform hand, Vector3 tip)
+        {
+            if (layer == null && !BuildLayer(hand, tip))
+            {
+                return;
+            }
+
+            sliding = true;
+            progress = 0f;
+            lastSound = 0f;
+            // La bolsa doblada deja de verse: ahora es la que va sobre la mano.
+            SetPropVisible(false);
+            Hito1FX.PlayAt("tela_roce_1", tip, 0.4f);
+        }
+
+        // La bolsa sigue a la mano que la desliza, medida sobre el eje de la
+        // mano de ella (si ella mueve la mano, no cuenta como avance).
+        private void UpdateSlide(bool held, Transform hand)
+        {
+            if (burnSequence.CurrentState != BurnSequenceManager.BurnState.Cooled)
+            {
+                SlipOff(hand);
+                return;
+            }
+
+            Vector3 tip = Fingertip(hand);
+            Vector3 wrist = hand.position;
+            Vector3 axis = wrist - tip;
+            float length = axis.magnitude + wristMargin;
+            if (length < 0.05f)
+            {
+                return;
+            }
+
+            axis.Normalize();
+            Vector3 offset = Mouth() - tip;
+            float along = Vector3.Dot(offset, axis);
+            float radial = (offset - axis * along).magnitude;
+            if (!held || radial > slipRadius || along < -0.12f)
+            {
+                if (held && progress < completeAt)
                 {
                     SimpleGrab.ForceRelease(body);
-                    Cover(hand);
+                }
+
+                if (progress >= completeAt)
+                {
+                    Finish(hand);
+                }
+                else
+                {
+                    SlipOff(hand);
                 }
 
                 return;
             }
 
-            progress = Mathf.MoveTowards(progress, 0f, Time.deltaTime * 2f);
-            hint.Hide();
+            float before = progress;
+            progress = Mathf.Clamp01(along / length);
+            ShowLayer(progress);
+            if (arm != null && arm.Current != PatientBurnArm.Mode.InWater)
+            {
+                arm.ShowHand(1.5f);
+            }
+
+            // Roce del plastico al avanzar y una vibracion suave en la mano que
+            // la desliza.
+            if (Mathf.Abs(progress - lastSound) > 0.25f)
+            {
+                lastSound = progress;
+                Hito1FX.PlayAt("tela_roce_" + Random.Range(1, 4), tip + axis * along, 0.3f);
+            }
+
+            float speed = Mathf.Abs(progress - before) / Mathf.Max(1e-4f, Time.deltaTime);
+            if (BurnHaptics.Current != null && speed > 0.05f)
+            {
+                BurnHaptics.Current.Buzz(SimpleGrab.IsHeldBy(body, true) ? 0 : 1,
+                    Mathf.Clamp(0.08f + 0.15f * speed, 0.08f, 0.3f), 0.05f, 0f, 0.4f);
+            }
+
+            hint.Show(wrist, "Deslízala hasta\nla muñeca", progress / completeAt);
+            if (progress >= completeAt)
+            {
+                SimpleGrab.ForceRelease(body);
+                Finish(hand);
+            }
         }
 
-        private void Released()
+        // Se salio de los dedos: la bolsa doblada vuelve a verse y cae.
+        private void SlipOff(Transform hand)
         {
-            if (burnSequence == null || !Patient(out Transform hand) || Distance(hand.position) > attachDistance)
+            sliding = false;
+            progress = 0f;
+            nextEngage = Time.time + 0.6f;
+            ShowLayer(-1f);
+            SetPropVisible(true);
+            hint.Hide();
+            if (!SimpleGrab.IsHeldObject(body))
             {
-                return;
+                transform.position = Fingertip(hand);
+                body.isKinematic = false;
+                body.useGravity = true;
             }
 
-            BurnSequenceManager.BurnState state = burnSequence.CurrentState;
-            if (state == BurnSequenceManager.BurnState.Burned || state == BurnSequenceManager.BurnState.Cooling)
-            {
-                burnSequence.Report(BurnSequenceManager.BurnEvent.CoveredTooEarly, kind.ToString(),
-                    BurnSequenceManager.Severity.Error);
-                return;
-            }
-
-            if (state == BurnSequenceManager.BurnState.Cooled)
-            {
-                Cover(hand);
-            }
+            Hito1FX.PlayAt("tela_roce_2", hand.position, 0.3f);
         }
 
-        private void Cover(Transform hand)
+        private void Finish(Transform hand)
         {
             used = true;
-            if (hint != null)
-            {
-                hint.Hide();
-            }
-
-            // La gasa se asienta sobre la mano antes de quedar puesta.
-            if (kind == Kind.Gasa && patient != null)
-            {
-                StartCoroutine(SettleGauze(hand));
-                return;
-            }
-
-            // Capa sobre la piel de la mano, un poco mas separada que la
-            // quemadura y la mano mojada. La bolsa llega hasta la muneca y
-            // queda holgada.
-            SkinnedMeshRenderer layer = kind == Kind.Bolsa
-                ? HandSkinMesh.Build(patient, true, 0.25f, 0.01f, "Body", "BolsaMano", "Bolsa_Mano")
-                : HandSkinMesh.Build(patient, true, 0.45f, 0.0035f, "Body", "FilmMano", "Film_Mano");
-            if (layer == null)
-            {
-                Debug.LogWarning("[CoverItem] No se pudo cubrir la mano (sin malla de piel).", this);
-            }
-
-            FinishCover(hand);
-        }
-
-        private void FinishCover(Transform hand)
-        {
-            Hito1FX.PlayAt(kind == Kind.Gasa ? "tela_roce_2" : "film_estirar", hand.position, 0.7f);
+            sliding = false;
+            hint.Hide();
+            ShowLayer(1f);
+            Hito1FX.PlayAt("tela_roce_3", hand.position, 0.6f);
             burnSequence.Report(BurnSequenceManager.BurnEvent.Covered, kind.ToString());
             burnSequence.ChangeState(BurnSequenceManager.BurnState.Covered);
             if (arm != null)
@@ -281,10 +287,138 @@ namespace SojaExiles
                 arm.EndShow();
             }
 
-            if (kind != Kind.Film)
+            Destroy(gameObject);
+        }
+
+        // Capa holgada sobre la piel de la mano hasta la muneca, con los
+        // triangulos ordenados por lo lejos que estan de la punta de los dedos.
+        private bool BuildLayer(Transform hand, Vector3 tip)
+        {
+            HandFrame frame = HandFrame.Build(patient, true, 0.45f, "Body");
+            layer = HandSkinMesh.Build(patient, true, 0.25f, 0.01f, "Body", "BolsaMano", "Bolsa_Mano");
+            if (frame == null || layer == null || layer.sharedMesh == null)
             {
-                Destroy(gameObject);
+                Debug.LogWarning("[CoverItem] No se pudo armar la bolsa sobre la mano (sin malla de piel).", this);
+                return false;
             }
+
+            Vector3 tipBind = frame.ToBind(tip);
+            Vector3 axis = frame.ToBind(hand.position) - tipBind;
+            float length = axis.magnitude + wristMargin * frame.UnitsPerMeter;
+            axis.Normalize();
+
+            Mesh mesh = layer.sharedMesh;
+            Vector3[] v = mesh.vertices;
+            int[] t = mesh.triangles;
+            int count = t.Length / 3;
+            float[] at = new float[count];
+            int[] order = new int[count];
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 c = (v[t[i * 3]] + v[t[i * 3 + 1]] + v[t[i * 3 + 2]]) / 3f;
+                at[i] = Vector3.Dot(c - tipBind, axis) / length;
+                order[i] = i;
+            }
+
+            System.Array.Sort(order, (a, b) => at[a].CompareTo(at[b]));
+            triangleAt = new float[count];
+            sortedTriangles.Clear();
+            for (int i = 0; i < count; i++)
+            {
+                int k = order[i];
+                triangleAt[i] = at[k];
+                sortedTriangles.Add(t[k * 3]);
+                sortedTriangles.Add(t[k * 3 + 1]);
+                sortedTriangles.Add(t[k * 3 + 2]);
+            }
+
+            ShowLayer(-1f);
+            return true;
+        }
+
+        // Muestra la bolsa hasta 'upTo' (0 = dedos, 1 = muneca; negativo, nada).
+        private void ShowLayer(float upTo)
+        {
+            if (layer == null || triangleAt == null)
+            {
+                return;
+            }
+
+            int count = 0;
+            if (upTo >= completeAt)
+            {
+                count = triangleAt.Length;
+            }
+            else if (upTo >= 0f)
+            {
+                while (count < triangleAt.Length && triangleAt[count] <= upTo)
+                {
+                    count++;
+                }
+            }
+
+            if (count == shownTriangles)
+            {
+                return;
+            }
+
+            shownTriangles = count;
+            layer.enabled = count > 0;
+            layer.sharedMesh.SetTriangles(sortedTriangles, 0, count * 3, 0, false);
+        }
+
+        private void SetPropVisible(bool visible)
+        {
+            foreach (Renderer r in renderers)
+            {
+                if (r != null)
+                {
+                    r.enabled = visible;
+                }
+            }
+        }
+
+        // La boca de la bolsa: el punto de agarre de la mano que la sostiene.
+        private Vector3 Mouth()
+        {
+            for (int h = 0; h < 2; h++)
+            {
+                bool left = h == 0;
+                if (SimpleGrab.IsHeldBy(body, left) && SimpleGrab.TryGetHand(left, out Vector3 p, out bool _))
+                {
+                    return p;
+                }
+            }
+
+            return transform.position;
+        }
+
+        // Punta del dedo medio de la mano quemada (la tia de Avaturn no tiene
+        // hueso de punta: se prolonga la ultima falange).
+        private Vector3 Fingertip(Transform hand)
+        {
+            if (middle3 == null || !middle3.IsChildOf(hand))
+            {
+                middle2 = middle3 = null;
+                foreach (Transform t in hand.GetComponentsInChildren<Transform>())
+                {
+                    if (t.name.EndsWith("Middle2"))
+                    {
+                        middle2 = t;
+                    }
+                    else if (t.name.EndsWith("Middle3"))
+                    {
+                        middle3 = t;
+                    }
+                }
+            }
+
+            if (middle3 != null && middle2 != null)
+            {
+                return middle3.position + (middle3.position - middle2.position) * 0.9f;
+            }
+
+            return hand.position + hand.up * 0.17f;
         }
 
         // La paciente y su mano quemada (false si aun no esta lista).
@@ -294,31 +428,10 @@ namespace SojaExiles
             {
                 patient = FindObjectOfType<PatientBody>();
                 arm = patient != null ? patient.GetComponent<PatientBurnArm>() : null;
-                burnOverlay = patient != null ? patient.GetComponent<BurnSkinOverlay>() : null;
             }
 
             hand = patient != null && patient.IsReady ? patient.HandBone(true) : null;
             return hand != null;
-        }
-
-        // Centro de la quemadura (el de BurnSkinOverlay, en el hueso de la mano).
-        private Vector3 BurnCenter(Transform hand)
-        {
-            return burnOverlay != null ? hand.position + hand.rotation * burnOverlay.burnCenter : hand.position;
-        }
-
-        private float Distance(Vector3 point)
-        {
-            float best = Vector3.Distance(transform.position, point);
-            foreach (Collider col in colliders)
-            {
-                if (col != null && col.enabled)
-                {
-                    best = Mathf.Min(best, Vector3.Distance(col.ClosestPoint(point), point));
-                }
-            }
-
-            return best;
         }
     }
 }

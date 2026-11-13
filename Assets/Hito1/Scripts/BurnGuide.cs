@@ -56,8 +56,23 @@ namespace SojaExiles
         public float cardAlphaCompact = 0.8f;
 
         [Header("Tutorial")]
-        public float grabTimeout = 45f;
-        public float bringTimeout = 60f;
+        [Tooltip("Segundos para agarrar la taza antes de seguir sin ella (0: espera al jugador y repite la indicacion). Antes 45: si el jugador no hacia nada, el accidente pasaba igual.")]
+        public float grabTimeout = 0f;
+        [Tooltip("Segundos para llevarle la taza (0: espera al jugador).")]
+        public float bringTimeout = 0f;
+        [Tooltip("Cada cuanto se repite la indicacion del tutorial mientras se espera (s).")]
+        public float tutorialReminder = 25f;
+
+        // El panel de inicio (modo guiado o evaluacion) esta abierto: todavia
+        // no empezo nada, asi que no hay pausa.
+        public bool ChoosingMode { get; private set; }
+
+        // La practica termino (por ejemplo, desde el menu de pausa antes del
+        // accidente): el tutorial deja de esperar y no hay accidente.
+        private bool Over
+        {
+            get { return protocol != null && protocol.Finished; }
+        }
         public float handOverDistance = 0.4f;
         [Tooltip("Distancia del jugador (con la taza en la mano) a la que la tia se voltea para recibirla (m).")]
         public float attendDistance = 2.2f;
@@ -108,9 +123,10 @@ namespace SojaExiles
         private static readonly StepInfo[] Steps =
         {
             new StepInfo { id = StepId.ApagarFuego, title = "Apaga la hornilla",
-                hint = "Toca la perilla que brilla. Así nadie más se quema.", clip = "guia_apagar" },
+                hint = "Acerca la mano a la perilla que brilla y apriétala (botón lateral o pinza). Así nadie más se quema.",
+                clip = "guia_apagar" },
             new StepInfo { id = StepId.AbrirAgua, title = "Abre el agua fría",
-                hint = "Es la llave del punto azul. Tócala con la mano.", clip = "guia_agua" },
+                hint = "Es la llave del punto azul: acerca la mano y apriétala (botón lateral o pinza).", clip = "guia_agua" },
             // El anillo va antes del chorro: ella ofrece la mano a la altura del
             // pecho y se alcanza facil (bajo el agua costaba mucho). Si se lo
             // salta, se puede sacar despues, tambien bajo el chorro.
@@ -123,25 +139,28 @@ namespace SojaExiles
             // La manta esta en el sofa de la sala: hay que ir a buscarla y ella
             // se queda con la mano bajo el agua.
             new StepInfo { id = StepId.Abrigar, title = "Abrígala con una manta",
-                hint = "El agua fría también le enfría el cuerpo. Trae la manta del sofá de la sala y suéltala sobre sus hombros.",
+                hint = "El agua fría también le enfría el cuerpo. Sal de la cocina hacia la sala: la manta está doblada en el sofá, detrás de la mesa de centro. Sigue las flechas del piso y suéltala sobre sus hombros.",
                 clip = "guia_abrigo" },
             // Mientras se enfria (antes ese minuto quedaba sin nada que hacer).
             // Sin celular en la escena se decide al final con el panel
             // (ver ShowStep).
             new StepInfo { id = StepId.Llamar, title = "Llama al 106",
-                hint = "Mientras se enfría, toma el celular del mesón y llévalo a tu oreja. Responde lo que te pregunten.",
+                hint = "Toma el celular del mesón y toca «Llamar 106» en su pantalla con la otra mano (o aprieta A/X en el control que lo sostiene). Sale en altavoz: puedes dejarlo en el mesón y seguir atendiéndola.",
                 clip = "guia_llamar" },
             // Los 20 minutos de agua dan tiempo de buscar con que cubrir: el
-            // botiquin esta guardado en el mueble alto y el film en el cajon,
-            // como en una casa. No da ni quita puntos (ninguna guia lo pide);
-            // solo evita que al terminar haya que salir a buscarlo.
-            new StepInfo { id = StepId.Preparar, title = "Ten lista la gasa",
-                hint = "Mientras se enfría, abre el mueble alto junto al lavadero, saca el botiquín, déjalo en el mesón y ábrelo. Si no hay gasa, el film está en el cajón de abajo.",
+            // film y la bolsa estan guardados en el cajon, como en una casa
+            // (el botiquin del mueble alto solo tiene curitas y pomada, que no
+            // sirven). No da ni quita puntos (ninguna guia lo pide); solo
+            // evita que al terminar haya que salir a buscarlo.
+            new StepInfo { id = StepId.Preparar, title = "Busca con qué cubrirla",
+                hint = "Mientras se enfría, abre el cajón bajo el mesón junto al lavadero y saca el film o la bolsa plástica.",
                 clip = "guia_preparar" },
             new StepInfo { id = StepId.Esperar, title = "Enfría 20 minutos",
                 hint = "Mantén su mano bajo el agua hasta que el reloj complete las 20 marcas.", clip = "guia_esperar" },
-            new StepInfo { id = StepId.Cubrir, title = "Cubre con una gasa limpia",
-                hint = "Abre el botiquín, toma un sobre de gasa y rásgalo separando las manos. Toma la gasa de los bordes y apóyala plana y centrada sobre la quemadura 1 segundo, sin apretar. Si quieres, fíjala con la venda dando una vuelta suelta. Si no hay gasa, usa film: sostén el rollo, toma el borde que brilla con la otra mano y pon las tiras a lo largo de su mano.",
+            // Cruz Roja Britanica: "loosely cover it with cling film or a
+            // clean plastic bag"; NHS: el film encima, sin envolver.
+            new StepInfo { id = StepId.Cubrir, title = "Cúbrela sin apretar",
+                hint = "Con la bolsa: pasa la boca de la bolsa por sus dedos y deslízala hasta la muñeca. Con film: sostén el rollo, tira del borde que brilla con la otra mano y apoya cada tira a lo largo de su mano, sin envolverla.",
                 clip = "guia_cubrir" }
         };
 
@@ -211,6 +230,17 @@ namespace SojaExiles
         private bool currentIsReturn;
         private float stepShownTime;
         private bool coolingStarted;
+        private float coolingStartTime;
+
+        // Busqueda de la manta (ver UpdateBlanketGuidance).
+        [Tooltip("Modo evaluacion: segundos desde que empieza a enfriar hasta que la tia comenta que tiene frio, si el jugador no fue a la sala.")]
+        public float blanketHintDelay = 20f;
+        [Tooltip("Modo evaluacion: segundos entre la primera y la segunda vez que lo comenta.")]
+        public float blanketHintRepeat = 45f;
+        private FloorPathGuide pathGuide;
+        private BlanketItem blanketItem;
+        private int blanketHintsSaid;
+        private float nextBlanketHint;
 
         // Donde estaba la taza del tutorial (respaldo para dejarla).
         private Vector3 mugSpot;
@@ -315,7 +345,9 @@ namespace SojaExiles
             else if (askMode)
             {
                 TakeMenuSnapshot();
+                ChoosingMode = true;
                 yield return ChooseMode();
+                ChoosingMode = false;
 
                 // Si mientras estaba el menu el jugador boto o movio algo,
                 // abrio una llave, giro la perilla o volco la olla, la
@@ -341,12 +373,16 @@ namespace SojaExiles
             }
 
             // Espera el accidente.
-            while (burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle)
+            while (burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle && !Over)
             {
                 yield return null;
             }
 
             yield return new WaitForSeconds(2.5f);
+            if (Over)
+            {
+                yield break;
+            }
             if (guided)
             {
                 Say("guia_accidente");
@@ -379,7 +415,7 @@ namespace SojaExiles
             VRPanelKit.Text(root, VRPanelKit.Wrap("Aviso: esta práctica incluye gritos de dolor y una quemadura visible. " +
                     "Puedes quitarte el visor cuando quieras.", 60), new Vector2(left, 0.09f), 0.018f,
                 VRPanelKit.CardWarningColor);
-            VRPanelKit.Text(root, "Deja la mano sobre un botón hasta que se llene:", new Vector2(left, 0.03f), 0.018f,
+            VRPanelKit.Text(root, "Apunta a un botón y aprieta el gatillo (o haz la pinza):", new Vector2(left, 0.03f), 0.018f,
                 VRPanelKit.CardHintColor);
             VRPanelKit.RoundedButton(root, "Modo guiado", new Vector2(-0.14f, -0.05f), new Vector2(0.26f, 0.08f),
                 new Color(0.22f, 0.48f, 0.95f), () => { guided = true; chosen = true; });
@@ -525,9 +561,16 @@ namespace SojaExiles
                 Say("guia_agarrar");
                 HighlightFollow(mug.transform, 0.07f);
                 float t = 0f;
-                while (t < grabTimeout && !SimpleGrab.IsHeldObject(mug))
+                float remind = tutorialReminder;
+                while ((grabTimeout <= 0f || t < grabTimeout) && !SimpleGrab.IsHeldObject(mug) && !Over)
                 {
                     t += Time.deltaTime;
+                    if (t >= remind && !Speaking)
+                    {
+                        remind = t + tutorialReminder;
+                        Say("guia_agarrar");
+                    }
+
                     yield return null;
                 }
 
@@ -545,10 +588,17 @@ namespace SojaExiles
                 }
 
                 t = 0f;
+                remind = tutorialReminder;
                 bool delivered = false;
-                while (t < bringTimeout && mug != null)
+                while ((bringTimeout <= 0f || t < bringTimeout) && mug != null && !Over)
                 {
                     t += Time.deltaTime;
+                    if (t >= remind && !Speaking)
+                    {
+                        remind = t + tutorialReminder;
+                        Say("guia_caminar");
+                    }
+
                     if (patient != null && NearPatient(mug.worldCenterOfMass))
                     {
                         delivered = true;
@@ -583,10 +633,17 @@ namespace SojaExiles
             }
 
             StopNarration();
+            if (Over)
+            {
+                // Termino desde el menu de pausa antes del accidente.
+                ClearHighlights();
+                HideCard();
+                yield break;
+            }
+
             Say("guia_bien");
             yield return WaitNarration();
-
-            if (accident != null)
+            if (accident != null && !Over)
             {
                 accident.Trigger(accidentAfterTutorial);
             }
@@ -664,9 +721,10 @@ namespace SojaExiles
 
         private void HandleState(BurnSequenceManager.BurnState state)
         {
-            if (state == BurnSequenceManager.BurnState.Cooling)
+            if (state == BurnSequenceManager.BurnState.Cooling && !coolingStarted)
             {
                 coolingStarted = true;
+                coolingStartTime = Time.time;
             }
 
             if (state == BurnSequenceManager.BurnState.Success)
@@ -711,18 +769,14 @@ namespace SojaExiles
             return true;
         }
 
-        // Ya hay con que cubrir a mano: el botiquin abierto fuera del mueble,
-        // o el film, la bolsa o una gasa fuera de donde estaban guardados.
+        // Ya hay con que cubrir a mano: el film o la bolsa fuera del cajon
+        // (o no hay nada guardado).
         private static bool SuppliesOut()
         {
-            FirstAidKit kit = FirstAidKit.Current;
-            if (kit == null || kit.ReadyToUse)
-            {
-                return true;
-            }
-
+            bool any = false;
             foreach (FilmRoll roll in FindObjectsOfType<FilmRoll>())
             {
+                any = true;
                 if (!StorageFront.IsStored(roll.GetComponent<Rigidbody>()))
                 {
                     return true;
@@ -731,40 +785,225 @@ namespace SojaExiles
 
             foreach (CoverItem item in FindObjectsOfType<CoverItem>())
             {
+                any = true;
                 if (!StorageFront.IsStored(item.GetComponent<Rigidbody>()))
                 {
                     return true;
                 }
             }
 
+            return !any;
+        }
+
+        // El tirador del cajon si esta cerrado; abierto, el film y la bolsa.
+        private static void AddSupplies(List<Vector3> points)
+        {
+            foreach (CoverItem item in FindObjectsOfType<CoverItem>())
+            {
+                AddSupply(points, item.GetComponent<Rigidbody>(), item.GetComponentInChildren<Renderer>());
+            }
+
+            foreach (FilmRoll roll in FindObjectsOfType<FilmRoll>())
+            {
+                AddSupply(points, roll.GetComponent<Rigidbody>(), roll.GetComponentInChildren<Renderer>());
+            }
+        }
+
+        private static void AddSupply(List<Vector3> points, Rigidbody body, Renderer renderer)
+        {
+            StorageFront drawer = StorageFront.Holder(body);
+            if (drawer != null && !drawer.IsOpen)
+            {
+                AddOnce(points, drawer.HandlePosition);
+            }
+            else if (drawer != null && renderer != null)
+            {
+                points.Add(renderer.bounds.center);
+            }
+        }
+
+        // Hacia donde apuntan los dedos de la mano quemada (del hueso de la
+        // mano al nudillo del medio).
+        private static Vector3 FingerDirection(Transform hand)
+        {
+            foreach (Transform t in hand.GetComponentsInChildren<Transform>())
+            {
+                if (t.name.EndsWith("Middle1"))
+                {
+                    Vector3 d = t.position - hand.position;
+                    if (d.sqrMagnitude > 1e-6f)
+                    {
+                        return d.normalized;
+                    }
+                }
+            }
+
+            return hand.up;
+        }
+
+        // ---------------- orden flexible ----------------
+        //
+        // Cada paso tiene su momento, pero ninguno bloquea a los demas (antes
+        // el guia mostraba siempre el primer paso pendiente de la lista: sin
+        // llamar al 106 nunca llegaba a cubrir, y el anillo tapaba llevar la
+        // mano al agua). Cuando pasa el momento de un paso que todavia se
+        // puede hacer, la tarjeta lo deja abajo como "Cuando puedas" y sigue
+        // con lo que toca:
+        //   - Anillo: antes del chorro, por 'ringFocusSeconds'. Despues se
+        //     puede sacar bajo el agua (hasta que la mano se hinche).
+        //   - Abrigar, llamar y buscar con que cubrir: durante el
+        //     enfriamiento, en cualquier orden. Abrigar y llamar siguen
+        //     valiendo mientras se cubre y despues.
+        //   - Cubrir: al terminar de enfriar pasa primero, aunque falte
+        //     llamar o abrigar.
+
+        [Tooltip("Segundos que quitar el anillo es el paso principal antes de pasar al chorro (se puede sacar despues, bajo el agua).")]
+        public float ringFocusSeconds = 25f;
+        private float ringShownTime = -1f;
+
+        private static readonly StepId[] OrderCooling =
+        {
+            StepId.ApagarFuego, StepId.AbrirAgua, StepId.Anillo, StepId.LlevarAlAgua, StepId.Abrigar, StepId.Llamar,
+            StepId.Preparar, StepId.Esperar, StepId.Cubrir
+        };
+
+        // Ya enfriada: cubrir antes que lo que quedo pendiente.
+        private static readonly StepId[] OrderCooled =
+        {
+            StepId.ApagarFuego, StepId.AbrirAgua, StepId.LlevarAlAgua, StepId.Cubrir, StepId.Abrigar, StepId.Llamar,
+            StepId.Anillo
+        };
+
+        // Su momento ya paso, pero todavia se puede hacer.
+        private bool Deferred(StepId id)
+        {
+            switch (id)
+            {
+                case StepId.Anillo:
+                    // No cambia de paso mientras lo esta sacando.
+                    if (ring != null && ring.Progress > 0.02f)
+                    {
+                        return false;
+                    }
+
+                    return coolingStarted || (ringShownTime >= 0f && Time.time - ringShownTime > ringFocusSeconds);
+            }
+
             return false;
         }
 
-        // Donde tocar para llegar al botiquin: la puerta del mueble si sigue
-        // cerrado; si no, su tirador mientras este cerrado.
-        private static bool KitTarget(out Vector3 point)
+        // Pasos que se pueden hacer en paralelo con el principal.
+        private static bool CanWait(StepId id)
         {
-            FirstAidKit kit = FirstAidKit.Current;
-            point = Vector3.zero;
-            if (kit == null)
+            return id == StepId.Anillo || id == StepId.Abrigar || id == StepId.Llamar || id == StepId.Preparar;
+        }
+
+        private static int IndexOf(StepId id)
+        {
+            for (int i = 0; i < Steps.Length; i++)
             {
-                return false;
+                if (Steps[i].id == id)
+                {
+                    return i;
+                }
             }
 
-            StorageFront holder = StorageFront.Holder(kit.Body);
-            if (holder != null && !holder.IsOpen)
+            return -1;
+        }
+
+        private bool Pending(StepId id)
+        {
+            return Available(id) && !IsDone(id);
+        }
+
+        // Los que quedan para "Cuando puedas" (sin el principal).
+        private readonly List<int> sideSteps = new List<int>();
+
+        private void PickSide(int main)
+        {
+            sideSteps.Clear();
+            if (main < 0)
             {
-                point = holder.HandlePosition;
-                return true;
+                return;
             }
 
-            if (!kit.IsOpen)
+            // Mientras se apaga el fuego, se abre el agua o se lleva la mano al
+            // chorro no se distrae con lo demas (salvo el anillo ya pasado).
+            StepId mainId = Steps[main].id;
+            bool urgent = !CanWait(mainId) && mainId != StepId.Esperar && mainId != StepId.Cubrir;
+            StepId[] order = IsDone(StepId.Esperar) ? OrderCooled : OrderCooling;
+            foreach (StepId id in order)
             {
-                point = kit.HandlePosition;
-                return true;
+                int index = IndexOf(id);
+                if (index == main || !CanWait(id) || !Pending(id))
+                {
+                    continue;
+                }
+
+                if (id == StepId.Anillo ? Deferred(id) : !urgent)
+                {
+                    sideSteps.Add(index);
+                }
+            }
+        }
+
+        private static string SideLabel(StepId id)
+        {
+            switch (id)
+            {
+                case StepId.Anillo:
+                    return "quitarle el anillo (también bajo el agua)";
+                case StepId.Abrigar:
+                    return "abrigarla con la manta del sofá";
+                case StepId.Llamar:
+                    return EmergencyCall.Instance != null ? "llamar al 106 con el celular" : null;
+                case StepId.Preparar:
+                    return "sacar el film o la bolsa del cajón";
             }
 
-            return false;
+            return null;
+        }
+
+        private string SideText()
+        {
+            List<string> labels = new List<string>();
+            foreach (int i in sideSteps)
+            {
+                string label = SideLabel(Steps[i].id);
+                if (label != null)
+                {
+                    labels.Add(label);
+                }
+            }
+
+            return labels.Count > 0 ? "Cuando puedas: " + string.Join(" · ", labels) + "." : null;
+        }
+
+        private string SideSignature()
+        {
+            return string.Join(",", sideSteps);
+        }
+
+        private string shownSide = "";
+        private bool warnedColdAway;
+        private int reminders;
+
+        // Frase del primer pendiente al lado que todavia dice lo correcto
+        // (la de llamar dice "mientras se enfria").
+        private string SideClip()
+        {
+            foreach (int i in sideSteps)
+            {
+                StepId id = Steps[i].id;
+                if (id == StepId.Llamar && (EmergencyCall.Instance == null || IsDone(StepId.Esperar)))
+                {
+                    continue;
+                }
+
+                return Steps[i].clip;
+            }
+
+            return null;
         }
 
         private bool Available(StepId id)
@@ -787,17 +1026,31 @@ namespace SojaExiles
             return s != BurnSequenceManager.BurnState.Idle;
         }
 
+        // El paso principal: el primero pendiente cuyo momento no paso; si
+        // solo quedan pasos atrasados, el primero de ellos.
         private int PickStep()
         {
-            for (int i = 0; i < Steps.Length; i++)
+            StepId[] order = IsDone(StepId.Esperar) ? OrderCooled : OrderCooling;
+            int late = -1;
+            foreach (StepId id in order)
             {
-                if (Available(Steps[i].id) && !IsDone(Steps[i].id))
+                if (!Pending(id))
                 {
-                    return i;
+                    continue;
+                }
+
+                if (!Deferred(id))
+                {
+                    return IndexOf(id);
+                }
+
+                if (late < 0)
+                {
+                    late = IndexOf(id);
                 }
             }
 
-            return -1;
+            return late;
         }
 
         private void Update()
@@ -805,6 +1058,7 @@ namespace SojaExiles
             UpdateNarration();
             UpdateCard();
             UpdateHighlights();
+            UpdateBlanketGuidance();
 
             if (!stepsActive)
             {
@@ -851,18 +1105,50 @@ namespace SojaExiles
                 currentStep = -2;
             }
 
+            // La tia se quejo del frio y el jugador no esta con ella (por
+            // ejemplo, fue por la manta): tiene un margen para volver antes
+            // de que saque la mano.
+            if (PatientDialog.WaitingForPlayer && !warnedColdAway)
+            {
+                warnedColdAway = true;
+                Correct("guia_frio_lejos", "Tu tía se queja de que el agua está muy fría. Vuelve con ella antes de que saque la mano.");
+            }
+
             int step = PickStep();
+            if (step >= 0 && Steps[step].id == StepId.Anillo && ringShownTime < 0f)
+            {
+                ringShownTime = Time.time;
+            }
+
+            PickSide(step);
+            string side = SideSignature();
             bool isReturn = step >= 0 && Steps[step].id == StepId.LlevarAlAgua && coolingStarted;
             if (step != currentStep || isReturn != currentIsReturn)
             {
                 currentStep = step;
                 currentIsReturn = isReturn;
+                shownSide = side;
+                reminders = 0;
                 ShowStep(step, isReturn, true);
+            }
+            else if (side != shownSide)
+            {
+                // Cambio lo que queda pendiente al lado: solo la tarjeta.
+                shownSide = side;
+                ShowStep(step, isReturn, false);
             }
             else if (step >= 0 && Time.time - stepShownTime > reminderSeconds && !Speaking)
             {
-                // Recordatorio si no avanza.
-                ShowStep(step, isReturn, true);
+                // Recordatorio si no avanza. Uno de cada dos recuerda algo de
+                // lo pendiente al lado (si tiene una frase que sirva ahora).
+                reminders++;
+                string sideClip = reminders % 2 == 0 ? SideClip() : null;
+                ShowStep(step, isReturn, sideClip == null);
+                if (sideClip != null)
+                {
+                    StopNarration();
+                    Say(sideClip);
+                }
             }
 
             if (step >= 0)
@@ -886,6 +1172,105 @@ namespace SojaExiles
         }
 
         private int shownCover = -1;
+
+        // La manta esta en otro cuarto (el sofa de la sala) y costaba
+        // encontrarla. Modo guiado: flechas en el piso hasta ella y, con la
+        // manta en la mano, de vuelta a la paciente. Modo evaluacion: sin
+        // flechas; si el jugador no va a la sala, la tia comenta que tiene
+        // frio y que hay una manta en el sofa (algo que diria cualquiera con
+        // la mano en agua fria; no le dice que hacer).
+        private void UpdateBlanketGuidance()
+        {
+            bool pending = coolingStarted && protocol != null && !protocol.Finished
+                && !protocol.IsDone(BurnProtocol.Step.Abrigar)
+                && burnSequence.CurrentState != BurnSequenceManager.BurnState.Success
+                && !EmergencyCall.InCall && !MedicalDecisionPanel.IsOpen && !PauseMenu.Paused;
+            if (pending && blanketItem == null)
+            {
+                blanketItem = FindObjectOfType<BlanketItem>();
+            }
+
+            if (!pending || blanketItem == null)
+            {
+                if (pathGuide != null)
+                {
+                    pathGuide.Hide();
+                }
+
+                return;
+            }
+
+            Grabbable grab = blanketItem.GetComponent<Grabbable>();
+            bool held = grab != null && grab.IsHeld;
+            Vector3 blanketPosition = blanketItem.transform.position;
+
+            if (guided)
+            {
+                // Paso principal, o pendiente al lado y ya con la manta en la
+                // mano (flechas de vuelta hacia ella).
+                bool onStep = stepsActive && currentStep >= 0 && currentStep < Steps.Length
+                    && ((Steps[currentStep].id == StepId.Abrigar && !currentIsReturn)
+                        || (held && sideSteps.Contains(IndexOf(StepId.Abrigar))));
+                if (!onStep)
+                {
+                    if (pathGuide != null)
+                    {
+                        pathGuide.Hide();
+                    }
+
+                    return;
+                }
+
+                if (pathGuide == null)
+                {
+                    pathGuide = FloorPathGuide.Ensure();
+                }
+
+                if (held && patient != null)
+                {
+                    pathGuide.SetTarget(patient.transform.position, 0.9f);
+                }
+                else
+                {
+                    pathGuide.SetTarget(blanketPosition, 0.9f);
+                }
+
+                return;
+            }
+
+            // Modo evaluacion.
+            if (held || reactions == null || blanketHintsSaid >= 2)
+            {
+                return;
+            }
+
+            float due = blanketHintsSaid == 0 ? coolingStartTime + blanketHintDelay : nextBlanketHint;
+            if (Time.time < due)
+            {
+                return;
+            }
+
+            // Ya esta en la sala o yendo: no hace falta.
+            Transform eye = head != null ? head : VRPanelKit.Head();
+            if (eye != null)
+            {
+                Vector3 d = eye.position - blanketPosition;
+                d.y = 0f;
+                if (d.magnitude < 2.5f)
+                {
+                    return;
+                }
+            }
+
+            if (reactions.IsSpeaking || Speaking)
+            {
+                return;
+            }
+
+            reactions.Say("voz_pide_manta", false);
+            blanketHintsSaid++;
+            nextBlanketHint = Time.time + blanketHintRepeat;
+        }
 
         // Porcentaje de la quemadura cubierto con film (-1 si aun no hay tiras).
         private static int CoverPercent()
@@ -919,13 +1304,34 @@ namespace SojaExiles
                 hint = $"Cubierto con film: {cover} % (hace falta {Mathf.RoundToInt(coverage.coverageNeeded * 100f)} %). "
                     + "Pon otra tira al lado, a lo largo de su mano.";
             }
-            if (!isReturn && info.id == StepId.Cubrir && cover < 0 && FirstAidKit.Current != null
-                && StorageFront.IsStored(FirstAidKit.Current.Body))
+            if (!isReturn && info.id == StepId.Cubrir && cover < 0 && !SuppliesOut())
             {
-                hint = "El botiquín está en el mueble alto junto al lavadero. " + hint;
+                hint = "El film y la bolsa están en el cajón bajo el mesón junto al lavadero. " + hint;
             }
 
-            ShowCard($"Paso {index + 1} de {Steps.Length}", title, hint);
+            string sideText = SideText();
+            if (sideText != null)
+            {
+                hint = hint + "\n" + sideText;
+            }
+
+            // Con el orden flexible el numero es cuantos van hechos, y los
+            // puntitos marcan cada paso hecho, el actual y los que faltan.
+            bool[] doneSteps = new bool[Steps.Length];
+            int doneCount = 0;
+            for (int i = 0; i < Steps.Length; i++)
+            {
+                doneSteps[i] = IsDone(Steps[i].id);
+                if (doneSteps[i])
+                {
+                    doneCount++;
+                }
+            }
+
+            dotDone = doneSteps;
+            dotCurrent = index;
+            ShowCard($"Paso {Mathf.Min(doneCount + 1, Steps.Length)} de {Steps.Length}", title, hint);
+            dotDone = null;
             if (speak)
             {
                 StopNarration();
@@ -1017,21 +1423,9 @@ namespace SojaExiles
 
                     break;
                 case StepId.Preparar:
-                    FirstAidKit kitToTake = FirstAidKit.Current;
-                    StorageFront kitHolder = kitToTake != null ? StorageFront.Holder(kitToTake.Body) : null;
-                    if (kitHolder != null && kitHolder.IsOpen)
-                    {
-                        // Mueble abierto: el botiquin entero, para sacarlo.
-                        points.Add(kitToTake.transform.position + Vector3.up * 0.05f);
-                        radius = 0.14f;
-                    }
-                    else if (KitTarget(out Vector3 kitPoint))
-                    {
-                        // Mueble cerrado: su puerta. Ya afuera: la tapa.
-                        points.Add(kitPoint);
-                        radius = 0.06f;
-                    }
-
+                    // Cajon cerrado: su tirador. Abierto: el film y la bolsa.
+                    AddSupplies(points);
+                    radius = 0.07f;
                     break;
                 case StepId.Cubrir:
                     foreach (CoverItem item in FindObjectsOfType<CoverItem>())
@@ -1044,21 +1438,24 @@ namespace SojaExiles
                             continue;
                         }
 
-                        Renderer rr = item.GetComponentInChildren<Renderer>();
-                        points.Add(rr != null ? rr.bounds.center : item.transform.position);
-                    }
-
-                    // La gasa esta en el botiquin: primero la puerta del mueble
-                    // o el tirador de la tapa; abierto, los sobres.
-                    if (KitTarget(out Vector3 kitHandle))
-                    {
-                        points.Add(kitHandle);
-                    }
-                    else
-                    {
-                        foreach (GauzePacket packet in FindObjectsOfType<GauzePacket>())
+                        // Con la bolsa en la mano: la punta de sus dedos, por
+                        // donde entra.
+                        if (item.GetComponent<Grabbable>().IsHeld)
                         {
-                            points.Add(packet.transform.position);
+                            PatientBody body = FindObjectOfType<PatientBody>();
+                            Transform burned = body != null && body.IsReady ? body.HandBone(true) : null;
+                            if (burned != null)
+                            {
+                                points.Add(burned.position + FingerDirection(burned) * 0.17f);
+                            }
+
+                            continue;
+                        }
+
+                        Renderer rr = item.GetComponentInChildren<Renderer>();
+                        if (rr != null && rr.enabled)
+                        {
+                            points.Add(rr.bounds.center);
                         }
                     }
 
@@ -1159,13 +1556,21 @@ namespace SojaExiles
                     break;
                 case BurnSequenceManager.BurnEvent.RemedyNear:
                 case BurnSequenceManager.BurnEvent.RemedyApplied:
-                    Correct("guia_err_remedio", "No le pongas nada en la quemadura: solo agua fría corriente.");
+                    if (detail == HomeRemedy.Remedy.Curita.ToString())
+                    {
+                        Correct("guia_err_curita", "Las curitas se pegan a la piel quemada. Cúbrela con film o una bolsa limpia.");
+                    }
+                    else
+                    {
+                        Correct("guia_err_remedio", "No le pongas nada en la quemadura: solo agua fría corriente.");
+                    }
+
                     break;
                 case BurnSequenceManager.BurnEvent.BurnedHandGrabbed:
                     Correct("guia_err_mano", "Sujétala del antebrazo: la mano quemada le duele.");
                     break;
                 case BurnSequenceManager.BurnEvent.ClothOnBurn:
-                    Correct("guia_err_pano", "El paño de cocina suelta pelusa. Usa una gasa limpia o, si no hay, film.");
+                    Correct("guia_err_pano", "El paño de cocina suelta pelusa. Usa film o una bolsa limpia.");
                     break;
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:
                     Correct("guia_err_temprano", "Todavía no: primero termina de enfriar la quemadura.");
@@ -1187,22 +1592,6 @@ namespace SojaExiles
                     break;
                 case BurnSequenceManager.BurnEvent.FilmWrapped:
                     Correct("guia_err_envolver", "No la envuelvas: apoya el film encima. La mano se va a hinchar.");
-                    break;
-                case BurnSequenceManager.BurnEvent.GauzePressed:
-                    Correct("guia_err_apretar", "Apóyala sin apretar: solo tiene que quedar encima.");
-                    break;
-                case BurnSequenceManager.BurnEvent.GauzeTouchedCenter:
-                    Correct("guia_err_centro_gasa", "Tómala de los bordes: el centro va sobre la herida y debe quedar limpio.");
-                    break;
-                case BurnSequenceManager.BurnEvent.GauzeOffCenter:
-                    Correct("guia_err_gasa_corrida", "La gasa quedó corrida: la próxima vez céntrala para cubrir toda la quemadura.");
-                    break;
-                case BurnSequenceManager.BurnEvent.BandageApplied:
-                    if (severity != BurnSequenceManager.Severity.None)
-                    {
-                        Correct("guia_err_venda", "La venda va suelta: al hincharse la mano, una venda apretada le corta la circulación.");
-                    }
-
                     break;
                 case BurnSequenceManager.BurnEvent.RingStuck:
                     // Antes el punto del anillo desaparecia sin explicacion y
@@ -1525,12 +1914,18 @@ namespace SojaExiles
 
         // Puntitos de progreso a la derecha de "Paso 3 de 8": los hechos en
         // azul suave, el actual alargado y brillante, los que faltan tenues.
+        // Estado de cada paso para los puntitos (solo mientras ShowStep arma
+        // la tarjeta; null para el tutorial).
+        private bool[] dotDone;
+        private int dotCurrent = -1;
+
         private void UpdateDots(string title)
         {
             System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(title ?? "",
                 @"(\d+)\s+de\s+(\d+)");
             int current = m.Success ? int.Parse(m.Groups[1].Value) : 0;
             int total = m.Success ? Mathf.Clamp(int.Parse(m.Groups[2].Value), 0, 12) : 0;
+            bool[] stepDone = dotDone != null && dotDone.Length == total ? dotDone : null;
 
             while (cardDots.Count < total)
             {
@@ -1555,12 +1950,13 @@ namespace SojaExiles
                 }
 
                 int step = i + 1;
-                bool now = step == current;
+                bool now = stepDone != null ? i == dotCurrent : step == current;
+                bool finished = stepDone != null ? stepDone[i] : step < current;
                 float width = now ? DotSize * 2.6f : DotSize;
                 dot.SetRect(new Vector2(x - width * 0.5f, y), new Vector2(width, DotSize));
                 x -= width + gap;
                 Color c = now ? new Color(0.45f, 0.86f, 1f, 1f)
-                    : step < current ? new Color(0.5f, 0.72f, 1f, 0.75f)
+                    : finished ? new Color(0.5f, 0.72f, 1f, 0.75f)
                     : new Color(1f, 1f, 1f, 0.25f);
                 dot.SetSolid(c, now ? 0.6f : 0f);
             }

@@ -539,6 +539,15 @@ namespace SojaExiles
             }
         }
 
+        // Deja la puerta o el cajon entreabierto (0 a 1 de la apertura total).
+        // Por debajo de la mitad sigue contando como cerrado: lo de adentro
+        // no se puede sacar hasta abrirlo mas.
+        public void SetAjar(float fraction)
+        {
+            amount = target = Mathf.Clamp(fraction, 0f, 0.4f) * openAmount;
+            Apply();
+        }
+
         // Angulo de la mano alrededor de la bisagra, medido desde la puerta cerrada.
         private float HandAngle(Vector3 point)
         {

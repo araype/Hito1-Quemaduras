@@ -170,6 +170,15 @@ namespace SojaExiles
                 return;
             }
 
+            if (!strip.IsHeld && OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.Touch))
+            {
+                // Con una sola mano (en el simulador mover las dos a la vez
+                // cuesta mucho): A o X corta una tira entera, deja el rollo y
+                // la tira queda en esa misma mano.
+                TearOneHanded(leftHolds);
+                return;
+            }
+
             if (!strip.IsHeld)
             {
                 // El borde espera en la superficie del rollo, del lado de la
@@ -235,6 +244,26 @@ namespace SojaExiles
             }
 
             return false;
+        }
+
+        private void TearOneHanded(bool leftHand)
+        {
+            Vector3 edge = strip.transform.position;
+            Vector3 center = transform.TransformPoint(axisCenter);
+            Vector3 outward = Vector3.ProjectOnPlane(edge - center, Axis);
+            outward = outward.sqrMagnitude > 1e-6f ? outward.normalized : Vector3.up;
+            FilmStrip cut = strip;
+            strip = null;
+            pulling = false;
+            HideFlap();
+            cut.transform.position = edge + outward * cutLength;
+            cut.Tear(edge, Axis);
+            SimpleGrab.ForceRelease(body);
+            redirect.target = body;
+            if (!SimpleGrab.ForceGrab(cut.GetComponent<Rigidbody>(), leftHand))
+            {
+                cut.LetGo();
+            }
         }
 
         // La tira se destruyo sin cortarse (por ejemplo, al reiniciar).

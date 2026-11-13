@@ -24,10 +24,14 @@ unión están en `docs/QUEMADURA_INMERSION.md`, sección 14. Se trabaja desde
 
 ## Cómo está armado
 
-- Escena principal: `Assets/Hito1/Escenas/Escenario_Quemadura.unity`.
-- **No se editan las escenas a mano.** Todo lo nuevo se instala al dar Play
-  desde `Hito1RuntimeBootstrap` (solo si la escena tiene
-  `BurnSequenceManager`) y no se duplica si ya está en la escena.
+- Escena principal (la del build, con luz precalculada):
+  `Assets/Hito1/Escenas/Escenario_Quemadura.unity`. Hasta el 2026-11-12 se
+  llamaba `Prueba_LuzHorneada`; la escena vieja que antes tenía ese nombre
+  quedó como `Escenario_Quemadura_Previa.unity` (desactualizada, fuera del
+  build). La tía de Avaturn ya está guardada en la escena principal.
+- Lo nuevo se instala al dar Play desde `Hito1RuntimeBootstrap` (solo si la
+  escena tiene `BurnSequenceManager`) y no se duplica si ya está en la
+  escena. La escena principal se puede modificar si el usuario lo pide.
 - `BurnSequenceManager` maneja los estados (Idle → Burned → Cooling → Cooled
   → Covered → Success) y el canal de eventos `OnEvent` (evento, detalle,
   gravedad). Lo nuevo debe avisar por `Report(...)` en vez de llamar

@@ -697,6 +697,8 @@ audífonos y cómo se sienten las vibraciones nuevas.
 
 ## 21. Botiquín con sobres de gasa (`mejoras-demo`, 2026-11-09)
 
+> La gasa y la venda se quitaron el 2026-11-12 (sección 26).
+
 Antes la gasa estaba suelta en el mesón (un cubo amarillo). Ahora está en un
 botiquín, y hay que abrirlo y rasgar el sobre como en la vida real. Todo se
 arma por código (sin modelos importados).
@@ -744,6 +746,8 @@ estaba en "I", con la mandíbula poco abierta. Sin errores en consola.
 **Falta en el Quest:** ver de cerca si la boca acompaña bien la voz.
 
 ## 23. Poner la gasa bien: bordes, sin apretar, centrada y con venda (`mejoras-demo`, 2026-11-09)
+
+> Se quitó el 2026-11-12 (sección 26).
 
 Antes bastaba acercar la gasa a la quemadura 1 s, y la capa aparecía de
 golpe con la forma de la quemadura. Ahora se pide hacerlo como en la vida
@@ -856,3 +860,224 @@ lavadero con `PatientReach.Teleport`). **Falta en el Quest:** todo con las
 manos y con controles, si el tirador de la puerta se encuentra fácil y si
 los 20 minutos (90 s reales) alcanzan para abrigar, llamar y preparar sin
 apuro.
+
+## 26. Sin gasa: se cubre con bolsa o film, sin que se pegue solo (`mejoras-demo`, 2026-11-12)
+
+Revisado contra las guías: el NHS pide film encima, sin envolver, y no usar
+curitas ni apósitos adhesivos; la Cruz Roja Británica pide cubrir sin
+apretar "con film o una bolsa plástica limpia" y no usar vendas adhesivas.
+Ninguna de las dos usa gasa, y la mecánica realista de la gasa (bordes,
+centrada, sin apretar, venda suelta) era difícil de hacer bien en el visor.
+Se quitó la gasa y se cambiaron la bolsa y el film para que **no se peguen a
+la mano con solo acercarlos**.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Bolsa | Con la bolsa en la mano y la quemadura ya enfriada, ella ofrece la mano ("Pasa la bolsa por sus dedos"). Se lleva la mano que la sostiene a la punta de sus dedos (a menos de 7 cm) y se desliza hacia la muñeca: la bolsa cubre la mano de los dedos hacia la muñeca siguiendo la mano del jugador (si retrocede, baja), con roce y vibración suave, y un círculo que se llena ("Deslízala hasta la muñeca"). Al pasar la muñeca queda puesta, holgada. Si se suelta antes o la mano se aparta más de 12 cm del eje de su mano, se sale de los dedos y cae. Antes de enfriar, acercarla es error (como antes). | `CoverItem` (reescrito: solo la bolsa) |
+| Tiras de film | Antes bastaba soltar la tira a 15 cm del hueso de la muñeca y la capa aparecía de golpe. Ahora la tira tiene que estar apoyada en la mano (a menos de 5,5 cm del eje de la muñeca a los dedos); al soltarla baja a la piel, se alinea con el largo de la mano y se desvanece mientras aparece la capa de film (0,3 s). Más lejos, cae. Con una tira cortada cerca de su mano, ella la ofrece. | `FilmStrip.attachDistance`, `Settle`, `OfferHand`; `FilmCoverage.LastLayer` |
+| Botiquín | Sigue guardado en el mueble alto, pero ahora solo tiene distractores: tres **curitas** y la pomada. Una curita sobre la quemadura queda pegada (franja de 7 × 2 cm en el dorso), ella se queja y es error común ("Las curitas y apósitos adhesivos se pegan a la piel quemada…"). Ya no avisa `SuppliesReady`. | `FirstAidKit.BuildPlaster`, `HomeRemedy.Remedy.Curita` (al final del enum), material `Hito1FX/Curita` |
+| Guía | Paso 7: **"Busca con qué cubrirla"** (abrir el cajón y sacar el film o la bolsa; marca el tirador del cajón y luego el film y la bolsa). Paso 9: **"Cúbrela sin apretar"** (bolsa deslizada hasta la muñeca o tiras de film a lo largo); con la bolsa en la mano marca la punta de sus dedos. Corrección nueva para la curita. | `BurnGuide` |
+| Textos | Resumen: paso "Cubrir sin apretar (film o bolsa limpia)" y explicaciones del paño, la pomada y la curita sin gasa. Operador del 106: "cúbrala sin apretar con film de cocina o una bolsa plástica limpia". | `BurnProtocol`, `EmergencyCall` |
+| Voces | `guia_cubrir` y `guia_err_pano` decían "gasa": quedan en solo texto hasta regrabarlas; `guia_err_curita` es nueva (`docs/VOCES.md`). | `Hito1FX.TtsStandIns` |
+
+Se borraron `CoverItemGauze`, `GauzePacket` y `BandageItem` (ninguna escena
+los usaba). `CoverItem.Kind.Gasa` y los eventos `GauzePressed`,
+`GauzeTouchedCenter`, `GauzeOffCenter` y `BandageApplied` quedan en sus
+enums sin uso (las escenas guardan el número). Las secciones 16, 21 y 23
+describen la gasa tal como estaba antes de este cambio.
+
+**Probado en Play** (`Escenario_Quemadura`, sin visor, mano simulada de
+`SimpleGrab`, accidente y enfriado forzados por código), con capturas en
+`Temp/Capturas`:
+
+- Bolsa sacada del cajón y acercada a sus dedos antes de enfriar:
+  `CoveredTooEarly Bolsa (Error)`.
+- Ya enfriada: al acercarla, ella pasó a ofrecer la mano; en la punta de los
+  dedos se enganchó; al deslizarla, la bolsa cubrió los dedos (progreso
+  0,35, captura `bolsa_mitad`) y al pasar la muñeca quedó puesta hasta la
+  muñeca (`Covered`, captura `bolsa_puesta`).
+- Otra partida: soltada a 0,4 del recorrido, se salió, la bolsa doblada
+  volvió a verse y cayó (al quedar en el piso volvió al mesón).
+- Tira de film soltada a 10 cm sobre el dorso: cayó. A 2,5 cm, a lo largo:
+  se puso y cubrió el 88 % con una sola tira (captura `film_tira`).
+- Curita del botiquín llevada a la mano: `RemedyNear Curita` sin error,
+  `RemedyApplied Curita (Error)` y la franja sobre el dorso.
+- Sin errores en la consola. Los textos nuevos de la guía y la llamada solo
+  se compilaron (no se recorrió la guía completa).
+
+**Falta en el Quest:** deslizar la bolsa con las manos y con controles,
+apoyar tiras tiradas del rollo con las dos manos, y ver si el film se ve
+transparente (en el editor se ve blanquecino, material `Film_Mano`)
+(`PRUEBAS_QUEST.md`, sección 11).
+
+## 27. Botones que se aprietan y voces que dicen lo correcto (`mejoras-demo`, 2026-11-12)
+
+Al probarlo en el Meta XR Simulator, los botones costaban: se apretaban
+dejando la mano 0,6 s encima (y por eso "Modo guiado" se elegía sin querer)
+y, de lejos, no había forma de apuntarles.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Botón normal | Se apunta y se aprieta. Apuntar: tocarlo con la punta del índice o apuntarle con el rayo. Apretar: gatillo o botón lateral del control, o la pinza con la mano. Solo cuenta el momento de apretar (si ya se tenía apretado al llegar, hay que soltar y volver a apretar) y un apretón aprieta un solo botón. Con esa mano sosteniendo algo no cuenta. Dejar la mano encima ya no aprieta nada. Destello, clic y vibración al apretar; un toque leve al llegar. | `TouchButton` (reescrito) |
+| Rayo | Al apuntar a un botón de lejos (hasta 4 m) sale un rayo blanco con un punto al final; el botón se aclara. Con controles sale del control; con las manos, del rayo del sistema (`OVRHand.PointerPose`). Si el dedo ya está en un panel, esa mano no usa el rayo. Mientras apunta a un botón, apretar no agarra objetos cercanos. | `ButtonPointer` (nuevo), `SimpleGrab.TryGetPointer` |
+| Tarjetas quietas | Las tarjetas con botones (menú, decisión médica, diálogo, resumen, pausa) quedaban siempre a 0,6 m de la cabeza: al caminar o inclinarse hacia ellas retrocedían y nunca se alcanzaban. Ahora quedan fijas en el mundo y solo se reacomodan si se gira la cabeza más de 32° o se aleja más de 0,9 m. Probado en Play: al acercar la cabeza 0,4 m la tarjeta no se movió (quedó a 0,24 m); al alejarse 1,4 m volvió a ponerse a 0,6 m. | `PanelFollow` (`PanelPlacement.cs`) |
+| Anillo | No avanzaba al pellizcarlo: `PatientRing` medía la distancia antes de que `PatientBody` (orden 300) llevara el brazo a donde se ve, así que el anillo "real" estaba lejos de la mano. Ahora corre después (orden 310). Además, mientras una mano está en el anillo, la otra no agarra la mano quemada a menos de 17 cm (en el simulador las dos pellizcan a la vez y saltaba "De la mano no, me duele mucho"). Probado en Play: antes, 40 s apretando a 1–2 cm del anillo, progreso 0; ahora, con las dos manos apretando (una a 11 cm sobre la mano), el anillo salió en 3,5 s sin `BurnedHandGrabbed`. | `PatientRing` |
+| Escenas | `Prueba_LuzHorneada` (la del build, con luz precalculada) pasó a llamarse `Escenario_Quemadura`, con su carpeta de luz y sus ajustes; la vieja `Escenario_Quemadura` (desactualizada) quedó como `Escenario_Quemadura_Previa`, desmarcada en el build. Renombradas con `AssetDatabase.MoveAsset` (mismos GUID). En la escena principal se aplicó `PatientModelSwap` en el editor y se guardó: la tía de Avaturn se ve sin dar Play (en pose T; en Play anima igual que antes). Los objetos de la simulación (botiquín, film, bolsa, manta, remedios, reloj) siguen apareciendo al dar Play. Probado en Play: tía de Avaturn, anillo y quemadura igual que antes, sin errores nuevos. | `Assets/Hito1/Escenas`, `EditorBuildSettings` |
+| Textos | Menú, resumen y pausa: "Apunta y aprieta el gatillo o haz la pinza" (antes "Deja la mano sobre un botón hasta que se llene"). | `BurnGuide`, `BurnSummaryPanel`, `PauseMenu` |
+| Voces | Las frases del narrador que decían algo incorrecto (gasa, chompa, "deja la mano sobre el botón", el gesto viejo del anillo) o que faltaban, y `op_centro`, se regeneraron con las voces de Windows: Sabina (narradora) y Raúl (operador), 44,1 kHz mono, al volumen de las demás (-17 dBFS). Ya no están en `TtsStandIns`. Suenan menos naturales que ElevenLabs, pero dicen lo correcto (lista en `docs/VOCES.md`). | `Hito1Audio`, `Hito1FX.TtsStandIns` |
+
+**Probado en Play** (editor, sin visor, mano simulada de `SimpleGrab`):
+con la mano dentro de "Modo guiado" sin apretar, 8 s sin elegir nada; con
+el rayo desde 0,9 m apuntando a "Modo guiado" se vio el rayo y el botón se
+aclaró (captura `menu_rayo`), y al apretar se eligió; en otra partida, lo
+mismo con "Modo evaluación". Sin errores en la consola. **No se probó:** con
+las manos ni con controles reales, el rayo de las manos
+(`PointerPose`) ni la pausa. Las voces se generaron y se importaron, pero
+no se escucharon dentro del juego.
+
+## 28. Rayo de las manos, mesa de centro y cómo encontrar la manta (`mejoras-demo`, 2026-11-12)
+
+Al probarlo con Quest Link, los botones del menú no respondían con las
+manos y, en la sala, el jugador "rebotaba" al acercarse a la manta. Además
+no quedaba claro dónde estaba la sala.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Rayo de las manos | `OVRHand.PointerPose` queda en la raíz de la escena con valores del espacio de seguimiento: con el rig movido al punto de inicio, el rayo salía unos 5,5 m detrás del jugador y nunca cruzaba los botones. Ahora la pose se pasa por el `TrackingSpace` (sale a unos 12 cm de la mano). | `SimpleGrab.TryGetPointer` |
+| Tocar y hacer la pinza | Al hacer la pinza sobre un botón, la punta del índice va hacia el pulgar y salía del botón justo al apretar. El toque sigue contando 0,4 s después de salir. | `TouchButton` |
+| Mesa de centro | La cápsula del jugador se trepaba por el borde de la mesa de centro (0,49 m) y `GuardAgainstFalling` lo devolvía al último lugar firme: se sentía como un empujón hacia atrás. Ahora, si un paso (con el joystick o caminando en el cuarto real) lo subiría a un mueble, ese paso se deshace: choca con la mesa como con una pared y puede rodearla. | `VRLocomotion` (`ClimbedFurniture`, `UndoMove`) |
+| Flechas en el piso (modo guiado) | En el paso "Abrígala con una manta" aparecen flechas azules en el piso desde el jugador hasta el sofá de la sala; con la manta en la mano, apuntan de vuelta a la tía. Siguen el mismo camino por el que `PlayArea` deja caminar (búsqueda por la grilla del piso, sin muebles), así que lo que se ve coincide con por dónde se puede ir. Una onda de brillo las recorre hacia el objetivo. Se esconden a menos de 1,3 m del objetivo. | `FloorPathGuide` (nuevo), `PlayArea.FindPath`, `BurnGuide.UpdateBlanketGuidance` |
+| Voz y texto del paso | "El agua fría también le enfría el cuerpo. Sal de la cocina hacia la sala: la manta está doblada en el sofá, detrás de la mesa de centro. Sigue las flechas del piso y suéltala sobre sus hombros." `guia_abrigo` regrabada con Sabina (OneCore). | `BurnGuide`, `Hito1Audio/guia_abrigo.wav` |
+| Pista de la tía (modo evaluación) | Sin flechas. Si 20 s después de empezar a enfriar el jugador no está a menos de 2,5 m de la manta, la tía dice "Uy, con el agua me está dando frío… En el sofá de la sala hay una manta." (una segunda vez 45 s después, como máximo). No le dice qué hacer: es lo que diría cualquiera con la mano en agua fría. No resta puntos. | `BurnGuide.UpdateBlanketGuidance`, `Hito1Audio/voz_pide_manta.wav` (Sabina con tono más grave; falta ElevenLabs) |
+
+**Probado en Play** (editor con Quest Link, sin pasar por todos los pasos):
+con la sesión abierta se midió que el rayo corregido sale a unos 12 cm de
+cada mano; `PlayArea.FindPath` desde el inicio da un camino de la cocina a
+la sala que termina frente al sofá, junto a la mesa, y las flechas se ven
+en el piso de madera y en la alfombra (capturas `flechas_cocina`,
+`flechas_sala`). Los dos audios cargan (13,6 s y 6,3 s) y los visemas se
+regeneraron (31 voces). **No se probó:** apretar los botones con la pinza
+real, chocar con la mesa caminando, el paso completo hasta abrigarla ni la
+pista de la tía dentro del juego.
+
+## 29. Orden flexible de los pasos y llamada en altavoz (`mejoras-demo`, 2026-11-12)
+
+Al probar en el simulador el jugador quedó atrapado: no podía llevar el
+celular a la oreja, y como el guía mostraba siempre el primer paso pendiente
+de una lista fija, sin la llamada nunca llegaba a "Cúbrela" (siguió
+hablando del celular después de los 20 minutos). Con el anillo pasaba lo
+mismo: tapaba "Lleva su mano al chorro". Además la queja del frío del
+minuto 9 salía mientras el jugador estaba en la sala buscando la manta, y la
+práctica terminaba apenas se cubría, sin dejar abrigarla después.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Cada paso tiene su momento, ninguno bloquea | El guía elige el paso principal según el momento: antes del chorro, apagar, abrir el agua, el anillo y llevar la mano; durante el enfriamiento, abrigar, llamar y buscar con qué cubrir en cualquier orden; al terminar de enfriar, **cubrir va primero** aunque falte llamar o abrigar. Lo que todavía se puede hacer aparece abajo en la tarjeta como "Cuando puedas: …". Uno de cada dos recordatorios dice en voz algo de esa lista. | `BurnGuide.PickStep`, `PickSide`, `OrderCooling`, `OrderCooled` |
+| Anillo | Es el paso principal durante 25 s (`ringFocusSeconds`) o hasta que empieza a enfriar; después pasa a "Cuando puedas: quitarle el anillo (también bajo el agua)", hasta que se saca o se traba. Mientras se está sacando no cambia el paso. | `BurnGuide.Deferred` |
+| Número del paso | Con orden libre, "Paso X de 9" cuenta los pasos hechos, y cada puntito marca si ese paso está hecho, es el actual o falta. | `BurnGuide.ShowStep`, `UpdateDots` |
+| Manta fuera de su momento | Si la manta quedó pendiente y el jugador la toma, las flechas del piso lo llevan de vuelta a la tía (antes solo con el paso principal). | `BurnGuide.UpdateBlanketGuidance` |
+| Fin de la práctica | Al cubrir, se espera también la manta, no solo la llamada: si falta la llamada, 90 s (guiado) o 40 s (evaluación); si solo falta abrigarla, 60 s o 20 s. Con todo hecho, termina a los 5 s. | `BurnProtocol.WaitForRest`, `blanketGraceSeconds` |
+| Llamar desde el celular | Con el celular en la mano aparece en su pantalla el botón verde "Llamar 106"; se toca con la otra mano (dedo y gatillo o pinza, o el rayo, que en el simulador es lo más fácil). Llevarlo a la oreja también llama. El botón solo aparece con el celular en la mano, para que apretar junto a él en el mesón lo agarre. | `EmergencyCall.StartCall`, `UpdateCallButton` |
+| Altavoz | La llamada sale en altavoz (pantalla verde): se puede soltar el celular y seguir atendiéndola. Solo queda en espera si el jugador se aleja a más de 3 m (`speakerDistance`): "Desde aquí no oyes el altavoz: vuelve junto al celular". El panel de respuestas se queda quieto mientras se ve y se reacomoda al costado si el jugador se da vuelta o camina. | `EmergencyCall.UpdateHold`, `FollowCallPanel` |
+| Queja del frío (consecuencia con margen) | Al minuto 9 ella reacciona siempre: se queja y empieza a levantar la mano, esté donde esté el jugador. Las opciones salen solo con el jugador a menos de 2,5 m y sin la manta en la mano (antes salían mientras buscaba la manta en la sala). Si está lejos, ella aguanta 30 s reales (`awayGraceSeconds`, unos 7 minutos simulados; a la mitad vuelve a quejarse) y, si no vuelve, saca la mano: se corta el enfriamiento y cuenta el error. Durante la llamada al 106 el plazo no corre. Templar el agua también la calma. En modo guiado el narrador avisa: "Tu tía se queja de que el agua está muy fría. Vuelve con ella antes de que saque la mano." (`guia_frio_lejos`, nueva, Sabina). | `PatientDialog.Resist`, `WaitingForPlayer`, `BurnGuide.Update` |
+| Perilla y llaves se aprietan | Antes se accionaban con solo tocarlas (y se abrían o cerraban al pasar la mano). Ahora hay que acercar la mano (8 cm) y apretar: botón lateral o gatillo del control, o la pinza. Cuenta el momento de apretar (si se llega apretando, hay que soltar y volver a apretar) y no con esa mano sosteniendo algo. El punto crece y vibra un poco cuando la mano está al alcance. Con las dos llaves al alcance se acciona la más cercana. Apretar ahí no agarra otro objeto. Textos del guía y `guia_apagar` (Sabina) dicen "apriétala". | `HandPress` (nuevo), `StoveKnob`, `WaterTap`, `BurnGuide` |
+| Voz del paso | `guia_llamar` regrabada con Sabina (OneCore) con el texto nuevo (antes decía "llévalo a tu oreja"). | `Hito1Audio/guia_llamar.wav`, `docs/VOCES.md` |
+
+**Probado en Play** (editor, forzando los estados desde código, sin manos
+ni controles): la tarjeta pasa del anillo a "Lleva su mano al chorro" a los
+25 s, con el anillo en "Cuando puedas"; al enfriar muestra la manta con el
+anillo, la llamada y el cajón como pendientes; la llamada (empezada por
+código) no se puso en espera con el celular a 1,8 m sobre el mesón y se
+respondió entera; al colgar ya enfriada, la tarjeta pasó a "Cúbrela" con la
+manta y el anillo pendientes; al cubrir no terminó hasta abrigarla, y
+terminó 5 s después. Sin errores en la consola. **No se probó:** tocar el
+botón de la pantalla con el dedo o el rayo (el botón existe y mira hacia
+arriba, pero no se agarró el celular de verdad), el panel que acompaña al
+jugador, ni nada en el Quest.
+
+**Probado en Play** (queja del frío, mismo día, forzando el minuto 9 y
+moviendo al jugador por código): con el jugador a 5 m (hacia la sala) no
+se abrió el panel, apareció el aviso del narrador y, con el margen bajado a
+10 s, ella se rindió y el guía corrigió con `guia_err_aguantar`; con el
+jugador de vuelta a 2 m el panel se abrió. El error en el puntaje viene del
+detector del agua al sacar la mano, que en esta prueba estaba apagado: no
+se vio sumarse. **La perilla y las llaves que se aprietan solo se
+compilaron:** no se pudo simular la mano apretando; probarlas con el
+simulador y en el Quest.
+
+**Botiquín con la puerta entreabierta** (mismo día): cerrado, nadie lo
+encontraba y no funcionaba como trampa. Ahora la puerta del mueble alto
+empieza abierta al 25 % (`BurnSceneProps.kitDoorAjar`,
+`StorageFront.SetAjar`): por la rendija se ve el botiquín blanco. Sigue
+contando como cerrado (lo de adentro no se saca hasta abrirla más). Solo
+tiene curitas y pomada: en modo guiado el narrador lleva al cajón del film
+y la bolsa y corrige si se usan; en modo evaluación es una de las cosas que
+el jugador puede usar mal. Probado en Play: la puerta queda a 24° sin
+chocar con la de al lado y el botiquín sigue guardado (captura
+`Temp/Capturas/botiquin_entreabierto.png`). No se probó abrirla más con la
+mano.
+
+## 30. Llaves con su mano bajo el chorro y salida al resumen (`mejoras-demo`, 2026-11-12)
+
+Al probar en el simulador: con la llave fría abierta no se podía abrir la
+caliente ni cerrar la fría, y el jugador no pudo terminar la práctica (se
+atascó en el vendaje y no alcanzó a llamar), así que tampoco vio el
+resumen.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Llaves con su mano en el agua | Con su mano bajo el chorro, la mano de ella queda a 2,7 cm de la llave fría y 15 cm delante de las llaves. `PatientHandLimiter` frena la mano visible en la superficie de la paciente, y `SimpleGrab` toma el punto de la mano visible: la mano del jugador chocaba con la de ella antes de llegar a la llave. Ahora `HandPress` usa el punto de la mano real (sin el freno) si está más cerca, y el alcance subió de 8 a 10 cm. Si se aprieta cerca pero no cuenta, la consola dice a cuántos cm fue y por qué (`[HandPress]`). | `SimpleGrab.TryGetRawHandPoint`, `HandPress`, `pressReach` |
+| Terminar y ver resumen | En el menú de pausa (botón de menú del control izquierdo, el gesto de menú de la mano o Escape/P en el editor), después del accidente aparece "Terminar y ver resumen" en los dos modos. Lo que falta cuenta como paso no hecho (agua fría, enfriar y cubrir se agregaron a los que se pueden marcar como faltantes, con su explicación) y el resumen dice "Terminada desde el menú". Si estaba en la llamada, se corta. | `PauseMenu.FinishNow`, `BurnProtocol.EndEarly`, `EmergencyCall.HangUp`, `BurnSummaryPanel` |
+| Límite de tiempo (solo evaluación) | En modo evaluación la práctica termina sola a los 10 minutos reales desde el accidente (`evaluationTimeLimit`; no corre durante la llamada ni en pausa) y el resumen dice "Se acabó el tiempo". En modo guiado no hay límite: el que aprende no "pierde", y si una interacción lo atasca usa el menú. | `BurnProtocol.Update` |
+| Enfriamiento en el resumen | Al terminar antes, el resumen decía "20/20 min" aunque no se hubiera enfriado (el estado final contaba como enfriado). Ahora cuenta lo que de verdad se enfrió. | `BurnProtocol.CoolingProgress` |
+| Sesión guardada | El JSON tiene `terminoAntes` ("Menu", "Tiempo" o vacío). | `BurnProtocol.SaveLog` |
+
+**Probado en Play** (editor, sin manos reales): con la mano de prueba de
+`SimpleGrab` (pasa por el mismo código que las manos) se abrió la fría, se
+abrió la caliente con la fría abierta, y se cerró la fría con la mano de
+ella bajo el chorro. **Pero la mano de prueba no pasa por el freno visual**,
+así que el arreglo del freno no se pudo comprobar: falta probarlo en el
+simulador y en el Quest. El menú de pausa mostró los tres botones y
+"Terminar y ver resumen" abrió el resumen con los pasos que faltaban
+(captura `Temp/Capturas/resumen_terminado_menu.png`). El límite de tiempo de
+evaluación solo se compiló. Manta y mano enfriada: en las capturas
+`manta_mano_enfriada` y `manta_mano_guard` la mano quemada queda delante de
+la manta; no se reprodujo que la manta tape las manos.
+
+**Simulador con una sola mano y manta abierta** (2026-11-13). En el
+simulador de Meta mover las dos manos a la vez es muy difícil, la pausa no
+llegaba al juego (el simulador se queda con el teclado) y, en las capturas
+del usuario, la manta se cerraba por delante y tapaba sus brazos y la mano
+quemada mientras se intentaba poner la bolsa o el film.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Pausa y terminar desde Unity | Menú **Hito1 > Práctica > Pausar o continuar (F9)** y **Terminar y ver resumen (F10)**. Con el mouse en la barra de menús de Unity funciona siempre; las teclas, con la ventana de Unity enfocada. | `Editor/PracticeMenu.cs` (nuevo) |
+| Celular con una mano | Con el celular en la mano, el botón A o X del control que lo sostiene llama (el pulgar tocando la pantalla). Sigue valiendo tocar "Llamar 106" con la otra mano o llevarlo a la oreja. | `EmergencyCall.Update` |
+| Film con una mano | Con el rollo en la mano, A o X corta una tira entera, deja el rollo y la tira queda en esa misma mano para apoyarla. Con dos manos sigue igual (sostener el rollo y tirar del borde que brilla en azul). | `FilmRoll.TearOneHanded` |
+| Ella saca la mano antes | Con la bolsa o una tira de film a 1,2 m de su mano (antes 40 cm), ya enfriada, ella saca la mano y la ofrece. | `CoverItem.approachDistance`, `FilmStrip.offerDistance` |
+| Manta abierta por delante | La tela no puede quedar delante del pecho entre los hombros (40 cm de ancho, desde un poco por debajo de los hombros): queda abierta como un chal y cae por los costados, sin cruzarse sobre sus brazos. | `BlanketDrape.openFront`, `frontOpenHalfWidth`, `frontOpenDepth`, `frontOpenTop` |
+
+**Solo compilado** (sin errores de compilación). No se probó en Play: al
+recompilar, Unity estaba en Play con la sesión del usuario y los
+componentes del SDK de Meta dieron errores (`FingerPinchValue.OnEnable`,
+`HmdOffset.OnEnable`): hay que detener y volver a dar Play. Falta ver que
+la manta quede abierta sin atravesar los brazos, y probar A/X en el
+simulador.
+
+**Pausa desde el simulador y tutorial que espera** (2026-11-13). F9/F10
+del menú de Unity no llegaban: el simulador de Meta se queda con el
+teclado. Y el tutorial de la taza se saltaba solo si el jugador no hacía
+nada (45 s para agarrar y 60 s para entregar, y luego el accidente).
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Teclas que llegan siempre | En el editor de Windows, `PauseMenu` lee **F9** (pausa o continuar) y **F8** (terminar y ver resumen) directo de Windows, aunque la ventana activa sea la del simulador. (F10 no se usa: Windows lo reserva para la barra de menús.) El menú Hito1 > Práctica quedó sin atajos (con el mouse). | `PauseMenu.Update` (`GetAsyncKeyState`), `Editor/PracticeMenu.cs` |
+| Botón del control | Además del botón de menú del control izquierdo, **mantener B o Y un segundo** abre o cierra la pausa (en el visor y en el simulador). | `PauseMenu.holdToPause` |
+| Tutorial que espera | Ya no se salta solo: espera a que el jugador agarre la taza y se la lleve, y repite la indicación cada 25 s (`grabTimeout` y `bringTimeout` en 0 = sin límite). Nada se salta salvo con "Terminar y ver resumen". | `BurnGuide.Tutorial` |
+| Opciones ordenadas | **Panel de inicio** (guiado o evaluación): sin pausa, porque todavía no empezó nada. **Pausa** (desde la taza hasta el resumen): siempre las mismas tres opciones, "Continuar", "Volver al inicio" (antes "Reiniciar práctica": vuelve al panel de inicio con el mismo caso) y "Terminar y ver resumen" (también antes del accidente: todo lo que falta sale en el resumen y no hay accidente). **Resumen**: "Volver al inicio" y "Otra quemadura: primer grado/segundo grado" (antes "Otro caso", que parecía otro tipo de guía), con la línea "Los dos vuelven al inicio para elegir modo guiado o evaluación". | `PauseMenu.BuildPanel`, `CanPause`, `BurnGuide.ChoosingMode`, `BurnProtocol.EndEarly`, `BurnSummaryPanel` |
+
+**Solo compilado** (Roslyn de Unity contra las DLL del proyecto, sin
+errores; el MCP de Unity estaba desconectado). Falta probar en el
+simulador F9/F8, mantener B/Y y terminar desde la pausa antes del
+accidente (que no llegue a pasar el accidente después del resumen).
