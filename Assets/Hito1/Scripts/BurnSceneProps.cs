@@ -416,9 +416,15 @@ namespace SojaExiles
 
             Quaternion facing = Quaternion.LookRotation(drawer.Outward, Vector3.up);
             float depth = Mathf.Abs(Vector3.Dot(box.size, drawer.Outward));
-            // El rollo adelante (atravesado, a lo ancho del cajon) y la bolsa atras.
-            film.transform.SetPositionAndRotation(floor.point + drawer.Outward * (depth * 0.18f) + Vector3.up * 0.003f, facing);
-            bag.transform.SetPositionAndRotation(floor.point - drawer.Outward * (depth * 0.2f) + Vector3.up * 0.003f, facing);
+            // Lado a lado, hacia el frente: la caja de film atravesada y la
+            // bolsa a lo largo. Atras quedaban bajo el borde del meson y la
+            // bolsa transparente no se veia al abrir el cajon.
+            Vector3 side = Vector3.Cross(Vector3.up, drawer.Outward).normalized;
+            float width = Mathf.Abs(Vector3.Dot(box.size, side));
+            film.transform.SetPositionAndRotation(floor.point + drawer.Outward * (depth * 0.12f)
+                - side * (width * 0.21f) + Vector3.up * 0.003f, facing);
+            bag.transform.SetPositionAndRotation(floor.point + drawer.Outward * (depth * 0.05f)
+                + side * (width * 0.22f) + Vector3.up * 0.003f, facing);
             Physics.SyncTransforms();
             foreach (GameObject item in new[] { film, bag })
             {
@@ -593,7 +599,8 @@ namespace SojaExiles
 
         private static readonly Quaternion Lying = Quaternion.Euler(0f, 0f, 90f);
 
-        // Film y bolsa en amarillo: en blanco se perdian sobre el meson.
+        // Film y bolsa en amarillo: en blanco se perdian sobre el meson. Solo
+        // para las piezas de respaldo (si faltan los modelos importados).
         private static readonly Color Yellow = new Color(1f, 0.82f, 0.1f);
 
         private static void Amarillo(GameObject root, string part, float alpha)
@@ -615,8 +622,42 @@ namespace SojaExiles
             }
         }
 
+        // Modelo importado (CoverModelsSetup, menu Hito1 > Preparar film y
+        // bolsa importados): malla con la base en y = 0 y su material en
+        // Resources/Hito1FX. Null si falta.
+        private static GameObject FromModel(string name, string mesh, string material, float mass,
+            float minHeight)
+        {
+            Mesh m = Resources.Load<Mesh>("Hito1FX/" + mesh);
+            if (m == null || Resources.Load<Material>("Hito1FX/" + material) == null)
+            {
+                return null;
+            }
+
+            Vector3 size = m.bounds.size;
+            size.y = Mathf.Max(size.y, minHeight);
+            GameObject root = PropKit.Grabbable(name, Vector3.zero, Quaternion.identity, size, mass);
+            Renderer r = PropKit.MeshPart(root.transform, m, Vector3.zero, Quaternion.identity, material, Color.white);
+            r.gameObject.name = material;
+            return root;
+        }
+
+        // Caja de film de cocina ("Aluminum Foil Box - Low Poly", de Ian
+        // Valeta, CC BY 4.0, con etiqueta propia). La tira sale del borde de
+        // la caja (FilmRoll con el radio de la caja).
         private static GameObject BuildFilm()
         {
+            GameObject box = FromModel("FilmTransparente", "FilmCaja_Malla", "FilmCaja", 0.25f, 0f);
+            if (box != null)
+            {
+                Bounds b = box.GetComponentInChildren<MeshFilter>().sharedMesh.bounds;
+                FilmRoll roll = box.AddComponent<FilmRoll>();
+                roll.axisCenter = b.center;
+                roll.halfLength = b.extents.x;
+                roll.radius = Mathf.Max(b.extents.y, b.extents.z) + 0.002f;
+                return box;
+            }
+
             GameObject root = PropKit.Grabbable("FilmTransparente", Vector3.zero, Quaternion.identity,
                 new Vector3(0.31f, 0.052f, 0.052f), 0.25f);
             PropKit.Part(root.transform, PrimitiveType.Cylinder, new Vector3(0f, 0.026f, 0f),
@@ -632,8 +673,17 @@ namespace SojaExiles
         // Bolsa plastica limpia, doblada: para una mano quemada sirve como
         // cubierta holgada (Cruz Roja Britanica). Se pone deslizandola de los
         // dedos a la muneca (CoverItem).
+        // Modelo: "Ziplock bag", de Phoenix_Connor (CC BY 4.0), transparente
+        // y sin logo.
         private static GameObject BuildBag()
         {
+            GameObject zip = FromModel("BolsaPlastica", "BolsaZip_Malla", "BolsaZip", 0.02f, 0.012f);
+            if (zip != null)
+            {
+                zip.AddComponent<CoverItem>().kind = CoverItem.Kind.Bolsa;
+                return zip;
+            }
+
             GameObject root = PropKit.Grabbable("BolsaPlastica", Vector3.zero, Quaternion.identity,
                 new Vector3(0.16f, 0.012f, 0.2f), 0.02f);
             PropKit.Part(root.transform, PrimitiveType.Cube, new Vector3(0f, 0.004f, 0f),

@@ -1,0 +1,11 @@
+Model Information:
+* title:	Aluminum Foil Box - Low Poly
+* source:	https://sketchfab.com/3d-models/aluminum-foil-box-low-poly-697c4ce533834df59b54d3ac861b4380
+* author:	Ian Valeta (https://sketchfab.com/ian.valeta)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Aluminum Foil Box - Low Poly" (https://sketchfab.com/3d-models/aluminum-foil-box-low-poly-697c4ce533834df59b54d3ac861b4380) by Ian Valeta (https://sketchfab.com/ian.valeta) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

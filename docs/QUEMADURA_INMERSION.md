@@ -1081,3 +1081,27 @@ nada (45 s para agarrar y 60 s para entregar, y luego el accidente).
 errores; el MCP de Unity estaba desconectado). Falta probar en el
 simulador F9/F8, mantener B/Y y terminar desde la pausa antes del
 accidente (que no llegue a pasar el accidente después del resumen).
+
+## 31. Caja de film y bolsa con modelos importados (`main`, 2026-11-14)
+
+El film y la bolsa eran piezas hechas por código y pintadas de amarillo
+(en blanco no se veían). Ahora son modelos de Sketchfab (CC BY 4.0, con
+crédito en el informe), parecidos a lo que piden las guías (Cruz Roja
+Británica y NHS: "cling film o una bolsa plástica limpia", puesta suelta).
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Caja de film | "Aluminum Foil Box - Low Poly" (Ian Valeta): caja dispensadora de 24,5 × 8,7 × 8,3 cm, 422 triángulos. Etiqueta nueva del equipo, en verde azulado: "FILM TRANSPARENTE / Film plástico de cocina", 25 cm × 30 m, y atrás cómo se usa. La tapa se lee desde quien abre el cajón. | `Kits/Cubiertas/FilmCaja`, `FilmCaja_Etiqueta.png` |
+| Misma interacción del film | La raíz sigue siendo `FilmTransparente` con `FilmRoll`; solo cambian las medidas: el eje del rollo va a lo largo de la caja (`halfLength` 12,2 cm) y el borde de la tira sale de la superficie de la caja (`radius` ≈ 4,5 cm), así la solapa aparece sobre la tapa. Tiras, corte y `FilmCoverage` sin cambios. | `BurnSceneProps.BuildFilm` |
+| Bolsa | "Ziplock bag" (Phoenix_Connor): bolsa de cierre de 21 × 27 cm (el modelo medía 35 × 45 cm), 1028 triángulos, con las arrugas del original. Plástico blanco translúcido (Standard, transparente) y el cierre en azul suave; se quitó el logo de reciclaje del color y del relieve. | `Kits/Cubiertas/BolsaZip`, `BolsaZip_Color.png`, `BolsaZip_Normal.png` |
+| Misma interacción de la bolsa | La raíz sigue siendo `BolsaPlastica` con `CoverItem` (boca en la mano que la sostiene, `mouthReach`, `slipRadius` y `wristMargin` sin cambios); al deslizarla se oculta el modelo y se ve la capa sobre su mano, como antes. | `BurnSceneProps.BuildBag` |
+| En el cajón | Lado a lado y hacia el frente (antes la bolsa quedaba atrás, bajo el borde del mesón, y no se veía). | `BurnSceneProps.StoreInDrawer` |
+| Cómo se arman | Menú **Hito1 > Preparar film y bolsa importados**: toma la malla de cada glTF, la deja en metros con la base en y = 0 y crea `FilmCaja_Malla`, `BolsaZip_Malla` y sus materiales en `Resources/Hito1FX`, con texturas a 1024. Si faltan, se usan las piezas amarillas de antes. Las texturas nuevas salen de los scripts de Python de `Kits/Cubiertas/Herramientas~` (Unity no importa esa carpeta). | `Editor/CoverModelsSetup.cs` |
+
+**Probado en Play** (editor, sin visor, con la mano de prueba de
+`SimpleGrab`): los dos aparecen en el cajón al abrirlo, se agarran y siguen
+a la mano, y con la otra mano cerca aparece la solapa del film sobre la
+caja. Sin errores en la consola. **No se probó:** tirar una tira entera,
+cubrir la quemadura con la tira o con la bolsa, ni nada en el Quest (cómo
+se ve la bolsa transparente en el cajón con la luz del visor, y si la
+solapa sobre la tapa se encuentra con la mano).

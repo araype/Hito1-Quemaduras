@@ -1,0 +1,11 @@
+Model Information:
+* title:	Ziplock bag
+* source:	https://sketchfab.com/3d-models/ziplock-bag-6428bacd2c3c46bb8987db060e4fea45
+* author:	Phoenix_Connor (https://sketchfab.com/odin.takoy1989)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Ziplock bag" (https://sketchfab.com/3d-models/ziplock-bag-6428bacd2c3c46bb8987db060e4fea45) by Phoenix_Connor (https://sketchfab.com/odin.takoy1989) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

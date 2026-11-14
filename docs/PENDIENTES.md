@@ -217,11 +217,11 @@ texturas de 1024 por objeto de mano.
 - **Una sola mano en el simulador** (sección 30, solo compilado): A/X con
   el celular en la mano llama; A/X con el rollo corta una tira y la deja en
   esa mano. Menú Hito1 > Práctica (F9 pausa, F10 terminar).
-- **Film y bolsa amarillos (a decidir):** son piezas hechas por código y
-  se pintaron de amarillo cuando estaban sueltas en el mesón (en blanco no
-  se veían). Ahora están en el cajón: se podría volver a un aspecto real
-  (film transparente en su caja, bolsa blanca translúcida) o usar modelos
-  (H.1).
+- **Caja de film y bolsa importadas** (`QUEMADURA_INMERSION.md`, sección
+  31): en el Quest, que la bolsa transparente se vea en el cajón, que la
+  solapa del film sobre la tapa de la caja se encuentre con la mano y que
+  tirar, cortar y apoyar las tiras y deslizar la bolsa sigan funcionando
+  con los modelos nuevos.
 - **Queja del frío lejos de ella** (sección 29): ir por la manta justo al
   empezar a enfriar y medir si 30 s (`PatientDialog.awayGraceSeconds`)
   alcanzan para volver caminando con el joystick; ver que al no volver se
