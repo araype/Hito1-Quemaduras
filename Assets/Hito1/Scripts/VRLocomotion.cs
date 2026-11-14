@@ -10,12 +10,12 @@ namespace SojaExiles
     //
     //  - Controles / manos conducidas por control: joystick izquierdo camina
     //    en la direccion de la mirada; joystick derecho gira a saltos.
-    //  - Solo manos (sin controles): pellizco de dedo medio de la mano
-    //    izquierda = avanzar, dedo anular izquierda = retroceder; pellizco de
-    //    dedo medio derecha = girar a la derecha, dedo anular derecha =
-    //    girar a la izquierda. El indice queda libre para agarrar. Los gestos
-    //    de una mano se ignoran mientras esa mano sostiene algo o pellizca
-    //    con el indice, para no caminar sin querer al agarrar.
+    //  - Solo manos (sin controles), con cualquier mano libre: pulgar con el
+    //    dedo medio = caminar hacia donde esta esa mano; pulgar con el anular
+    //    = girar a saltos hacia ese lado (ver ReadInput). El indice queda
+    //    libre para agarrar. Los gestos de una mano se ignoran mientras esa
+    //    mano sostiene algo, esta cerrada o pellizca con el indice, para no
+    //    caminar sin querer al agarrar.
     //
     // La capsula del CharacterController sigue a la cabeza: cuando el
     // jugador camina fisicamente, el cuerpo se mueve con controller.Move
@@ -118,6 +118,10 @@ namespace SojaExiles
                     move.Normalize();
                 }
             }
+            else if (gestureDirection.sqrMagnitude > 0f)
+            {
+                move = gestureDirection;
+            }
 
             if (controller.isGrounded && verticalVelocity < 0f)
             {
@@ -165,6 +169,58 @@ namespace SojaExiles
             SlideOffProp();
             KeepHeadOutOfPatient(head);
             GuardAgainstFalling();
+            AnchorFloor();
+        }
+
+        // El piso del espacio de seguimiento (el piso real, con el origen en
+        // FloorLevel) queda a la altura del piso del juego. El
+        // CharacterController flota 'skinWidth' (8 cm) sobre lo que pisa, y el
+        // rig iba con el: la mano real tocaba el suelo 8-10 cm antes que el
+        // piso del juego y lo caido no se alcanzaba.
+        [Tooltip("Ajuste fino del piso real respecto del piso del juego (m); positivo lo sube.")]
+        public float floorOffset = 0f;
+
+        private void AnchorFloor()
+        {
+            Transform trackingRoot = rig != null ? rig.transform : null;
+            if (trackingRoot == null || trackingRoot == transform || !trackingRoot.IsChildOf(transform)
+                || !controller.isGrounded)
+            {
+                return;
+            }
+
+            Vector3 origin = transform.position + Vector3.up * 0.5f;
+            RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, 1.2f, ~0, QueryTriggerInteraction.Ignore);
+            float best = float.MaxValue;
+            float ground = 0f;
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.collider == controller || hit.rigidbody != null || hit.distance >= best
+                    || hit.collider.GetComponentInParent<VRLocomotion>() != null)
+                {
+                    continue;
+                }
+
+                best = hit.distance;
+                ground = hit.point.y;
+            }
+
+            if (best == float.MaxValue)
+            {
+                return;
+            }
+
+            Vector3 p = trackingRoot.position;
+            float wanted = ground + floorOffset;
+            float gap = wanted - p.y;
+            if (Mathf.Abs(gap) < 0.001f)
+            {
+                return;
+            }
+
+            // Suave para pequenos desniveles (alfombra); de golpe si es mucho.
+            p.y = Mathf.Abs(gap) > 0.3f ? wanted : Mathf.MoveTowards(p.y, wanted, 0.5f * Time.deltaTime);
+            trackingRoot.position = p;
         }
 
         // Objetos sueltos (con Rigidbody: la olla, la taza, el pano...) no son
@@ -524,36 +580,121 @@ namespace SojaExiles
             moveInput = ApplyDeadZone(leftStick);
             turnInput = Mathf.Abs(rightStick.x) > deadZone ? rightStick.x : 0f;
 
+            gestureDirection = Vector3.zero;
             bool handsActive = (OVRInput.GetActiveController() & OVRInput.Controller.Hands) != 0;
             if (!enableHandPinchLocomotion || !handsActive)
             {
+                walkGestureSince[0] = walkGestureSince[1] = -1f;
+                turnGestureSince[0] = turnGestureSince[1] = -1f;
                 return;
             }
 
-            // Sin controles activos: los gestos reemplazan a los joysticks.
-            if (moveInput.sqrMagnitude <= 0f && IsGestureHandFree(leftHand, true))
+            // Sin controles: los gestos reemplazan a los joysticks, con
+            // cualquiera de las dos manos que este libre (asi se puede
+            // caminar con la manta en la otra mano).
+            //  - Pulgar con el dedo medio: caminar hacia donde esta esa mano
+            //    (estirarla hacia adelante, al costado...). Se camina y se
+            //    dobla a la vez, sin girar.
+            //  - Pulgar con el anular: girar a saltos hacia el lado de esa mano.
+            // El gesto debe mantenerse 'gestureHoldSeconds' y ser limpio (solo
+            // ese dedo): al cerrar la mano para agarrar, el medio y el anular
+            // tambien "pellizcaban" y el jugador caminaba sin querer.
+            float now = Time.unscaledTime;
+            Transform head = GetHead();
+            for (int h = 0; h < 2; h++)
             {
-                if (IsPinching(leftHand, OVRHand.HandFinger.Middle))
+                bool isLeft = h == 0;
+                OVRHand hand = isLeft ? leftHand : rightHand;
+                Gesture g = IsGestureHandFree(hand, isLeft) ? ReadGesture(hand) : Gesture.None;
+                bool walk = Held(walkGestureSince, h, g == Gesture.Walk, now);
+                bool turn = Held(turnGestureSince, h, g == Gesture.Turn, now);
+
+                if (walk && moveInput.sqrMagnitude <= 0f && gestureDirection.sqrMagnitude <= 0f)
                 {
-                    moveInput = new Vector2(0f, 1f);
+                    gestureDirection = HandDirection(hand, head);
                 }
-                else if (IsPinching(leftHand, OVRHand.HandFinger.Ring))
+
+                if (turn && Mathf.Approximately(turnInput, 0f))
                 {
-                    moveInput = new Vector2(0f, -1f);
+                    turnInput = isLeft ? -1f : 1f;
                 }
+            }
+        }
+
+        private enum Gesture { None, Walk, Turn }
+
+        [Tooltip("Segundos que hay que mantener un gesto de caminar o girar antes de que cuente.")]
+        public float gestureHoldSeconds = 0.2f;
+
+        // Direccion de la caminata con gestos (mundo, horizontal); cero si no.
+        private Vector3 gestureDirection;
+        private readonly float[] walkGestureSince = { -1f, -1f };
+        private readonly float[] turnGestureSince = { -1f, -1f };
+
+        private bool Held(float[] since, int h, bool active, float now)
+        {
+            if (!active)
+            {
+                since[h] = -1f;
+                return false;
             }
 
-            if (Mathf.Approximately(turnInput, 0f) && IsGestureHandFree(rightHand, false))
+            if (since[h] < 0f)
             {
-                if (IsPinching(rightHand, OVRHand.HandFinger.Middle))
-                {
-                    turnInput = 1f;
-                }
-                else if (IsPinching(rightHand, OVRHand.HandFinger.Ring))
-                {
-                    turnInput = -1f;
-                }
+                since[h] = now;
             }
+
+            return now - since[h] >= gestureHoldSeconds;
+        }
+
+        // Un solo dedo junto al pulgar, con los demas abiertos.
+        private Gesture ReadGesture(OVRHand hand)
+        {
+            if (!hand.IsDataHighConfidence)
+            {
+                return Gesture.None;
+            }
+
+            float index = hand.GetFingerPinchStrength(OVRHand.HandFinger.Index);
+            float middle = hand.GetFingerPinchStrength(OVRHand.HandFinger.Middle);
+            float ring = hand.GetFingerPinchStrength(OVRHand.HandFinger.Ring);
+            if (index > 0.5f)
+            {
+                return Gesture.None;
+            }
+
+            if (middle >= pinchStrengthThreshold && ring < 0.5f)
+            {
+                return Gesture.Walk;
+            }
+
+            if (ring >= pinchStrengthThreshold && middle < 0.5f)
+            {
+                return Gesture.Turn;
+            }
+
+            return Gesture.None;
+        }
+
+        // De la cabeza hacia la mano, en horizontal. Con la mano pegada al
+        // cuerpo (sin direccion clara), hacia donde mira la cabeza.
+        private static Vector3 HandDirection(OVRHand hand, Transform head)
+        {
+            Vector3 forward = head != null ? head.forward : Vector3.forward;
+            forward.y = 0f;
+            if (head == null)
+            {
+                return forward.normalized;
+            }
+
+            Vector3 toHand = hand.transform.position - head.position;
+            toHand.y = 0f;
+            if (toHand.magnitude < 0.2f)
+            {
+                return forward.sqrMagnitude > 1e-4f ? forward.normalized : Vector3.zero;
+            }
+
+            return toHand.normalized;
         }
 
         // La mano esta libre para hacer gestos de locomocion si esta
@@ -566,7 +707,7 @@ namespace SojaExiles
                 return false;
             }
 
-            if (IsPinching(hand, OVRHand.HandFinger.Index))
+            if (SimpleGrab.IsGripping(isLeft))
             {
                 return false;
             }

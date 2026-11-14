@@ -38,8 +38,11 @@ namespace SojaExiles
         public float hysteresis = 3f;
         [Tooltip("Angulo al que queda con un apreton corto (agua fria).")]
         public float quickOpenAngle = 30f;
-        [Tooltip("Distancia de la mano a la palanca para tomarla (m).")]
-        public float grabReach = 0.08f;
+        [Tooltip("Distancia de la mano a la palanca para tomarla (m). Era 0,08: con las manos del visor costaba encontrarla.")]
+        public float grabReach = 0.11f;
+        [Tooltip("Segundos despues de empezar a apretar en los que todavia se toma la palanca (la mano se cierra antes de llegar).")]
+        public float grabWindowSeconds = 0.4f;
+        private readonly float[] pressStart = { -10f, -10f };
         [Tooltip("Un apreton mas corto que esto, sin girar, abre o cierra.")]
         public float tapSeconds = 0.35f;
 
@@ -284,7 +287,12 @@ namespace SojaExiles
                     near = h;
                 }
 
-                if (dragHand < 0 && inReach && pressed && !wasPressed[h])
+                if (pressed && !wasPressed[h])
+                {
+                    pressStart[h] = Time.unscaledTime;
+                }
+
+                if (dragHand < 0 && inReach && pressed && Time.unscaledTime - pressStart[h] <= grabWindowSeconds)
                 {
                     dragHand = h;
                     dragStartTime = Time.time;

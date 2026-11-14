@@ -128,9 +128,11 @@ Usa `[calm]` en todas; en `op_agua_no`, `[firm]`.
 | `op_saludo` | Contesta | `[calm] SAMU, ciento seis. ¿Cuál es su emergencia?` |
 | `op_agua` | Pregunta por el agua | `[calm] Entiendo. ¿Ya tiene la mano bajo agua fría corriente?` |
 | `op_agua_si` | Ya está bajo el agua | `[calm] Muy bien. Manténgala bajo el agua unos veinte minutos.` |
+| `op_agua_hecha` | Ya la enfrió (sección 36) | `[warmly] Muy bien, eso es lo más importante.` (hoy con Raúl, OneCore) |
 | `op_agua_no` | Todavía no | `[firm] Póngala ya bajo agua fría corriente, sin hielo, y manténgala ahí.` |
 | `op_ampollas` | Pide mirar la quemadura | `[calm] Mire bien la quemadura. ¿Tiene ampollas?` |
 | `op_centro` | Con ampollas | `[calm] Con ampollas en la mano, debe verla un médico. Cuando termine de enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.` (El texto del panel ya coincide; revisar que el audio no diga "gasa".) |
+| `op_centro_cubierta` | Con ampollas, ya cubierta (sección 36) | `[calm] Con ampollas en la mano, debe verla un médico. Si ya la cubrió sin apretar con film o una bolsa limpia, déjela así.` (hoy con Raúl, OneCore) |
 | `op_casa` | Sin ampollas | `[calm] Si solo está roja y es pequeña, puede cuidarla en casa. Si salen ampollas o empeora, llévela al centro de salud.` |
 | `op_decidir_centro` | Tras recomendar el centro de salud | `[calm] ¿Puede llevarla al centro de salud?` |
 | `op_decidir_casa` | Tras recomendar cuidarla en casa | `[calm] ¿Podrá cuidarla en casa?` |

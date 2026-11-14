@@ -690,7 +690,7 @@ namespace SojaExiles
 
                 // 2. Caminar y entregar.
                 ShowCard("Tutorial 2 de 3", "Llévale la taza a tu tía",
-                    "Camina con el joystick izquierdo (sin controles: pellizca con el dedo medio izquierdo).");
+                    "Camina con el joystick izquierdo. Sin controles: estira una mano hacia donde quieres ir y junta el pulgar con el dedo medio (con el anular giras).");
                 StopNarration();
                 Say("guia_caminar");
                 Transform herHand = patient != null && patient.IsReady ? patient.HandBone(false) : null;

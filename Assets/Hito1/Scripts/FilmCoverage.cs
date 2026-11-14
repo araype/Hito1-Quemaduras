@@ -18,6 +18,8 @@ namespace SojaExiles
         [Range(0.3f, 1f)] public float coverageNeeded = 0.8f;
         [Tooltip("Coseno minimo entre la tira y el largo de la mano para contar como 'a lo largo'.")]
         [Range(0f, 1f)] public float lengthwiseMin = 0.6f;
+        [Tooltip("Si es true, soltar una tira cruzada cuenta como envolver (antes). Ahora solo envolver de verdad (dar la vuelta a la mano) es error.")]
+        public bool acrossIsWrap = false;
         [Tooltip("Margen a lo largo de la tira (m): cubre un poco mas alla de sus extremos.")]
         public float lengthMargin = 0.03f;
         [Tooltip("Valor minimo de la mascara de la quemadura (canal rojo de BurnSkinPattern) para contar como zona quemada.")]
@@ -103,8 +105,17 @@ namespace SojaExiles
             Vector3 dir = frame.DirToBind(direction);
             if (Mathf.Abs(Vector3.Dot(dir, frame.Long)) < lengthwiseMin)
             {
-                wrapped = true;
-                return false;
+                if (acrossIsWrap)
+                {
+                    wrapped = true;
+                    return false;
+                }
+
+                // Una tira apoyada cruzada no envuelve nada (las guias piden
+                // no rodear la mano, porque al hincharse aprieta): se acomoda
+                // a lo largo. Con las manos del visor la tira cuelga como
+                // quiere y casi siempre caia cruzada, y salia "No la envuelvas".
+                dir = frame.Long;
             }
 
             float units = frame.UnitsPerMeter;

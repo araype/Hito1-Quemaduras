@@ -3,7 +3,8 @@ using UnityEngine;
 
 namespace SojaExiles
 {
-    // Boton de un panel, como un boton normal: se apunta y se aprieta.
+    // Boton de un panel, como un boton normal: se toca con el dedo (Poked) o
+    // se apunta y se aprieta.
     // Apuntar es tocarlo con la punta del indice (o la esfera de la mano) o
     // apuntarle de lejos con el rayo de la mano (ButtonPointer). Apretar es
     // el gatillo o el boton lateral del control, o la pinza con la mano. Solo
@@ -162,7 +163,12 @@ namespace SojaExiles
             }
 
             lastHovered = hand;
-            if (hand >= 0 && armed && ButtonPointer.PressedDown(hand))
+            int poke = Poked(now);
+            if (armed && poke >= 0)
+            {
+                Press(poke);
+            }
+            else if (hand >= 0 && armed && ButtonPointer.PressedDown(hand))
             {
                 Press(hand);
             }
@@ -173,6 +179,43 @@ namespace SojaExiles
             {
                 fillRenderer.enabled = now < flashUntil;
             }
+        }
+
+        // Tocarlo con el dedo, como en el menu del Quest: la punta del indice
+        // llega por delante del boton y lo atraviesa. Con las manos del visor
+        // la pinza sobre el boton costaba (al pinzar, el dedo se sale). Para no
+        // apretarlo sin querer, el dedo tiene que haber estado delante del
+        // boton, dentro de su rectangulo, en el ultimo medio segundo.
+        [Tooltip("Cuanto debe pasar el dedo detras del frente del boton para apretarlo (m).")]
+        public float pokeDepth = 0.006f;
+        private readonly float[] frontAt = { -10f, -10f };
+
+        private int Poked(float now)
+        {
+            int result = -1;
+            for (int h = 0; h < 2; h++)
+            {
+                if (!SimpleGrab.TryGetFingertip(h == 0, out Vector3 tip)
+                    || (SimpleGrab.TryGetHand(h == 0, out Vector3 _, out bool holding) && holding)
+                    || !PointInside(tip, 0.008f, false))
+                {
+                    frontAt[h] = -10f;
+                    continue;
+                }
+
+                float depth = Vector3.Dot(tip - transform.position, transform.forward);
+                if (depth < -0.004f && depth > -0.06f)
+                {
+                    frontAt[h] = now;
+                }
+                else if (depth >= pokeDepth && depth < 0.04f && now - frontAt[h] < 0.5f && result < 0)
+                {
+                    frontAt[h] = -10f;
+                    result = h;
+                }
+            }
+
+            return result;
         }
 
         private void Press(int hand)
@@ -307,14 +350,14 @@ namespace SojaExiles
             return -1;
         }
 
-        private bool PointInside(Vector3 p, float margin)
+        private bool PointInside(Vector3 p, float margin, bool checkDepth = true)
         {
             Vector3 local = transform.InverseTransformPoint(p) - box.center;
             Vector3 scale = transform.lossyScale;
             Vector3 half = box.size * 0.5f;
             return Mathf.Abs(local.x * scale.x) <= Mathf.Abs(half.x * scale.x) + margin
                 && Mathf.Abs(local.y * scale.y) <= Mathf.Abs(half.y * scale.y) + margin
-                && Mathf.Abs(local.z * scale.z) <= Mathf.Abs(half.z * scale.z) + margin;
+                && (!checkDepth || Mathf.Abs(local.z * scale.z) <= Mathf.Abs(half.z * scale.z) + margin);
         }
 
         private static BurnHaptics haptics;

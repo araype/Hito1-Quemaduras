@@ -16,6 +16,43 @@ si se probó en el Quest, en el editor o si solo se compiló.
 - Los valores nuevos de `BurnEvent` y demás enums van **al final**: las
   escenas guardan el número.
 
+## V. Prueba en el visor con las manos (2026-11-14) — PRIMERO
+
+El usuario probó en el Quest Pro con las manos y el simulador no mostró los
+problemas. Los arreglos están hechos y **solo se probaron en el editor con
+la mano simulada** (`QUEMADURA_INMERSION.md`, sección 36). Falta probar en
+el Quest con las manos:
+
+- **Agarrar:** con la pinza y cerrando la mano entera (taza, celular,
+  manta, bolsa, rollo de film); que agarre aunque la mano se cierre un poco
+  antes de llegar; que no agarre sin querer al pasar con la mano cerrada.
+  Ajustar `SimpleGrab.palmCloseRatio` (0,8) / `palmOpenRatio` (1,0) si la
+  mano cerrada no se detecta o se detecta de más, y `handGrabRadius` (10 cm).
+- **Llevar la manta** de la sala a la cocina con la mano al costado (fuera
+  de la vista): que no se caiga (`trackingLossHoldSeconds`, 8 s).
+- **Recoger la manta del piso** agachándose. Si el piso real sigue más
+  alto que el del juego, reajustar el piso del límite en el Quest y, si no
+  alcanza, usar `VRLocomotion.floorOffset`.
+- **Gestos de caminar:** medio = caminar hacia la mano, anular = girar; que
+  no se active al agarrar ni al cerrar la mano; caminar con la manta en la
+  otra mano. Si siguen siendo incómodos, probar el modo multimodal (control
+  izquierdo solo para el joystick, mano derecha libre).
+- **`PlaySpaceFit`:** que el límite quede frente al mesón y que el
+  celular, la palanca del caño, el cajón y la tía se alcancen sin salir del
+  límite. Revisar en el registro "[PlaySpaceFit] Area de juego acomodada";
+  si dice "Cabeza en el punto de inicio", el límite no se pudo leer (con
+  Quest Link puede pasar).
+- **Palanca del caño** con la mano bajo el chorro (alcance 11 cm).
+- **Llamada** al cubrir o después: las tres respuestas, que el operador no
+  pida cubrir si ya está cubierta y el error `SinEnfriar`.
+- **Film:** tiras cruzadas que se acomodan a lo largo sin "No la envuelvas";
+  dar la vuelta completa a su mano con la tira sí debe dar el error.
+- **Botones con el dedo:** tocar y atravesar; que dejar la mano encima o
+  pasar por delante no apriete; el botón "Llamar 106" del celular y el de
+  pausa en la muñeca.
+- **A decidir tras la prueba:** subir `PatientDialog.awayGraceSeconds`
+  (30 s) si ir por la manta sigue sin alcanzar.
+
 ## Regla
 
 Toda mecánica nueva debe estar respaldada por las guías reales (NHS, Cruz
@@ -60,7 +97,8 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
   `guia_err_curita`, `guia_err_anillo`, `guia_err_calma`,
   `guia_err_aguantar`, `guia_err_olla`, `guia_err_charco`, `guia_llamar`,
   `guia_apagar`, `guia_frio_lejos` (sección 29), `guia_agua` y
-  `guia_err_caliente` (palanca del caño, sección 34) y `op_centro`
+  `guia_err_caliente` (palanca del caño, sección 34), `op_centro`,
+  `op_agua_hecha` y `op_centro_cubierta` (sección 36)
   (textos en `docs/VOCES.md`).
 - **Voces de la tía que siguen como TTS** (`voz_ansiosa`, `voz_calmada`,
   `voz_asustada`, `voz_frio`, `voz_aguanto`, `voz_templada`, `voz_aprieta`,

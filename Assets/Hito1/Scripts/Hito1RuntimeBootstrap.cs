@@ -67,6 +67,11 @@ namespace SojaExiles
             BurnStaging.Apply();
             // Que el jugador no salga de la cocina.
             PlayArea.FromKitchen();
+            // El cuarto real del jugador, acomodado frente al meson.
+            if (Object.FindObjectOfType<PlaySpaceFit>() == null)
+            {
+                burn.gameObject.AddComponent<PlaySpaceFit>();
+            }
 
             if (Object.FindObjectOfType<KitchenAmbience>() == null)
             {

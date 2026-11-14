@@ -713,6 +713,10 @@ namespace SojaExiles
                     break;
                 case BurnSequenceManager.BurnEvent.WrongCallInfo when detail == "SinAgua":
                     return "Al 106 dijiste que la mano estaba bajo el agua y no lo estaba: informa lo que pasa de verdad.";
+                case BurnSequenceManager.BurnEvent.WrongCallInfo when detail == "SinEnfriar":
+                    return "Al 106 dijiste que ya la habías enfriado 20 minutos y no era así: informa lo que pasa de verdad.";
+                case BurnSequenceManager.BurnEvent.WrongCallInfo when detail == "YaEnfriada":
+                    return "Al 106 dijiste que todavía no la enfriabas, pero ya lo habías hecho: cuéntale lo que ya hiciste.";
                 case BurnSequenceManager.BurnEvent.WrongCallInfo:
                     return detail == "TieneAmpollas"
                         ? "Mira bien la quemadura antes de describirla: tenía ampollas (segundo grado)."

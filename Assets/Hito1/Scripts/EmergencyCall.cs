@@ -218,18 +218,34 @@ namespace SojaExiles
 
             // El operador no ve la cocina: responde a lo que le dicen. Decir
             // que esta bajo el agua cuando no lo esta es un error.
+            // Se puede llamar en cualquier momento (tambien al cubrir): hay
+            // una respuesta para cada etapa y la correcta es la que pasa.
             yield return Ask("op_agua", "Entiendo. ¿Ya tiene la mano bajo agua fría corriente?",
-                "Sí, está bajo el chorro", "Todavía no");
-            bool saysWater = answer == 0;
-            if (saysWater && !UnderWater())
+                "Sí, está bajo el chorro", "Sí, ya la enfrié 20 minutos", "Todavía no");
+            bool cooledDone = CoolingDone();
+            if (answer == 0 && !UnderWater())
             {
                 burnSequence.Report(BurnSequenceManager.BurnEvent.WrongCallInfo, "SinAgua",
                     BurnSequenceManager.Severity.Error);
             }
+            else if (answer == 1 && !cooledDone)
+            {
+                burnSequence.Report(BurnSequenceManager.BurnEvent.WrongCallInfo, "SinEnfriar",
+                    BurnSequenceManager.Severity.Error);
+            }
+            else if (answer == 2 && cooledDone)
+            {
+                burnSequence.Report(BurnSequenceManager.BurnEvent.WrongCallInfo, "YaEnfriada",
+                    BurnSequenceManager.Severity.None);
+            }
 
-            if (saysWater)
+            if (answer == 0)
             {
                 yield return Say("op_agua_si", "Muy bien. Manténgala bajo el agua unos veinte minutos.");
+            }
+            else if (answer == 1)
+            {
+                yield return Say("op_agua_hecha", "Muy bien, eso es lo más importante.");
             }
             else
             {
@@ -272,8 +288,17 @@ namespace SojaExiles
             bool goToHealthCenter;
             if (advisedCenter)
             {
-                yield return Say("op_centro", "Con ampollas en la mano, debe verla un médico. Cuando termine de " +
-                    "enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.");
+                if (burnSequence.CurrentState == BurnSequenceManager.BurnState.Covered)
+                {
+                    // Ya esta cubierta: no se le pide cubrirla otra vez.
+                    yield return Say("op_centro_cubierta", "Con ampollas en la mano, debe verla un médico. " +
+                        "Si ya la cubrió sin apretar con film o una bolsa limpia, déjela así.");
+                }
+                else
+                {
+                    yield return Say("op_centro", "Con ampollas en la mano, debe verla un médico. Cuando termine de " +
+                        "enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.");
+                }
                 yield return Ask("op_decidir_centro", "¿Puede llevarla al centro de salud?",
                     "Sí, la llevo", "Prefiero cuidarla en casa");
                 goToHealthCenter = answer == 0;
@@ -492,6 +517,14 @@ namespace SojaExiles
             }
         }
 
+        // Ya se enfrio los 20 minutos (enfriada o cubierta).
+        private bool CoolingDone()
+        {
+            BurnSequenceManager.BurnState s = burnSequence.CurrentState;
+            return s == BurnSequenceManager.BurnState.Cooled || s == BurnSequenceManager.BurnState.Covered
+                || s == BurnSequenceManager.BurnState.Success;
+        }
+
         private bool UnderWater()
         {
             BurnSequenceManager.BurnState s = burnSequence.CurrentState;
@@ -557,7 +590,9 @@ namespace SojaExiles
             root.AddComponent<OverlayPanel>();
             panel = root.transform;
             int lines = VRPanelKit.Wrap(text, 38).Split('\n').Length;
-            float height = 0.1f + lines * 0.03f + (options != null ? 0.1f : 0f);
+            bool stacked = options != null && options.Length > 2;
+            float buttonsHeight = options == null ? 0f : stacked ? options.Length * 0.07f + 0.02f : 0.1f;
+            float height = 0.1f + lines * 0.03f + buttonsHeight;
             float top = height * 0.5f;
             const float width = 0.56f;
             const float left = -width * 0.5f + 0.025f;
@@ -576,6 +611,20 @@ namespace SojaExiles
             {
                 VRPanelKit.RoundedButton(panel, options[0], new Vector2(0f, y), new Vector2(0.5f, 0.075f), Blue,
                     () => answer = 0);
+                return;
+            }
+
+            if (stacked)
+            {
+                // Tres respuestas o mas: una debajo de la otra, a lo ancho.
+                for (int i = 0; i < options.Length; i++)
+                {
+                    int index = i;
+                    float rowY = y + (options.Length - 1 - i) * 0.07f;
+                    VRPanelKit.RoundedButton(panel, options[i], new Vector2(0f, rowY), new Vector2(0.5f, 0.06f),
+                        i == 0 ? Blue : Green, () => answer = index);
+                }
+
                 return;
             }
 
@@ -705,8 +754,14 @@ namespace SojaExiles
                 taken.Add(rb.position);
             }
 
-            if (!PropKit.FindSurfaceSpot(tap.transform.position, counter, 0.35f, 1.1f, 0.09f, taken, stove,
-                stoveRadius, out Vector3 spot))
+            // Primero al borde del meson, frente al jugador: antes se buscaba
+            // alrededor del grifo y solia quedar al fondo, y en el visor solo
+            // se alcanzaba saliendo del limite del cuarto real.
+            Vector3 spot = Vector3.zero;
+            bool found = FrontOfPlayer(counter, out Vector3 near)
+                && PropKit.FindSurfaceSpot(near, counter, 0f, 0.1f, 0.09f, taken, stove, stoveRadius, out spot);
+            if (!found && !PropKit.FindSurfaceSpot(tap.transform.position, counter, 0.35f, 1.1f, 0.09f, taken, stove,
+                stoveRadius, out spot))
             {
                 return null;
             }
@@ -742,6 +797,70 @@ namespace SojaExiles
             Hito1FX.Spatialize(speaker);
             Debug.Log("[EmergencyCall] Celular en " + spot.ToString("F2"));
             return go.GetComponent<Rigidbody>();
+        }
+
+        // Lugar del celular: en el borde del meson (a 'phoneEdgeInset'), en la
+        // linea del frente del meson donde esta la tia, el punto libre mas
+        // cercano al jugador (fuera de la cocina y del lavadero).
+        [Tooltip("Distancia del celular al borde del meson (m).")]
+        public float phoneEdgeInset = 0.12f;
+
+        private bool FrontOfPlayer(float counter, out Vector3 point)
+        {
+            point = Vector3.zero;
+            VRLocomotion player = FindObjectOfType<VRLocomotion>();
+            PatientBody patient = FindObjectOfType<PatientBody>();
+            if (player == null || patient == null)
+            {
+                return false;
+            }
+
+            Vector3 dir = PropKit.Flat(patient.transform.forward).normalized;
+            Vector3 from = patient.transform.position;
+            from.y = counter - 0.12f;
+            float front = -1f;
+            foreach (RaycastHit hit in Physics.RaycastAll(from, dir, 1.5f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.rigidbody == null && hit.collider.GetComponentInParent<PatientBody>() == null
+                    && (front < 0f || hit.distance < front))
+                {
+                    front = hit.distance;
+                }
+            }
+
+            if (front < 0f)
+            {
+                return false;
+            }
+
+            BurnStaging.StoveArea(out Vector3 stove, out float stoveRadius);
+            Vector3 edge = from + dir * (front + phoneEdgeInset);
+            edge.y = counter;
+            Vector3 along = Vector3.Cross(Vector3.up, dir);
+            Vector3 feet = player.transform.position;
+            float best = float.MaxValue;
+            for (float x = -1.2f; x <= 1.2f; x += 0.1f)
+            {
+                Vector3 c = edge + along * x;
+                if (PropKit.Flat(c - stove).magnitude < stoveRadius + 0.05f)
+                {
+                    continue;
+                }
+
+                if (!PropKit.FindSurfaceSpot(c, counter, 0f, 0.04f, 0.09f, null, stove, stoveRadius, out Vector3 spot))
+                {
+                    continue;
+                }
+
+                float d = PropKit.Flat(spot - feet).magnitude;
+                if (d < best)
+                {
+                    best = d;
+                    point = spot;
+                }
+            }
+
+            return best < float.MaxValue;
         }
 
         // Tono de llamada (425 Hz, como en Peru): 1 s sonando y 1,5 s en

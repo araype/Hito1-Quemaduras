@@ -10,8 +10,9 @@ namespace SojaExiles
     // pone sobre la piel): no se pega desde lejos, la tira tiene que estar
     // tocando la mano. Mientras se acerca con la tira, ella ofrece la mano.
     // Envolver la mano es un
-    // error: soltarla atravesada o dar la vuelta a la mano con la tira la deja
-    // envuelta (se ve unos segundos), ella se queja y el narrador corrige.
+    // error: dar la vuelta a la mano con la tira la deja envuelta (se ve unos
+    // segundos), ella se queja y el narrador corrige. Soltarla cruzada ya no
+    // es error: se acomoda a lo largo (FilmCoverage.acrossIsWrap).
     [RequireComponent(typeof(Rigidbody))]
     public class FilmStrip : MonoBehaviour
     {
@@ -44,7 +45,14 @@ namespace SojaExiles
         // de la mano quemada. Se mide el giro de la mano del jugador alrededor
         // del eje largo de esa mano.
         [Tooltip("Grados de vuelta alrededor de la mano quemada para que el film se envuelva.")]
-        public float wrapGestureDegrees = 270f;
+        public float wrapGestureDegrees = 330f;
+        [Tooltip("Distancia minima de la mano del jugador al eje de la mano quemada para que cuente el giro (m). Mas cerca, el temblor de la mano sumaba vueltas falsas.")]
+        public float wrapGestureMinRadius = 0.05f;
+        [Tooltip("Un salto mayor que esto en un cuadro se descarta (temblor o seguimiento perdido).")]
+        public float wrapGestureMaxStep = 40f;
+        [Tooltip("Segundos sin avanzar en el giro para que el gesto empiece de nuevo.")]
+        public float wrapGestureStallSeconds = 1.5f;
+        private float wrapLastProgress;
         [Tooltip("Distancia maxima de la mano del jugador al eje de la mano quemada durante el gesto (m).")]
         public float wrapGestureRadius = 0.15f;
         private float wrapAngle;
@@ -437,9 +445,34 @@ namespace SojaExiles
                 return false;
             }
 
+            if (radial.magnitude < wrapGestureMinRadius)
+            {
+                // Encima de su mano (apoyando la tira): no se mide el giro.
+                return false;
+            }
+
             if (trackingWrap)
             {
-                wrapAngle += Vector3.SignedAngle(lastRadial, radial, axis);
+                float step = Vector3.SignedAngle(lastRadial, radial, axis);
+                if (Mathf.Abs(step) <= wrapGestureMaxStep)
+                {
+                    float before = Mathf.Abs(wrapAngle);
+                    wrapAngle += step;
+                    if (Mathf.Abs(wrapAngle) > before + 1f)
+                    {
+                        wrapLastProgress = Time.time;
+                    }
+                }
+
+                if (Time.time - wrapLastProgress > wrapGestureStallSeconds)
+                {
+                    wrapAngle = 0f;
+                    wrapLastProgress = Time.time;
+                }
+            }
+            else
+            {
+                wrapLastProgress = Time.time;
             }
 
             trackingWrap = true;

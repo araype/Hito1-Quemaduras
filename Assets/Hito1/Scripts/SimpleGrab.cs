@@ -50,6 +50,24 @@ namespace SojaExiles
         [Tooltip("Al agarrar, el objeto se acerca hasta tocar la mano en vez de quedar flotando a la distancia a la que estaba.")]
         public bool snapToHand = true;
 
+        [Header("Manos (hand tracking)")]
+        [Tooltip("Radio de agarre con las manos seguidas por las camaras (m). Mas grande que con controles: el punto de la pinza tiembla y la mano que se ve no siempre coincide con la real.")]
+        public float handGrabRadius = 0.1f;
+        [Tooltip("Agarrar cerrando la mano entera (puno), ademas de la pinza. Es lo que hace la gente sin pensarlo con la manta, la bolsa o el celular.")]
+        public bool palmGrab = true;
+        [Tooltip("Dedos medio y anular a menos de esta parte del largo de la palma, desde su centro: la mano cuenta como cerrada.")]
+        public float palmCloseRatio = 0.8f;
+        [Tooltip("Por encima de esta parte, la mano cerrada se abre (suelta).")]
+        public float palmOpenRatio = 1.0f;
+        [Tooltip("Segundos despues de empezar a apretar en los que se sigue intentando agarrar: la gente cierra la mano mientras llega al objeto, no despues.")]
+        public float grabWindowSeconds = 0.4f;
+        [Tooltip("Segundos que la mano debe estar abierta para soltar (las camaras pierden la pinza un instante y el objeto se caia).")]
+        public float releaseGraceSeconds = 0.12f;
+        [Tooltip("Si las camaras dejan de ver la mano con algo agarrado (al caminar con la mano al costado), el objeto se sigue llevando con la cabeza hasta este tiempo (s).")]
+        public float trackingLossHoldSeconds = 8f;
+        [Tooltip("Con la mano cerca del piso, tambien se toma lo que esta hasta esto mas abajo (m): el piso real puede no coincidir con el del juego.")]
+        public float floorReachDown = 0.25f;
+
         [Header("Colision de las manos")]
         public bool handCollisions = true;
         public float handColliderRadius = 0.03f;
@@ -79,6 +97,23 @@ namespace SojaExiles
             public Rigidbody body;
             public SphereCollider bodyCollider;
             public Held held;
+
+            // Mano cerrada (puno) con hand tracking y el punto delante de la
+            // palma donde queda lo que se agarra asi.
+            public bool palmValid;
+            public bool palmClosed;
+            public Vector3 palmPoint;
+            public bool pinchPressed;
+            public bool heldByPalm;
+
+            public float pressStart = -10f;
+            public float openSince = -1f;
+
+            // Mano perdida por las camaras con algo agarrado: pose guardada
+            // respecto de la cabeza (solo el giro horizontal).
+            public float lostSince = -1f;
+            public Vector3 lostOffset;
+            public Quaternion lostRotation;
 
             // Agarres de Meta de esta mano: se apagan mientras SimpleGrab
             // sostiene algo, para no tomar dos objetos con la misma mano.
@@ -184,6 +219,7 @@ namespace SojaExiles
                     continue;
                 }
 
+                hand.heldByPalm = false;
                 grab.Grab(hand, rb, Vector3.zero);
                 return true;
             }
@@ -860,14 +896,66 @@ namespace SojaExiles
             UpdatePendingCollisions();
         }
 
+        // True si esa mano esta cerrada (puno) con hand tracking. Lo usa
+        // VRLocomotion: con la mano cerrada los dedos medio y anular tambien
+        // "pellizcan" y el jugador caminaba o giraba sin querer al agarrar.
+        public static bool IsGripping(bool leftHand)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                Hand hand = leftHand ? Instances[i].left : Instances[i].right;
+                if (hand.palmClosed || hand.heldByPalm)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private void UpdateInput(Hand hand, Hand otherHand)
         {
             UpdatePose(hand);
+            UpdatePalm(hand);
+            float now = Time.unscaledTime;
 
             bool wasPressed = hand.pressed;
-            hand.pressed = hand.poseValid && ReadPressed(hand);
+            bool raw = hand.poseValid && ReadPressed(hand);
 
-            if (hand.pressed && !wasPressed && hand.held == null && !Blocked(hand.position) && !MetaHolding(hand))
+            // Mano perdida con algo agarrado: se sigue llevando un rato.
+            if (!hand.poseValid && hand.held != null && CarryWhileLost(hand))
+            {
+                hand.pressed = true;
+                return;
+            }
+
+            hand.lostSince = -1f;
+            if (hand.held != null && !raw && hand.poseValid && HandTracked(hand))
+            {
+                // Un instante abierta no suelta: las camaras pierden la pinza
+                // o confunden los dedos al mover la mano.
+                if (hand.openSince < 0f)
+                {
+                    hand.openSince = now;
+                }
+
+                raw = now - hand.openSince < releaseGraceSeconds;
+            }
+            else
+            {
+                hand.openSince = -1f;
+            }
+
+            hand.pressed = raw;
+            if (hand.pressed && !wasPressed)
+            {
+                hand.pressStart = now;
+            }
+
+            // Se intenta agarrar al apretar y durante un momento despues (la
+            // mano suele cerrarse un poco antes de llegar al objeto).
+            bool inWindow = hand.pressed && now - hand.pressStart <= grabWindowSeconds;
+            if (inWindow && hand.held == null && !Blocked(hand.position) && !MetaHolding(hand))
             {
                 TryGrab(hand, otherHand);
             }
@@ -875,6 +963,52 @@ namespace SojaExiles
             {
                 Release(hand);
             }
+        }
+
+        private bool HandTracked(Hand hand)
+        {
+            return hand.trackedHand != null && hand.trackedHand.IsTracked
+                && !OVRInput.IsControllerConnected(hand.controller);
+        }
+
+        // Las camaras dejaron de ver la mano con algo agarrado: el objeto queda
+        // donde estaba respecto de la cabeza (al caminar con la manta, la mano
+        // cuelga al costado, fuera de la vista). False si ya paso el tiempo o
+        // no se usa hand tracking (con controles, perder el control suelta).
+        private bool CarryWhileLost(Hand hand)
+        {
+            Transform head = cameraRig != null ? cameraRig.centerEyeAnchor : null;
+            if (head == null || hand.trackedHand == null || trackingLossHoldSeconds <= 0f)
+            {
+                return false;
+            }
+
+            Quaternion yaw = Quaternion.Euler(0f, head.eulerAngles.y, 0f);
+            float now = Time.unscaledTime;
+            if (hand.lostSince < 0f)
+            {
+                hand.lostSince = now;
+                hand.lostOffset = Quaternion.Inverse(yaw) * (GrabPoint(hand) - head.position);
+                hand.lostRotation = Quaternion.Inverse(yaw) * hand.rotation;
+            }
+
+            if (now - hand.lostSince > trackingLossHoldSeconds)
+            {
+                return false;
+            }
+
+            Vector3 point = head.position + yaw * hand.lostOffset;
+            hand.position = point;
+            hand.palmPoint = point;
+            hand.rotation = yaw * hand.lostRotation;
+            return true;
+        }
+
+        // Punto donde queda lo agarrado: la pinza o, si se agarro con la mano
+        // cerrada, delante de la palma.
+        private static Vector3 GrabPoint(Hand hand)
+        {
+            return hand.heldByPalm ? hand.palmPoint : hand.position;
         }
 
         private void UpdatePose(Hand hand)
@@ -945,6 +1079,94 @@ namespace SojaExiles
                 hand.fingertip = hand.anchor.TransformPoint(controllerFingertipOffset);
                 hand.poseValid = true;
             }
+        }
+
+        // Mano cerrada: los dedos medio y anular se doblan hacia la palma. Se
+        // mide con las articulaciones de la mano que se ve (relativo al largo
+        // de la palma, asi vale para manos grandes y chicas). Solo con hand
+        // tracking: con controles agarra el boton lateral.
+        private void UpdatePalm(Hand hand)
+        {
+            hand.palmValid = false;
+#if UNITY_EDITOR
+            if (Simulated(hand))
+            {
+                hand.palmClosed = false;
+                hand.palmPoint = hand.position;
+                return;
+            }
+#endif
+            if (!palmGrab || !hand.poseValid || !HandTracked(hand) || !TryVisibleHand(hand == left, out Oculus.Interaction.Input.IHand h))
+            {
+                hand.palmClosed = false;
+                return;
+            }
+
+            if (!h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandWristRoot, out Pose wrist)
+                || !h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandIndex1, out Pose index1)
+                || !h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandMiddle1, out Pose middle1)
+                || !h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandPinky1, out Pose pinky1)
+                || !h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandMiddleTip, out Pose middleTip)
+                || !h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandRingTip, out Pose ringTip))
+            {
+                hand.palmClosed = false;
+                return;
+            }
+
+            float palmLength = Vector3.Distance(wrist.position, middle1.position);
+            if (palmLength < 0.03f)
+            {
+                hand.palmClosed = false;
+                return;
+            }
+
+            Vector3 center = Vector3.Lerp(wrist.position, middle1.position, 0.6f);
+            Vector3 a = index1.position - wrist.position;
+            Vector3 b = pinky1.position - wrist.position;
+            // Igual que TryGetPalm: sale del lado de la palma.
+            Vector3 normal = hand == left ? Vector3.Cross(b, a) : Vector3.Cross(a, b);
+            if (normal.sqrMagnitude < 1e-8f)
+            {
+                hand.palmClosed = false;
+                return;
+            }
+
+            normal.Normalize();
+            float curl = (Vector3.Distance(middleTip.position, center) + Vector3.Distance(ringTip.position, center))
+                * 0.5f / palmLength;
+            hand.palmValid = true;
+            hand.palmPoint = center + normal * 0.035f;
+            hand.palmClosed = hand.palmClosed ? curl < palmOpenRatio : curl < palmCloseRatio;
+        }
+
+        private static bool TryVisibleHand(bool leftHand, out Oculus.Interaction.Input.IHand hand)
+        {
+            hand = null;
+            if (Time.unscaledTime >= nextVisualLookup)
+            {
+                nextVisualLookup = Time.unscaledTime + 2f;
+                handVisuals = FindObjectsOfType<Oculus.Interaction.HandVisual>();
+            }
+
+            Oculus.Interaction.Input.Handedness side = leftHand
+                ? Oculus.Interaction.Input.Handedness.Left
+                : Oculus.Interaction.Input.Handedness.Right;
+            foreach (Oculus.Interaction.HandVisual visual in handVisuals)
+            {
+                if (visual == null || !visual.isActiveAndEnabled || !visual.IsVisible)
+                {
+                    continue;
+                }
+
+                Oculus.Interaction.Input.IHand h = visual.Hand;
+                if (h != null && h.IsTrackedDataValid && h.Handedness == side)
+                {
+                    hand = h;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static Oculus.Interaction.HandVisual[] handVisuals = new Oculus.Interaction.HandVisual[0];
@@ -1046,34 +1268,41 @@ namespace SojaExiles
 
             if (hand.trackedHand != null && hand.trackedHand.IsTracked)
             {
-                float strength = hand.trackedHand.GetFingerPinchStrength(OVRHand.HandFinger.Index);
-                return hand.pressed ? strength > pinchReleaseThreshold : strength >= pinchGrabThreshold;
+                // Con poca confianza (dedos tapados por la otra mano o por el
+                // objeto) se mantiene lo que habia: antes la pinza "se abria"
+                // sola y el objeto se caia.
+                if (hand.trackedHand.IsDataHighConfidence)
+                {
+                    float strength = hand.trackedHand.GetFingerPinchStrength(OVRHand.HandFinger.Index);
+                    hand.pinchPressed = hand.pinchPressed ? strength > pinchReleaseThreshold : strength >= pinchGrabThreshold;
+                }
+
+                // Pinza o mano cerrada: suelta cuando no queda ninguna de las
+                // dos (al pasar de la pinza a cerrar la mano no se cae).
+                return hand.pinchPressed || hand.palmClosed;
             }
 
+            hand.pinchPressed = false;
             return false;
         }
 
         private void TryGrab(Hand hand, Hand otherHand)
         {
-            Collider[] hits = Physics.OverlapSphere(hand.position, grabRadius, ~0, QueryTriggerInteraction.Ignore);
-            Rigidbody closest = null;
-            Collider closestCollider = null;
-            float closestSqrDistance = float.MaxValue;
-            foreach (Collider col in hits)
-            {
-                Rigidbody rb = ResolveGrabTarget(col);
-                if (rb == null)
-                {
-                    continue;
-                }
+            bool tracked = HandTracked(hand);
+            // Con la mano cerrada (sin pinza) se agarra delante de la palma.
+            bool byPalm = tracked && hand.palmClosed && !hand.pinchPressed && hand.palmValid;
+            Vector3 point = byPalm ? hand.palmPoint : hand.position;
+            float radius = tracked ? Mathf.Max(grabRadius, handGrabRadius) : grabRadius;
 
-                float sqrDistance = (ClosestPoint(col, hand.position) - hand.position).sqrMagnitude;
-                if (sqrDistance < closestSqrDistance)
-                {
-                    closest = rb;
-                    closestCollider = col;
-                    closestSqrDistance = sqrDistance;
-                }
+            Collider[] hits = Physics.OverlapSphere(point, radius, ~0, QueryTriggerInteraction.Ignore);
+            if (!Closest(hits, point, out Rigidbody closest, out Collider closestCollider) && LowNearFloor(point))
+            {
+                // Cerca del piso: tambien lo que queda un poco mas abajo (la
+                // manta caida). Si el piso real esta mas alto que el del
+                // juego, la mano no llegaba a tocarla.
+                hits = Physics.OverlapCapsule(point, point + Vector3.down * floorReachDown, radius, ~0,
+                    QueryTriggerInteraction.Ignore);
+                Closest(hits, point, out closest, out closestCollider);
             }
 
             if (closest == null)
@@ -1087,10 +1316,59 @@ namespace SojaExiles
                 Release(otherHand);
             }
 
+            hand.heldByPalm = byPalm;
             // Lo que falta para que el objeto toque la mano.
-            Vector3 snap = snapToHand ? hand.position - ClosestPoint(closestCollider, hand.position) : Vector3.zero;
+            Vector3 snap = snapToHand ? point - ClosestPoint(closestCollider, point) : Vector3.zero;
             Grab(hand, closest, snap);
             OnGrabbed?.Invoke(closestCollider, closest, hand == left);
+        }
+
+        private bool Closest(Collider[] hits, Vector3 point, out Rigidbody closest, out Collider closestCollider)
+        {
+            closest = null;
+            closestCollider = null;
+            float closestSqrDistance = float.MaxValue;
+            foreach (Collider col in hits)
+            {
+                Rigidbody rb = ResolveGrabTarget(col);
+                if (rb == null)
+                {
+                    continue;
+                }
+
+                float sqrDistance = (ClosestPoint(col, point) - point).sqrMagnitude;
+                if (sqrDistance < closestSqrDistance)
+                {
+                    closest = rb;
+                    closestCollider = col;
+                    closestSqrDistance = sqrDistance;
+                }
+            }
+
+            return closest != null;
+        }
+
+        // La mano esta a menos de 45 cm del piso (de lo que hay debajo sin
+        // fisica, a la altura de los pies del jugador).
+        private bool LowNearFloor(Vector3 point)
+        {
+            if (floorReachDown <= 0f)
+            {
+                return false;
+            }
+
+            float feet = transform.position.y;
+            RaycastHit[] hits = Physics.RaycastAll(point + Vector3.up * 0.02f, Vector3.down, 0.6f, ~0,
+                QueryTriggerInteraction.Ignore);
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.rigidbody == null && hit.point.y < feet + 0.15f)
+                {
+                    return point.y - hit.point.y < 0.45f;
+                }
+            }
+
+            return false;
         }
 
         private Rigidbody ResolveGrabTarget(Collider col)
@@ -1155,10 +1433,11 @@ namespace SojaExiles
                 snap = Vector3.zero;
             }
 
+            Vector3 grip = GrabPoint(hand);
             Quaternion inverseHand = Quaternion.Inverse(hand.rotation);
-            held.localPosition = inverseHand * (rb.position + snap - hand.position);
+            held.localPosition = inverseHand * (rb.position + snap - grip);
             held.localRotation = inverseHand * rb.rotation;
-            held.worldOffset = rb.position + snap - hand.position;
+            held.worldOffset = rb.position + snap - grip;
 
             rb.isKinematic = false;
             rb.useGravity = false;
@@ -1180,6 +1459,8 @@ namespace SojaExiles
         {
             Held held = hand.held;
             hand.held = null;
+            hand.heldByPalm = false;
+            hand.lostSince = -1f;
             if (held.rb == null)
             {
                 return;
@@ -1229,7 +1510,9 @@ namespace SojaExiles
                 return;
             }
 
-            if (held.rb == null || !hand.poseValid)
+            // Sin pose: suelta, salvo que se este llevando con la mano perdida
+            // por las camaras (CarryWhileLost).
+            if (held.rb == null || (!hand.poseValid && hand.lostSince < 0f))
             {
                 Release(hand);
                 return;
@@ -1240,14 +1523,15 @@ namespace SojaExiles
 
             Vector3 targetPosition;
             Quaternion targetRotation;
+            Vector3 grip = GrabPoint(hand);
             if (trackRotation)
             {
-                targetPosition = hand.position + hand.rotation * held.localPosition;
+                targetPosition = grip + hand.rotation * held.localPosition;
                 targetRotation = hand.rotation * held.localRotation;
             }
             else
             {
-                targetPosition = hand.position + held.worldOffset;
+                targetPosition = grip + held.worldOffset;
                 targetRotation = rb.rotation;
             }
 

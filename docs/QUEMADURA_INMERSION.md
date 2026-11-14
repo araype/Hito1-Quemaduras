@@ -1226,3 +1226,35 @@ código): el menú se ve con la fila nueva; segundo grado, grande y nudillos
 recargó la escena con `SegundoSuperficial/Grande/Nudillos/1232`, sin menú y
 con la palanca del caño instalada. **No se probó:** tocar los botones con
 el dedo o el rayo, ni en el Quest.
+
+## 36. Arreglos para el visor con las manos (`main`, 2026-11-14)
+
+En la prueba en el Quest Pro con las manos: costaba agarrar y apretar, se
+caminaba sin querer al agarrar, la manta caída no se alcanzaba, el celular
+y la palanca del caño pedían salir del límite del cuarto, la llamada no
+encajaba si se hacía al cubrir y el film decía "No la envuelvas" sin
+haberla envuelto. El simulador no mostraba nada de esto: todo se pensó para
+el seguimiento real de las manos.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Agarrar con la mano entera | Además de la pinza, cerrar la mano (dedos medio y anular doblados hacia la palma, medido respecto del largo de la palma) agarra lo que está delante de la palma. Suelta cuando no queda ni pinza ni mano cerrada. | `SimpleGrab.UpdatePalm`, `palmCloseRatio`/`palmOpenRatio` |
+| Agarrar al llegar | Con las manos el radio es 10 cm (`handGrabRadius`; con controles sigue en 8). Se sigue intentando agarrar 0,4 s después de empezar a apretar (`grabWindowSeconds`): la mano suele cerrarse antes de tocar el objeto y antes no agarraba. Igual en la palanca del caño, cuyo alcance subió de 8 a 11 cm. | `SimpleGrab.UpdateInput`, `FaucetLever` |
+| No se cae lo agarrado | Abrir la mano un instante no suelta (0,12 s, `releaseGraceSeconds`); con poca confianza del seguimiento se mantiene la pinza que había. Si las cámaras pierden la mano (al caminar con la manta, la mano cuelga al costado) el objeto se sigue llevando respecto de la cabeza hasta 8 s (`trackingLossHoldSeconds`). | `SimpleGrab.ReadPressed`, `CarryWhileLost` |
+| Recoger del piso | Con la mano a menos de 45 cm del piso también se toma lo que está hasta 25 cm más abajo (`floorReachDown`). Probado en Play: con la mano simulada 20 cm sobre la manta caída, la agarró y la subió a la mano. | `SimpleGrab.LowNearFloor` |
+| Piso alineado | El piso del espacio de seguimiento queda a la altura del piso del juego (rayo hacia abajo, sin objetos con física), sin la holgura de la cápsula. `floorOffset` permite un ajuste fino. Probado en Play: rig a 0,100 m con el piso a 0,100 m (antes iba con la cápsula, 2 cm más arriba). Si el piso real sigue más alto, reajustar el piso del límite en el Quest (Ajustes > Límite). | `VRLocomotion.AnchorFloor` |
+| Gestos de caminar | Con cualquier mano libre: pulgar con el dedo **medio** = caminar hacia donde está esa mano (estirarla adelante, al costado: se camina y se dobla a la vez); pulgar con el **anular** = girar a saltos hacia ese lado. El gesto cuenta solo si es limpio (índice abierto, el otro dedo abierto, buena confianza), se mantiene 0,2 s y la mano no está cerrada ni sostiene algo. Ya no se camina hacia atrás con gestos. Tarjeta del tutorial 2 actualizada. | `VRLocomotion.ReadInput`, `ReadGesture`, `BurnGuide` |
+| Cocina dentro del límite | Al empezar, el rectángulo del límite del Quest se pone frente al mesón, con su lado largo a lo largo del mesón y el borde 30 cm metido en él, centrado entre la tía, el grifo y el inicio: lo de la cocina se alcanza caminando de verdad. Sin límite legible, la cabeza real va al punto de inicio mirando a la tía. Al recentrar con el botón de Meta se vuelve a acomodar. Sin visor no hace nada (probado: "Sin visor"). | `PlaySpaceFit` (nuevo, lo instala `Hito1RuntimeBootstrap`) |
+| Celular al borde | Se pone a 12 cm del borde del mesón, en el frente donde está la tía, en el punto libre más cercano al jugador (fuera de la cocina y del lavadero). Probado en Play: quedó a 12 cm del borde y a 1 m de la tía (antes, al fondo junto al grifo). | `EmergencyCall.FrontOfPlayer` |
+| Llamar en cualquier etapa | La pregunta del agua tiene tres respuestas (una debajo de otra): "Sí, está bajo el chorro", "Sí, ya la enfrié 20 minutos", "Todavía no". Decir que ya se enfrió sin haberlo hecho es error (`SinEnfriar`); decir "todavía no" ya enfriada se anota sin restar (`YaEnfriada`). Si ya está cubierta, el operador no pide cubrirla. Voces nuevas con Raúl (OneCore, 44,1 kHz, al volumen de `op_centro`): `op_agua_hecha`, `op_centro_cubierta`. | `EmergencyCall`, `BurnProtocol` |
+| Film | Una tira soltada cruzada sobre la mano ya no cuenta como envolver: se acomoda a lo largo (`FilmCoverage.acrossIsWrap`). Envolver es solo dar la vuelta a su mano con la tira: ahora pide 330°, con la mano a más de 5 cm de su eje (encima de la mano el temblor sumaba vueltas falsas), descarta saltos de más de 40° por cuadro y vuelve a cero tras 1,5 s sin avanzar. | `FilmCoverage.Apply`, `FilmStrip.TrackWrapGesture` |
+| Botones con el dedo | Tocar el botón con la punta del índice, viniendo de delante y atravesándolo 6 mm, lo aprieta (como en el menú del Quest). El dedo tiene que haber estado delante del botón en el último medio segundo, así que dejar la mano encima no aprieta nada. Siguen valiendo el rayo y la pinza. Probado en Play con la mano simulada: el dedo atravesó "Grado: al azar" y pasó a "Primer grado". | `TouchButton.Poked` |
+
+**Probado en Play** (editor, sin visor, mano simulada de `SimpleGrab`):
+compila sin errores; sin errores nuevos al empezar; piso, celular, toque
+del botón y recoger la manta del piso como en la tabla. **No se probó:**
+nada con manos reales ni en el Quest. En particular, el agarre con la mano
+cerrada (la mano simulada no tiene dedos), llevar la manta con la mano
+fuera de la vista, los gestos de caminar, `PlaySpaceFit` con el límite real,
+la llamada con tres respuestas (no se hizo la llamada) ni las tiras de film
+cruzadas. Ver `PENDIENTES.md`, sección V.
