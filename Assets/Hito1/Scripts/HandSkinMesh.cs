@@ -12,11 +12,116 @@ namespace SojaExiles
             return index >= 0 && index < handBone.Length && handBone[index] ? weight : 0f;
         }
 
+        // Copia de otra capa (la de la quemadura) quedandose solo con los
+        // triangulos cuyos tres vertices cumplen 'keep' (sobre el color de cada
+        // vertice: la mascara de BurnSkinPattern) y un poco mas separada de la
+        // piel. La usa CoverItem: el film o la gasa cubren la quemadura, no la
+        // mano entera.
+        public static SkinnedMeshRenderer CopyWhere(SkinnedMeshRenderer source, System.Func<Color, bool> keep,
+            float extraOffset, string objectName, string materialName)
+        {
+            Mesh src = source != null ? source.sharedMesh : null;
+            if (src == null)
+            {
+                return null;
+            }
+
+            Vector3[] vertices = src.vertices;
+            Vector3[] normals = src.normals;
+            Vector2[] uv = src.uv;
+            Color[] colors = src.colors;
+            BoneWeight[] weights = src.boneWeights;
+            int[] triangles = src.triangles;
+            if (colors.Length != vertices.Length || normals.Length != vertices.Length)
+            {
+                return null;
+            }
+
+            float scale = Mathf.Abs(source.transform.lossyScale.x);
+            float offset = scale > 1e-6f ? extraOffset / scale : extraOffset;
+            Dictionary<int, int> remap = new Dictionary<int, int>();
+            List<Vector3> v2 = new List<Vector3>();
+            List<Vector3> n2 = new List<Vector3>();
+            List<Vector2> uv2 = new List<Vector2>();
+            List<BoneWeight> w2 = new List<BoneWeight>();
+            List<int> t2 = new List<int>();
+            for (int t = 0; t < triangles.Length; t += 3)
+            {
+                int a = triangles[t], b = triangles[t + 1], c = triangles[t + 2];
+                if (!keep(colors[a]) || !keep(colors[b]) || !keep(colors[c]))
+                {
+                    continue;
+                }
+
+                for (int k = 0; k < 3; k++)
+                {
+                    int index = triangles[t + k];
+                    if (!remap.TryGetValue(index, out int mapped))
+                    {
+                        mapped = v2.Count;
+                        remap[index] = mapped;
+                        v2.Add(vertices[index] + normals[index] * offset);
+                        n2.Add(normals[index]);
+                        uv2.Add(uv.Length == vertices.Length ? uv[index] : Vector2.zero);
+                        w2.Add(weights[index]);
+                    }
+
+                    t2.Add(mapped);
+                }
+            }
+
+            if (t2.Count == 0)
+            {
+                return null;
+            }
+
+            Mesh mesh = new Mesh { name = objectName };
+            mesh.SetVertices(v2);
+            mesh.SetNormals(n2);
+            mesh.SetUVs(0, uv2);
+            mesh.boneWeights = w2.ToArray();
+            mesh.bindposes = src.bindposes;
+            mesh.SetTriangles(t2, 0);
+            mesh.RecalculateBounds();
+
+            GameObject go = new GameObject(objectName);
+            go.AddComponent<NoAutoCollider>();
+            go.transform.SetParent(source.transform.parent, false);
+            go.transform.localPosition = source.transform.localPosition;
+            go.transform.localRotation = source.transform.localRotation;
+            go.transform.localScale = source.transform.localScale;
+            SkinnedMeshRenderer result = go.AddComponent<SkinnedMeshRenderer>();
+            result.sharedMesh = mesh;
+            result.bones = source.bones;
+            result.rootBone = source.rootBone;
+            result.localBounds = source.localBounds;
+            result.updateWhenOffscreen = source.updateWhenOffscreen;
+            result.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            Material material = Hito1FX.Mat(materialName);
+            if (material != null)
+            {
+                result.sharedMaterial = material;
+            }
+
+            return result;
+        }
+
         // Copia de los triangulos de la piel que mueven los huesos de una mano,
         // apenas por encima de la piel y con los mismos huesos (se deforma con
         // la mano). Devuelve null si no se puede (y avisa en la consola).
         public static SkinnedMeshRenderer Build(Component owner, bool rightHand, float minHandWeight,
             float surfaceOffset, string skinRendererName, string objectName, string materialName)
+        {
+            return Build(owner, rightHand, minHandWeight, surfaceOffset, skinRendererName, objectName, materialName,
+                null);
+        }
+
+        // Igual, pero solo con los triangulos que acepta 'filter' (recibe el
+        // centro y la normal del triangulo en el espacio de la malla, en la
+        // pose de enlace). Lo usan las tiras de film, que cubren una franja.
+        public static SkinnedMeshRenderer Build(Component owner, bool rightHand, float minHandWeight,
+            float surfaceOffset, string skinRendererName, string objectName, string materialName,
+            System.Func<Vector3, Vector3, bool> filter)
         {
             SkinnedMeshRenderer skin = null;
             foreach (SkinnedMeshRenderer r in owner.GetComponentsInChildren<SkinnedMeshRenderer>(true))
@@ -85,6 +190,12 @@ namespace SojaExiles
             {
                 int a = triangles[t], b = triangles[t + 1], c = triangles[t + 2];
                 if (!isHand[a] || !isHand[b] || !isHand[c])
+                {
+                    continue;
+                }
+
+                if (filter != null && !filter((vertices[a] + vertices[b] + vertices[c]) / 3f,
+                    (normals[a] + normals[b] + normals[c]).normalized))
                 {
                     continue;
                 }

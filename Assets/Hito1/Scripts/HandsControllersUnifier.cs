@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SojaExiles
@@ -18,6 +19,8 @@ namespace SojaExiles
     //     VRLocomotion queda como unico sistema de movimiento. Solo se tocan
     //     componentes dentro del jugador (el objeto con VRLocomotion), nunca
     //     los de otros personajes de la escena.
+    //  4. Apaga el agarre a distancia del SDK (objetos flotando lejos de la
+    //     mano).
     //
     // Se reaplica unos segundos porque el rig se arma en runtime.
     public class HandsControllersUnifier : MonoBehaviour
@@ -25,6 +28,7 @@ namespace SojaExiles
         public bool showHandsWhileHoldingControllers = true;
         public bool hideControllerModels = true;
         public bool disableMetaLocomotion = true;
+        public bool disableDistanceGrab = true;
         public OVRManager.ControllerDrivenHandPosesType handPosesType = OVRManager.ControllerDrivenHandPosesType.Natural;
 
         private static readonly float[] ApplyDelays = { 0f, 0.5f, 1.5f, 4f, 10f };
@@ -34,6 +38,7 @@ namespace SojaExiles
         private float startTime;
         private int disabledLocomotionComponents;
         private int disabledCharacterControllers;
+        private int disabledDistanceGrab;
 
         private void Start()
         {
@@ -58,9 +63,10 @@ namespace SojaExiles
             if (nextApplyIndex >= ApplyDelays.Length)
             {
                 Debug.Log(string.Format(
-                    "[Hito1] Manos+controles unificados. Componentes de locomocion Meta apagados: {0}, CharacterController extra apagados: {1}.",
+                    "[Hito1] Manos+controles unificados. Componentes de locomocion Meta apagados: {0}, CharacterController extra apagados: {1}, agarre a distancia apagado: {2}.",
                     disabledLocomotionComponents,
-                    disabledCharacterControllers));
+                    disabledCharacterControllers,
+                    disabledDistanceGrab));
             }
         }
 
@@ -71,6 +77,35 @@ namespace SojaExiles
             if (disableMetaLocomotion)
             {
                 DisableMetaLocomotion();
+            }
+
+            if (disableDistanceGrab)
+            {
+                DisableDistanceGrab();
+            }
+        }
+
+        // El agarre a distancia del SDK tomaba objetos lejanos y los dejaba
+        // flotando lejos de la mano (y sumaba un segundo objeto a la mano).
+        // En una cocina todo se alcanza caminando: solo agarre de cerca.
+        private void DisableDistanceGrab()
+        {
+            VRLocomotion player = FindObjectOfType<VRLocomotion>();
+            if (player == null)
+            {
+                return;
+            }
+
+            List<Behaviour> interactors = new List<Behaviour>();
+            interactors.AddRange(player.GetComponentsInChildren<Oculus.Interaction.HandGrab.DistanceHandGrabInteractor>(true));
+            interactors.AddRange(player.GetComponentsInChildren<Oculus.Interaction.DistanceGrabInteractor>(true));
+            foreach (Behaviour interactor in interactors)
+            {
+                if (interactor.enabled)
+                {
+                    interactor.enabled = false;
+                    disabledDistanceGrab++;
+                }
             }
         }
 

@@ -13,11 +13,43 @@ namespace SojaExiles
         private static readonly Dictionary<string, AudioClip> Clips = new Dictionary<string, AudioClip>();
         private static readonly Dictionary<string, Material> Materials = new Dictionary<string, Material>();
 
+        // Voces que todavia son TTS (de corregir-bugs) y se oian robotizadas al
+        // lado de las de ElevenLabs. Mientras no se regeneren (docs/VOCES.md),
+        // suena una frase de ElevenLabs que encaja en el mismo momento o, si
+        // no hay ninguna (""), nada: el texto sigue en la tarjeta o el panel.
+        // Al regenerar una voz, se quita de aqui.
+        // Las frases del narrador que decian algo incorrecto (gasa, chompa,
+        // "deja la mano sobre el boton") o faltaban se regeneraron el
+        // 2026-11-12 con la voz de Windows "Microsoft Sabina" (y op_centro con
+        // "Microsoft Raul"): suenan menos naturales que las de ElevenLabs,
+        // pero dicen lo correcto. Se reemplazan con ElevenLabs cuando esten.
+        private static readonly Dictionary<string, string> TtsStandIns = new Dictionary<string, string>
+        {
+            { "voz_ansiosa", "voz_dolor_1" },         // "Me arde... me arde mucho."
+            { "voz_calmada", "voz_alivio_agua" },     // "Ay... el agua fria me alivia."
+            { "voz_asustada", "voz_dolor_2" },        // "Ayudame, por favor!"
+            { "voz_frio", "voz_hielo_duele" },        // "Ay! Esta helado, me duele mas."
+            { "voz_aguanto", "voz_enfriada" },        // "Ya se siente un poco mejor."
+            { "voz_templada", "voz_alivio_agua" },
+            { "voz_aprieta", "voz_remedio_no" },      // "No, eso no me pongas, por favor."
+            { "voz_templar_pide", "" }
+        };
+
         public static AudioClip Clip(string name)
         {
             if (string.IsNullOrEmpty(name))
             {
                 return null;
+            }
+
+            if (TtsStandIns.TryGetValue(name, out string standIn))
+            {
+                if (standIn.Length == 0)
+                {
+                    return null;
+                }
+
+                name = standIn;
             }
 
             if (!Clips.TryGetValue(name, out AudioClip clip))
@@ -65,7 +97,26 @@ namespace SojaExiles
             source.maxDistance = maxDistance;
             source.dopplerLevel = 0f;
             source.spread = 30f;
+            Spatialize(source);
             return source;
+        }
+
+        // Sonido con HRTF de Meta XR Audio (el espacializador del proyecto,
+        // Project Settings > Audio): con audifonos se oye de donde viene,
+        // tambien arriba, abajo y atras, no solo a la izquierda o la
+        // derecha. El narrador no pasa por aqui: es una voz "en off".
+        public static void Spatialize(AudioSource source)
+        {
+            if (source == null)
+            {
+                return;
+            }
+
+            source.spatialize = true;
+            if (source.GetComponent<MetaXRAudioSource>() == null)
+            {
+                source.gameObject.AddComponent<MetaXRAudioSource>();
+            }
         }
 
         // Sonido corto en un punto del mundo. A diferencia de
@@ -83,6 +134,8 @@ namespace SojaExiles
             go.transform.position = position;
             AudioSource source = CreateSource(go, clipName, volume, false, minDistance, 10f);
             source.pitch = 1f + Random.Range(-pitchJitter, pitchJitter);
+            // En pausa solo suenan los clics del menu.
+            source.ignoreListenerPause = PauseMenu.Paused;
             source.Play();
             Object.Destroy(go, clip.length / Mathf.Max(0.5f, source.pitch) + 0.2f);
         }

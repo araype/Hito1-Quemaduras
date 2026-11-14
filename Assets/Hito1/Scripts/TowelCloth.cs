@@ -509,6 +509,19 @@ namespace SojaExiles
             }
         }
 
+        // Extiende la tela sobre el objeto donde esta ahora (al devolverlo al
+        // meson desde el piso): sin esto se estiraba por toda la cocina.
+        public void Snap()
+        {
+            for (int k = 0; k < count; k++)
+            {
+                pos[k] = transform.TransformPoint(restLocal[k]);
+                prev[k] = pos[k];
+            }
+
+            freeTime = 0f;
+        }
+
         private void LateUpdate()
         {
             if (count == 0)
@@ -601,10 +614,9 @@ namespace SojaExiles
 
             ApplyTethers();
 
-            if (mode != Mode.Free || restPull < 0.3f)
-            {
-                CollideWithScene();
-            }
+            // Tambien en reposo: si no, la tela que cuelga del borde del meson
+            // lo atravesaba.
+            CollideWithScene();
         }
 
         // Ninguna particula se aleja de un punto sujeto mas que su distancia

@@ -8,34 +8,45 @@ historial de git).
 
 ## Antes de empezar
 
-- **Qué falta:** `docs/PENDIENTES.md`. Al terminar un punto, márcalo ahí.
-- **Qué hay y cómo probarlo:** `docs/QUEMADURA_INMERSION.md`. Las secciones 5
-  y 6 cubren la experiencia principal y la secuencia.
-- **Movilidad del jugador:** `docs/MOVILIDAD_MEJORADA.md` explica los cambios y
-  cómo combinar la rama `movilidad-mejorada`.
-- Historia anterior: `docs/HITO2.md` y `docs/AUDITORIA.md`.
+- **Qué falta y en qué orden:** `docs/PENDIENTES.md` (única lista, solo lo
+  que falta). Al terminar un punto, bórralo de ahí y descríbelo en
+  `docs/QUEMADURA_INMERSION.md`. Los bugs vienen de
+  `Bugs_Experiencia_VR_Quemaduras.pdf` (raíz, sin versionar).
+- **Qué hay y cómo probarlo:** `docs/QUEMADURA_INMERSION.md`.
+- Los documentos de etapas anteriores se borraron; siguen en el historial.
 
 ## Ramas
 
-Todo el trabajo de quemadura ya está unido en `main`. Trabaja en
-`secuencia-quemadura` (o en una rama nueva salida de `main`) y une a `main`
-con un pull request.
+`consolidada` une `experiencia-inmersiva` (Araype, con `quemadura-realista`
+y `rediseno-tarjetas`) y `corregir-bugs` (jjosnayo). Las decisiones de la
+unión están en `docs/QUEMADURA_INMERSION.md`, sección 14. Se trabaja desde
+`consolidada` y se une a `main` con un pull request.
 
 ## Cómo está armado
 
-- Escena principal: `Assets/Hito1/Escenas/Escenario_Quemadura.unity`.
-- **No se editan las escenas a mano.** Todo lo nuevo se instala al dar Play
-  desde `Hito1RuntimeBootstrap` (solo si la escena tiene
-  `BurnSequenceManager`) y no se duplica si ya está en la escena.
+- Escena principal (la del build, con luz precalculada):
+  `Assets/Hito1/Escenas/Escenario_Quemadura.unity`. Hasta el 2026-11-12 se
+  llamaba `Prueba_LuzHorneada`; la escena vieja que antes tenía ese nombre
+  quedó como `Escenario_Quemadura_Previa.unity` (desactualizada, fuera del
+  build). La tía de Avaturn ya está guardada en la escena principal.
+- Lo nuevo se instala al dar Play desde `Hito1RuntimeBootstrap` (solo si la
+  escena tiene `BurnSequenceManager`) y no se duplica si ya está en la
+  escena. La escena principal se puede modificar si el usuario lo pide.
 - `BurnSequenceManager` maneja los estados (Idle → Burned → Cooling → Cooled
   → Covered → Success) y el canal de eventos `OnEvent` (evento, detalle,
   gravedad). Lo nuevo debe avisar por `Report(...)` en vez de llamar
   directamente al puntaje.
 - `BurnProtocol` arma los pasos, los errores, el puntaje y el resumen a
   partir de esos eventos.
-- Objetos creados por código con `PropKit`; paneles y textos con `VRPanelKit`
-  (TextMesh con la fuente integrada: el proyecto no tiene los recursos de
-  TextMesh Pro); botones táctiles con `TouchButton`.
+- La tía: animaciones de Mixamo (`PatientAnimator`, controlador en
+  `Resources/Hito1Anim`) para cuerpo, piernas y gestos; `PatientBody` mueve
+  los brazos por cinemática inversa cuando van a un objetivo. Al dar Play,
+  `PatientModelSwap` cambia el modelo de Mixamo por la tía de Avaturn
+  (`Resources/Hito1Avatar/TiaAvaturn`, Humanoid, se rearma con el menú
+  Hito1 > Preparar tia de Avaturn) y `PatientFace` mueve su cara.
+- Objetos creados por código con `PropKit`; paneles y textos con `VRPanelKit`,
+  `RoundedPanel` y `PanelText` (TextMesh Pro, desde `rediseno-tarjetas`);
+  botones táctiles con `TouchButton`.
 - Sonidos y materiales se cargan por nombre desde
   `Assets/Hito1/Resources/{Hito1Audio,Hito1FX}` con `Hito1FX.Clip/Mat` o
   `PropKit.Mat`. Los efectos están sintetizados y las voces son TTS.

@@ -48,7 +48,11 @@ namespace SojaExiles
         public float handShakeDegrees = 32f;
         public float handShakeSeconds = 1.6f;
 
-        private static readonly string[] PainLines = { "voz_dolor_1", "voz_dolor_2", "voz_quemadura_2" };
+        // Mas variantes para que el quejido no se repita cada pocos segundos.
+        private static readonly string[] PainLines =
+        {
+            "voz_dolor_1", "voz_dolor_2", "voz_quemadura_2", "voz_dolor_3", "voz_dolor_4", "voz_dolor_5"
+        };
 
         private PatientBody body;
         private AudioSource voice;
@@ -57,6 +61,7 @@ namespace SojaExiles
         private float stateTime;
         private float burnedWithoutWater;
         private float nextPainLine;
+        private int lastPainLine = -1;
         private float nextTremble;
         private float nextProtest;
         private bool waterHinted, clothHinted, relieved;
@@ -128,9 +133,10 @@ namespace SojaExiles
                     break;
 
                 case BurnSequenceManager.BurnEvent.RemedyNear:
-                    // El algodon no le parece mal (el error es que suelta
-                    // pelusa); de lo demas aparta la mano.
-                    if (detail == HomeRemedy.Remedy.Algodon.ToString())
+                    // El algodon y la curita no le parecen mal (el error es
+                    // que se pegan a la herida); de lo demas aparta la mano.
+                    if (detail == HomeRemedy.Remedy.Algodon.ToString()
+                        || detail == HomeRemedy.Remedy.Curita.ToString())
                     {
                         break;
                     }
@@ -142,6 +148,13 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnEvent.RemedyApplied:
                     if (severity != BurnSequenceManager.Severity.Critical)
                     {
+                        // La curita pegada sobre la piel quemada le duele.
+                        if (detail == HomeRemedy.Remedy.Curita.ToString())
+                        {
+                            Say("voz_dolor_1", true);
+                            Hurt(0.4f);
+                        }
+
                         break;
                     }
 
@@ -169,6 +182,11 @@ namespace SojaExiles
 
                 case BurnSequenceManager.BurnEvent.SweaterOn:
                     SayLater("voz_abrigo", 0.6f);
+                    break;
+
+                case BurnSequenceManager.BurnEvent.FilmWrapped:
+                    Say("voz_aprieta", true);
+                    Hurt(0.3f);
                     break;
 
                 case BurnSequenceManager.BurnEvent.MedicalDecision:
@@ -286,7 +304,11 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnState.Covered:
                     Hito1FX.PlayAt("logro_paso", hand, 0.6f, 0f);
                     SayLater("voz_exito", 0.9f);
-                    SayLater("voz_pregunta_medico", 0.6f);
+                    // Si todavia nadie llamo al 106, ella lo sugiere.
+                    if (EmergencyCall.Instance == null || !EmergencyCall.Instance.Decided)
+                    {
+                        SayLater("voz_pregunta_medico", 0.6f);
+                    }
                     break;
 
                 case BurnSequenceManager.BurnState.Success:
@@ -305,8 +327,15 @@ namespace SojaExiles
             float dt = Time.deltaTime;
             stateTime += dt;
             BurnSequenceManager.BurnState state = burnSequence.CurrentState;
+            // Durante la llamada al 106 no se queja ni habla encima del
+            // operador: lo que tenia por decir espera a que cuelgue.
+            bool quiet = EmergencyCall.InCall;
+            if (quiet)
+            {
+                nextQueuedTime = Mathf.Max(nextQueuedTime, Time.time + 0.8f);
+            }
 
-            if (queuedLines.Count > 0 && Time.time >= nextQueuedTime && !IsSpeaking)
+            if (queuedLines.Count > 0 && Time.time >= nextQueuedTime && !IsSpeaking && !quiet)
             {
                 Say(queuedLines[0], true);
                 queuedLines.RemoveAt(0);
@@ -321,13 +350,22 @@ namespace SojaExiles
             if (state == BurnSequenceManager.BurnState.Burned)
             {
                 burnedWithoutWater += dt;
-                if (Time.time >= nextPainLine && !IsSpeaking)
+                if (Time.time >= nextPainLine && !IsSpeaking && !quiet)
                 {
                     nextPainLine = Time.time + Random.Range(painLineInterval.x, painLineInterval.y);
-                    Say(PainLines[Random.Range(0, PainLines.Length)], false);
+                    // Nunca el mismo quejido dos veces seguidas.
+                    int line = Random.Range(0, PainLines.Length - (lastPainLine >= 0 ? 1 : 0));
+                    if (lastPainLine >= 0 && line >= lastPainLine)
+                    {
+                        line++;
+                    }
+
+                    lastPainLine = line;
+                    Say(PainLines[line], false);
                 }
 
-                if (voiceHints && !waterHinted && burnedWithoutWater > waterHintDelay && !relieved && !IsSpeaking)
+                if (voiceHints && !waterHinted && burnedWithoutWater > waterHintDelay && !relieved && !IsSpeaking
+                    && !quiet)
                 {
                     waterHinted = true;
                     Say("voz_pista_agua", false);
@@ -342,7 +380,7 @@ namespace SojaExiles
             }
 
             if (state == BurnSequenceManager.BurnState.Cooled && voiceHints && !clothHinted
-                && stateTime > clothHintDelay && !IsSpeaking)
+                && stateTime > clothHintDelay && !IsSpeaking && !quiet)
             {
                 clothHinted = true;
                 Say("voz_pista_pano", false);
@@ -409,6 +447,18 @@ namespace SojaExiles
             get { return voice != null && voice.isPlaying; }
         }
 
+        // Dolor actual de 0 (calmada) a 1 (dolor maximo). Lo lee PatientFace.
+        public float Pain
+        {
+            get { return pain; }
+        }
+
+        // Fuente de la voz de la tia (PatientFace mueve la boca con ella).
+        public AudioSource VoiceSource
+        {
+            get { return voice; }
+        }
+
         public void Say(string line, bool interrupt)
         {
             if (voice == null || (IsSpeaking && !interrupt))
@@ -433,6 +483,19 @@ namespace SojaExiles
             voice.volume = voiceVolume;
             voice.pitch = Random.Range(0.97f, 1.03f);
             voice.Play();
+
+            // El gesto que acompana la frase (asentir, negar, alivio...).
+            if (PatientAnimator.Instance != null)
+            {
+                PatientAnimator.Instance.ForVoice(line);
+            }
+
+            // Y la cara que la acompana (dolor, miedo, alivio, ceno...).
+            PatientFace face = GetComponent<PatientFace>();
+            if (face != null)
+            {
+                face.ForVoice(line);
+            }
         }
 
         // Dice la frase despues de 'delay' segundos (o despues de las que ya

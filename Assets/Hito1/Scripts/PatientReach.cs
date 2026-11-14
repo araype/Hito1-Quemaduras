@@ -22,8 +22,13 @@ namespace SojaExiles
         public Rigidbody target;
         public bool rightArm = true;
 
+        // Los limites de estirarse e inclinarse tienen nombre nuevo
+        // (2026-11-07) para que no los pisen los valores guardados en la
+        // escena (0,97 / 35 / 15 / 25), que hacian que la paciente se
+        // contorsionara antes de dar un paso: no volver a los nombres viejos.
         [Header("Limites del brazo")]
-        [Range(0.8f, 1f)] public float reachFraction = 0.97f;
+        [Tooltip("Fraccion del largo del brazo que puede estirarse (1 = brazo recto).")]
+        [Range(0.8f, 1f)] public float armReach = 0.92f;
         [Tooltip("Cuanto puede ir la mano detras del plano de los hombros (m).")]
         public float behindLimit = 0.12f;
         [Tooltip("Distancia minima entre la mano y la columna (m).")]
@@ -32,12 +37,19 @@ namespace SojaExiles
         [Header("Seguir con el cuerpo")]
         public bool followBody = true;
         [Tooltip("Fraccion del largo del brazo a partir de la cual el cuerpo se acerca.")]
-        public float startFollowFraction = 0.85f;
+        public float stepAtFraction = 0.72f;
         public float stepSpeed = 0.6f;
         [Tooltip("Mientras el jugador la lleva del brazo: empieza a caminar antes y puede ir mas rapido.")]
         public float ledFollowFraction = 0.55f;
         public float ledMaxSpeed = 1.5f;
         public float turnSpeed = 80f;
+        [Tooltip("Velocidad al girar hacia un punto (FaceTo, p.ej. al voltearse para recibir la taza), en grados/s. "
+            + "Acelera al empezar y frena al llegar.")]
+        public float faceTurnSpeed = 150f;
+        [Tooltip("Llevada del brazo: velocidad maxima, como una persona caminando (m/s).")]
+        public float ledWalkSpeed = 0.8f;
+        [Tooltip("Llevada del brazo: con que rapidez gira el cuerpo hacia donde camina (grados/s).")]
+        public float ledTurnSpeed = 200f;
         [Tooltip("Rango comodo del angulo de la mano respecto del frente (grados). Fuera de el, el cuerpo gira.")]
         public float comfortInner = 20f;
         public float comfortOuter = 55f;
@@ -47,10 +59,12 @@ namespace SojaExiles
         public float bodyHeight = 1.0f;
 
         [Header("Postura")]
-        public float maxLean = 35f;
+        [Tooltip("Inclinacion maxima del torso (grados).")]
+        public float leanLimit = 24f;
         [Tooltip("Inclinacion extra si aun asi el brazo no llega (p.ej. al chorro del grifo, al fondo del meson).")]
-        public float reachLeanExtra = 15f;
-        public float maxTwist = 25f;
+        public float leanReachExtra = 10f;
+        [Tooltip("Giro maximo del torso hacia la mano (grados).")]
+        public float twistLimit = 15f;
         public float postureSpeed = 4f;
 
         private PatientBody body;
@@ -61,6 +75,19 @@ namespace SojaExiles
         private CharacterController mover;
         private Vector3 lastRootPosition;
         private float smoothedSpeed;
+        private Vector3 walkGoal;
+        private float walkGoalSpeed;
+        private bool hasWalkGoal;
+
+        private Vector3 facePoint;
+        private float faceUntil;
+
+        // Se gira hacia ese punto durante un rato (si nadie la lleva).
+        public void FaceTo(Vector3 point, float seconds = 0.5f)
+        {
+            facePoint = point;
+            faceUntil = Time.time + seconds;
+        }
 
         // Capsula de piernas y cadera con que se desplaza (la usa
         // PatientPhysics para que sus propios colliders no la frenen).
@@ -130,6 +157,15 @@ namespace SojaExiles
             }
         }
 
+        // Camina hasta un punto (al quemarse se aparta de la cocina). Respeta
+        // muebles y paredes, y se cancela si el jugador la toma del brazo.
+        public void WalkTo(Vector3 point, float speed = 0.5f)
+        {
+            walkGoal = point;
+            walkGoalSpeed = speed;
+            hasWalkGoal = true;
+        }
+
         private void OnDestroy()
         {
             if (mover != null)
@@ -159,7 +195,7 @@ namespace SojaExiles
             desiredHand = next;
             hasDesired = true;
 
-            Vector3 allowed = body.ConstrainReach(rightArm, next, reachFraction, behindLimit, torsoClearance);
+            Vector3 allowed = body.ConstrainReach(rightArm, next, armReach, behindLimit, torsoClearance);
             if ((allowed - next).sqrMagnitude > 1e-8f)
             {
                 target.velocity = (allowed - position) / dt;
@@ -179,20 +215,70 @@ namespace SojaExiles
             Vector3 toHand = PatientBody.Flat(desiredHand - chest);
             float armLength = body.ArmLength(rightArm);
 
+            if (hasWalkGoal)
+            {
+                Vector3 toGoal = PatientBody.Flat(walkGoal - transform.position);
+                if (IsLed || toGoal.magnitude < 0.02f)
+                {
+                    hasWalkGoal = false;
+                }
+                else
+                {
+                    Vector3 before = transform.position;
+                    MoveBody(toGoal.normalized * Mathf.Min(toGoal.magnitude, walkGoalSpeed * dt));
+                    // Trabada contra un mueble: no insiste.
+                    if (PatientBody.Flat(transform.position - before).magnitude < walkGoalSpeed * dt * 0.1f)
+                    {
+                        hasWalkGoal = false;
+                    }
+                }
+            }
+
             if (followBody)
             {
-                TurnTowardHand(toHand, dt);
+                // Mientras se le pide mirar a un punto (FaceTo) no se gira
+                // hacia la mano: si no, las dos cosas se anulaban (al
+                // voltearse para recibir la taza volvia a la olla).
+                if (IsLed || hasWalkGoal || Time.time >= faceUntil)
+                {
+                    TurnTowardHand(toHand, dt);
+                }
 
                 // Si la llevan del brazo camina antes y, cuanto mas tiran,
                 // mas rapido (hasta ledMaxSpeed): asi no se suelta.
                 bool led = IsLed;
                 Vector3 fromShoulder = PatientBody.Flat(desiredHand - shoulder);
-                float excess = fromShoulder.magnitude - armLength * (led ? ledFollowFraction : startFollowFraction);
+                float excess = fromShoulder.magnitude - armLength * (led ? ledFollowFraction : stepAtFraction);
                 if (excess > 0.005f)
                 {
-                    float speed = led ? Mathf.Clamp(excess * 5f, stepSpeed, ledMaxSpeed) : stepSpeed;
+                    // Llevada del brazo: a paso de persona (antes hasta 1,5 m/s,
+                    // parecia un objeto arrastrado).
+                    float speed = led ? Mathf.Clamp(excess * 5f, stepSpeed, Mathf.Min(ledMaxSpeed, ledWalkSpeed)) : stepSpeed;
                     Vector3 move = fromShoulder.normalized * Mathf.Min(excess, speed * dt);
                     MoveBody(move);
+                }
+
+                if (led)
+                {
+                    FaceWhereWalking(dt);
+                }
+
+                if (!led && !hasWalkGoal && Time.time < faceUntil)
+                {
+                    Vector3 toFace = PatientBody.Flat(facePoint - transform.position);
+                    if (toFace.magnitude > 0.2f)
+                    {
+                        // Gira rapido y frena al llegar (antes 48 grados/s:
+                        // tardaba mas de 3 s en darse vuelta).
+                        float a = Vector3.SignedAngle(PatientBody.Flat(transform.forward), toFace, Vector3.up);
+                        if (Mathf.Abs(a) > 3f)
+                        {
+                            float ease = Mathf.Clamp(Mathf.Abs(a) / 45f, 0.25f, 1f);
+                            float stepAngle = Mathf.Min(Mathf.Abs(a), faceTurnSpeed * ease * dt);
+                            transform.Rotate(0f, Mathf.Sign(a) * stepAngle, 0f, Space.World);
+                            turnedThisFrame += stepAngle;
+                        }
+                    }
                 }
             }
 
@@ -200,10 +286,38 @@ namespace SojaExiles
             Vector3 moved = PatientBody.Flat(transform.position - lastRootPosition);
             lastRootPosition = transform.position;
             float instant = dt > 0f ? moved.magnitude / dt : 0f;
-            smoothedSpeed = Mathf.Lerp(smoothedSpeed, Mathf.Min(instant, 3f), 1f - Mathf.Exp(-8f * dt));
+            // Al girar en el lugar tambien da pasos (si no, rotaba como un
+            // trompo): cuenta como caminar unos 25 cm por radian.
+            float turning = dt > 0f ? turnedThisFrame * Mathf.Deg2Rad * 0.25f / dt : 0f;
+            turnedThisFrame = 0f;
+            smoothedSpeed = Mathf.Lerp(smoothedSpeed, Mathf.Min(Mathf.Max(instant, turning), 3f), 1f - Mathf.Exp(-8f * dt));
             body.walkSpeed = smoothedSpeed;
 
             UpdatePosture(shoulder, toHand, armLength, dt);
+        }
+
+        private float turnedThisFrame;
+
+        // Llevada del brazo: el cuerpo mira hacia donde camina (antes la
+        // arrastraban de costado o de espaldas, con los pies patinando: las
+        // piernas solo dan pasos hacia adelante).
+        private void FaceWhereWalking(float dt)
+        {
+            Vector3 moved = PatientBody.Flat(transform.position - lastRootPosition);
+            if (dt <= 0f || moved.magnitude / dt < 0.12f)
+            {
+                return;
+            }
+
+            float a = Vector3.SignedAngle(PatientBody.Flat(transform.forward), moved, Vector3.up);
+            if (Mathf.Abs(a) < 2f)
+            {
+                return;
+            }
+
+            float stepAngle = Mathf.Min(Mathf.Abs(a), ledTurnSpeed * dt);
+            transform.Rotate(0f, Mathf.Sign(a) * stepAngle, 0f, Space.World);
+            turnedThisFrame += stepAngle;
         }
 
         // Gira el cuerpo si la mano queda muy al costado o detras.
@@ -246,17 +360,17 @@ namespace SojaExiles
             float below = shoulder.y - hand.y;
             float fromHips = PatientBody.Flat(hand - body.Hips.position).magnitude;
 
-            float leanDown = Mathf.Clamp01((below - 0.3f) / 0.45f) * maxLean;
-            float leanFar = Mathf.Clamp01((fromHips - armLength * 0.7f) / 0.35f) * maxLean;
+            float leanDown = Mathf.Clamp01((below - 0.3f) / 0.45f) * leanLimit;
+            float leanFar = Mathf.Clamp01((fromHips - armLength * 0.7f) / 0.35f) * leanLimit;
             // Si el brazo no llega a donde quiere ir la mano, se inclina mas.
-            float deficit = Vector3.Distance(shoulder, hand) - armLength * reachFraction;
-            float leanReach = Mathf.Clamp01((deficit + 0.04f) / 0.14f) * (maxLean + reachLeanExtra);
+            float deficit = Vector3.Distance(shoulder, hand) - armLength * armReach;
+            float leanReach = Mathf.Clamp01((deficit + 0.04f) / 0.14f) * (leanLimit + leanReachExtra);
             float wantedLean = Mathf.Max(Mathf.Max(leanDown, leanFar), leanReach);
 
             float angle = toHand.magnitude > 0.1f
                 ? Vector3.SignedAngle(PatientBody.Flat(transform.forward), toHand, Vector3.up)
                 : 0f;
-            float wantedTwist = Mathf.Clamp(angle * 0.35f, -maxTwist, maxTwist);
+            float wantedTwist = Mathf.Clamp(angle * 0.35f, -twistLimit, twistLimit);
 
             float k = 1f - Mathf.Exp(-postureSpeed * dt);
             body.lean = Mathf.Lerp(body.lean, wantedLean, k);
@@ -318,11 +432,11 @@ namespace SojaExiles
         {
             if (mover == null)
             {
-                transform.position += move;
+                transform.position += PlayArea.Clip(transform.position, move);
                 return;
             }
 
-            mover.Move(PatientBody.Flat(move));
+            mover.Move(PlayArea.Clip(mover.transform.position, PatientBody.Flat(move)));
             Vector3 p = mover.transform.position;
             transform.position = new Vector3(p.x, transform.position.y, p.z);
         }

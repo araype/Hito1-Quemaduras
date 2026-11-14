@@ -1,0 +1,376 @@
+Delivered-To: jose.osnayo@utec.edu.pe
+Received: by 2002:a0c:e64b:0:b0:91b:8c92:8830 with SMTP id c11csp542580qvn;
+        Mon, 9 Nov 2026 19:51:29 -0800 (PST)
+X-Forwarded-Encrypted: i=3; AL+hErFQXy+R8NeVGdd7uY4oshWho9aLcs+FkIp15M8g+MiIRI3M64WMKj5AtO/v+ZugIxdz4XAmz/oyxVrQtg==@utec.edu.pe
+X-Received: by 2002:a05:7300:d58e:b0:375:6715:a4e3 with SMTP id 5a478bee46e88-3756715ada1mr882736eec.37.1794282689545;
+        Mon, 09 Nov 2026 19:51:29 -0800 (PST)
+ARC-Seal: i=2; a=rsa-sha256; t=1794282689; cv=pass;
+        d=google.com; s=arc-20260327;
+        b=Aml36io+qqc47JNcumgaHN2QwV2r7365x3nHn05YwgYPEuO4QrIMGeEYxeUX2+sKHm
+         yWj0ZOsRnuhm0g3y/flrIwpXgrO1Knrejf1GFL0GfHRlTJKY1Kl2mg58QKWzKBVpfWSy
+         Z26f7A1EmnDcVg67LgNILSytoBCluzp1gOcb9l9RWp5uS1AeT1zZuERDT4X3wEgfqUiz
+         JHtR3CxFWL2bUBeav9FTxRvAamnrM5qzaSxPIfYM0CqoEnvndHRQPP2JlYANocIds8Gf
+         ReyhH8mP7zu4VmDwNBwOJRt3lP/RAXhYprSTcdDOXnQox0LuqdSiJzRWsWgUskMuBSfL
+         qpGg==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :dkim-signature;
+        bh=a+SBicipFrgS2zYnIEszzz4O759lxh6jX2XFIDdkVow=;
+        fh=Log8pKuywg52hNB/WvP4O3hB480MvNvpNELjp5DnoIs=;
+        b=XIKac178xkl1q6+qlJZv6QfsY4OBySzzne0zWhXMprOQI//XZ2MCGU+s+VIpwT6C2u
+         FNwFnTp6RKg9FylywnjozU+7h6E2k8Srdp+RZy0gdoO1jXzZMT+8ByyBePW4W/OiTolO
+         Z1CJdRoeRAupWNjRhNnWzC/xbZOPO4waq102iSaBUTwsRZcqOpjmYi4xuWnPdEcGpsrO
+         hup2zTkeML25lJg1xd+RBXkItIf/CrUNv1o7QrJ1k3agu/9jYxXqRpe3b+3MbQeOTE2Z
+         bxTlXM5aX2L/Oeo6JJbPs1iZjrJ2Dwn5DkyLNPKA34d3K3Pdok3JuQgrip1Bn/peay7r
+         V6Xg==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@utec.edu.pe header.s=google header.b=Rns8DPAu;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of aracely.ayala@utec.edu.pe designates 209.85.220.41 as permitted sender) smtp.mailfrom=aracely.ayala@utec.edu.pe;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=utec.edu.pe;
+       dara=fail header.i=@utec.edu.pe
+Return-Path: <aracely.ayala@utec.edu.pe>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 5a478bee46e88-37521bb0097sor280295eec.22.2026.11.09.19.51.29
+        for <jose.osnayo@utec.edu.pe>
+        (Google Transport Security);
+        Mon, 09 Nov 2026 19:51:29 -0800 (PST)
+Received-SPF: pass (google.com: domain of aracely.ayala@utec.edu.pe designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@utec.edu.pe header.s=google header.b=Rns8DPAu;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of aracely.ayala@utec.edu.pe designates 209.85.220.41 as permitted sender) smtp.mailfrom=aracely.ayala@utec.edu.pe;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=utec.edu.pe;
+       dara=fail header.i=@utec.edu.pe
+ARC-Seal: i=1; a=rsa-sha256; t=1794282689; cv=none;
+        d=google.com; s=arc-20260327;
+        b=EaOkfXblHhY9H8CiLwHZvCCiciL8tTOlK4drNuZumZ5Eef2Hs+puz6GUOag8I2eXY8
+         Cb5n33dQ/gaNRi1Ha6JXRH0DSlOJUbafRd5Gv2L3eVbK9qMvc4DnOaMZ/QbmRM1udsyP
+         D+Eaw2XeZt/8RBeQGRHCfT/gFKyc8ODXcC51KISL+U+b7m/wLBIkDpisoIUnAMw7FuLd
+         CNPKN/ulGoRVgIoOS24BaPV9vAUvLLvSqPuaQO2pH/rx1uJHgytSBiU5BATKiM0JxCpk
+         GKffHaKTSUFML3MSA4Nu16UzGp0wSCYpU98YGsYLUgU0BZ/8HF/iJMyFaoOpp/BoMID/
+         ZoVQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :dkim-signature;
+        bh=a+SBicipFrgS2zYnIEszzz4O759lxh6jX2XFIDdkVow=;
+        fh=Log8pKuywg52hNB/WvP4O3hB480MvNvpNELjp5DnoIs=;
+        b=O8AI8ZE/8Dw5MWCJ0GlUd39w2ANEthNknRXjMOFs+g9RUpfX4TGIjb3FdMe0lQSmb0
+         3Y7hutpc4tvw4iyc6FZrnAnX6E3Sr/VQr/KDsrVBum829iOiyDGjggD+KFSUMaFUtg3U
+         KOAKSP0yGNY8M6aVPgE2xlc5fvibImuME+22F0Um+RRZI/oZhScsdTsWPPSta81Ul5ca
+         AkkSk62kW0PDBxO8C0vG37qUXTW1oDpbbiNc/cANotNa92lLv1EtpIVKOAaN1dowld2p
+         2dISxwXb2YM7fL1dtFK7WsGsbXRER4XWXtogAyW7Gz1kwwfPLwiEh4OKV4eYJsOzOLkm
+         RrBA==;
+        darn=utec.edu.pe
+ARC-Authentication-Results: i=1; mx.google.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=utec.edu.pe; s=google; t=1794282689; x=1794887489; darn=utec.edu.pe;
+        h=content-type:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:from:to:cc:subject:date:message-id:reply-to
+         :content-type;
+        bh=a+SBicipFrgS2zYnIEszzz4O759lxh6jX2XFIDdkVow=;
+        b=Rns8DPAubj40xqs/GG4/xyxKwy1fD3uKTEzTV2Ch1NWemJ/77NiXB8WqshiGXGeDTh
+         V4EH9jW8QzjT+K6oEyvXLudyn+PCb6tH7ZLofLQHdKgI4wwPmrqLeApGtMYSy3S8Shd2
+         h0uIIKcCBnIGJjwxeq0kO7g1wQljooYPN4MYdHTZHFOE6W3h306UVfSP9yXgvxGspRUp
+         Y9xBi4cEJD14PZB0S9+ucNcB/xZ97/gL/a2WnB+eE+noKWhry6Y+J0vqio4HA9CwQxWe
+         RwFP05N2aI0OwLsxpmmN67viPHdKJsZgwAvQcKWhBOw/BZ59/PrjW0PO2yxkOqdmoiSI
+         uCQg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20260707; t=1794282689; x=1794887489;
+        h=content-type:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:x-gm-gg:x-gm-message-state:from:to:cc:subject:date
+         :message-id:reply-to:content-type;
+        bh=a+SBicipFrgS2zYnIEszzz4O759lxh6jX2XFIDdkVow=;
+        b=PJZ2Mdw//YihifgmoDf/apPGQxk6Bb0Ee2NBeRn3El9DBMbxW15apgfZCHWACzj1PQ
+         mONLgKCk0/90q98mOGERIpvgjr9MHddsP2xfnzd/Rq702yBJxO789Ca2jkYFyW24zW81
+         xYNIPVUho5B5nFnJ1ZJZW0RfIe1qVEWyP9Yud3OMz3LSsfz4MrySlvSmviWrdT1CGUwv
+         DtdoOeAmUwVTosbQTsuYOzw2IaGEEJ826264JXpYMuBjvrTHzDESoeeIfISF65uYKl4a
+         fW4rkIzA0QC5DRzpYqO2pJz+h5lnFomIC9cVsq68b/ERxsdUD8oe9Wol6JKSLBmRaj7y
+         QX/Q==
+X-Forwarded-Encrypted: i=1; AL+hErG6KwqDMxibE0xG68B5C01B+nvm+l4NWOg3uZFNzZoR6FNQNULGQO9ODcEVc0JOE2qoCcp6cqhLQr59Rw==@utec.edu.pe
+X-Gm-Message-State: APuU4Z9N23H1W9h8wAxRwzB2/2Luv4HcbKconlIPjVLAzpAE6NDOv5hV
+	1tz/1enK9zpkB0ft4Oi86lNSWUW7LNelmRGk/lUCfE6SlsuTk1H8Lh5mgoD86LJCNN+Sj7N64lq
+	9LD3fPzXl5Bf+kazyuHA/kTzHWY2ntcdw40F9ke5dd+X3sgNl8knsS1LnpmcIolwkajBTQIDu3R
+	t52kg2TGI3wdpdb4q+Sf75vO7jTPQ0zmu4iEWZJhjdOc8=
+X-Gm-Gg: AYBFou36o6McR3m17VaUrbjlLSp9YtrLMp9ZqW6YQO81jvRE8ibMx6E25Xolry8CcWa
+	NW0w68WSDfEZ8aUfs1qDs0vU7K/qfSAUR8IQJI7ALL79OWV/0E5hn7PvRT9rWQ+Wl6yrLgFWIjk
+	H279dEebs7XFSfWXrqDP7+e23NL9xUmbsoTd15omj0UVOAcvgm/CWX+YI2L/HH8nLsSzu09PWpV
+	BBNtqg8w+becLsQuq+SpvlM55FgvY+4xaxSKR37QYw5YFVLcs4W09LGq4KdbjvxfI5awKuwwsl3
+	JiQZGiMWIPZ1FMIoDrgSZYnV7EUxMXYA2dWu8AcRPGoZTFLyi6+sSyvt5nxrggFY0mrryk2SxmW
+	8il8rXfp1x6SUg8hXbOfSBcSwRPHgWPnj7x5D
+X-Received: by 2002:a05:693c:8801:20b0:35e:f1a5:9ba6 with SMTP id
+ 5a478bee46e88-3751c53f049mr1745243eec.5.1794282688598; Mon, 09 Nov 2026
+ 19:51:28 -0800 (PST)
+MIME-Version: 1.0
+References: <CALgFETOqq3iHU1TtUJSxhkExJ4T4aGW203PcL-MjBkpj5O9VuA@mail.gmail.com>
+In-Reply-To: <CALgFETOqq3iHU1TtUJSxhkExJ4T4aGW203PcL-MjBkpj5O9VuA@mail.gmail.com>
+From: Aracely Yobely Ayala Pereda <aracely.ayala@utec.edu.pe>
+Date: Mon, 9 Nov 2026 22:51:16 -0500
+X-Gm-Features: AclHuK8Qe23DzujTewgY4NIBh4Qj2a3ORBZQvPnIqKpqL0Y1NZdef3cP814iRNc
+Message-ID: <CALgFETNUkd_1=1HSpJLaTnOEwqZmUrvYeHh4WPKE4BSZeUaN=w@mail.gmail.com>
+Subject: Fwd: AVANCES 9 DE NOVIEMBRE
+To: Sebastian Mauricio Sanchez Farfan <sebastian.sanchez.f@utec.edu.pe>, 
+	Jose Joaquin Osnayo Matos <jose.osnayo@utec.edu.pe>
+Content-Type: multipart/alternative; boundary="00000000000047e989065fe3fe44"
+
+--00000000000047e989065fe3fe44
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+---------- Forwarded message ---------
+De: Aracely Yobely Ayala Pereda <aracely.ayala@utec.edu.pe>
+Date: lun, 9 de nov de 2026, 10:09=E2=80=AFp. m.
+Subject: AVANCES 9 DE NOVIEMBRE
+To: Aracely Yobely Ayala Pereda <aracely.ayala@utec.edu.pe>
+
+
+Contexto de la sesi=C3=B3n (9 nov 2026, rama mejoras-demo) D=C3=B3nde se tr=
+abaja
+
+   - *Proyecto:* Desktop\sebas pp\semn13\Hito1-Quemaduras, repositorio
+   araype/Hito1-Quemaduras. La copia vieja en sebas pp\Hito1-Quemaduras
+   (rama rediseno-tarjetas) no se usa.
+   - *Unity 2022.3.62f3*, con el SDK de Meta (no el XR Interaction
+   Toolkit). La escena del build es Prueba_LuzHorneada.unity.
+   - *El avatar original* de Avaturn est=C3=A1 fuera del proyecto, en
+   semn13\avaturn\model.glb.
+
+Commits de la sesi=C3=B3n
+Commit Qu=C3=A9
+41d6899 La tarjeta de resultados se puede tocar y las opciones ya no se
+marcan solas
+b06c0c8 T=C3=ADa de Avaturn (tipo T2) con gestos en la cara y boca con la v=
+oz;
+animaciones pasadas a Humanoid
+267683e Materiales Standard (sin sombras raras ni cara gris), pelo suave,
+mirada limitada, mano natural al esperar la taza, chompa sin cuernos ni ala=
+s
+5f1ab72 Anillo arreglado (se trababa a los 42 s) y deslizable; voces
+espaciales; m=C3=A1s vibraci=C3=B3n; botiqu=C3=ADn con sobres de gasa; boca=
+ con visemas
+sacados del texto
+e040d7d Gasa bien puesta: de los bordes, sin apretar, centrada, se amolda;
+cobertura medida; venda suelta; lugares fijos en el botiqu=C3=ADn Decisione=
+s
+tomadas
+
+   - *No se cambia al XR Interaction Toolkit:* el SDK de Meta ya cumple ese
+   papel.
+   - *La t=C3=ADa de Avaturn se pone al dar Play,* sin tocar la escena. Par=
+a
+   volver a la de Mixamo: PatientBody.useAvaturn apagado.
+   - *Visemas desde el texto,* no con OVRLipSync ni el Movement SDK (este
+   =C3=BAltimo lee el micr=C3=B3fono de quien juega, no un audio grabado).
+   - *Las poses de mano se deciden despu=C3=A9s* de ver en el visor c=C3=B3=
+mo se ven
+   las manos al agarrar.
+   - *Nunca se suben* la escena Escenario_Quemadura.unity, los archivos de
+   ProjectSettings, a.unity ni esc.unity.
+
+C=C3=B3mo se prob=C3=B3
+
+Todo en Play en el editor, sin visor, con capturas desde Unity. *Nada de
+esta sesi=C3=B3n se prob=C3=B3 en el Quest.*
+Pendiente
+
+   1. *Grabar 6 voces de la narradora* con ElevenLabs. Los textos est=C3=A1=
+n en
+   VOCES.md:
+      - guia_anillo (regrabar)
+      - guia_err_anillo
+      - guia_err_apretar
+      - guia_err_centro_gasa
+      - guia_err_gasa_corrida
+      - guia_err_venda
+   2. *Hacer un APK nuevo* y probar todo siguiendo docs/PRUEBAS_QUEST.md:
+      - 72 fps
+      - la t=C3=ADa de cerca
+      - el anillo deslizable
+      - el sonido con aud=C3=ADfonos
+      - las vibraciones
+      - el botiqu=C3=ADn y la gasa
+      - la boca al hablar
+   3. *Ajustar con el visor* los n=C3=BAmeros de la gasa y la venda: grosor=
+ de
+   la mano (1,8 cm), cu=C3=A1nto hundir para que cuente como apretar (1,2 c=
+m) y el
+   radio que separa una venda apretada de una suelta (5,5 cm).
+   4. *Decidir las poses de mano* seg=C3=BAn lo que se vea en el visor.
+   5. *Lo que ya estaba* en PENDIENTES.md: regenerar las voces TTS, variar
+   el caso, chompa con tela simulada, l=C3=ADnea de tiempo en el resumen, p=
+ruebas
+   con usuarios e informe.
+
+D=C3=B3nde est=C3=A1 cada cosa
+
+   - *docs/CONTEXTO_2026-11-09.md:* este resumen en el repositorio. Su
+   tabla de commits solo llega hasta 267683e; los dos =C3=BAltimos commits =
+est=C3=A1n
+   descritos en la lista de pendientes, pero no en la tabla.
+   - *docs/QUEMADURA_INMERSION.md:* el detalle t=C3=A9cnico de cada cambio
+   (secciones 18 a 23).
+   - *docs/PENDIENTES.md:* qu=C3=A9 falta y en qu=C3=A9 orden.
+   - *docs/PRUEBAS_QUEST.md:* la lista para marcar en el lab.
+
+--=20
+La informaci=C3=B3n contenida en este e-mail y sus anexos es confidencial,=
+=20
+privilegiada y est=C3=A1 dirigida exclusivamente a su destinatario, en=20
+consecuencia, solo puede ser utilizada por aquel. Si usted no es el=20
+destinatario original, no deber=C3=A1 examinar, usar, copiar o distribuir e=
+ste=20
+mensaje o la informaci=C3=B3n que contiene. Si lo recibe por error, por fav=
+or=20
+reenv=C3=ADelo a la persona que se lo envi=C3=B3 y elim=C3=ADnelo. Cualquie=
+r retenci=C3=B3n o=20
+uso total o parcial no autorizada de este mensaje est=C3=A1 estrictamente=
+=20
+prohibida y sancionada por ley.
+
+--00000000000047e989065fe3fe44
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"auto"></div><br><div class=3D"gmail_quote gmail_quote_container=
+"><div dir=3D"ltr" class=3D"gmail_attr">---------- Forwarded message ------=
+---<br>De: <strong class=3D"gmail_sendername" dir=3D"auto">Aracely Yobely A=
+yala Pereda</strong> <span dir=3D"auto">&lt;<a href=3D"mailto:aracely.ayala=
+@utec.edu.pe">aracely.ayala@utec.edu.pe</a>&gt;</span><br>Date: lun, 9 de n=
+ov de 2026, 10:09=E2=80=AFp.=C2=A0m.<br>Subject: AVANCES 9 DE NOVIEMBRE<br>=
+To: Aracely Yobely Ayala Pereda &lt;<a href=3D"mailto:aracely.ayala@utec.ed=
+u.pe">aracely.ayala@utec.edu.pe</a>&gt;<br></div><br><br><div dir=3D"ltr"><=
+h1>Contexto de la sesi=C3=B3n (9 nov 2026, rama <code>mejoras-demo</code>)<=
+/h1>
+<h2>D=C3=B3nde se trabaja</h2>
+<ul>
+<li><strong>Proyecto:</strong> <code>Desktop\sebas pp\semn13\Hito1-Quemadur=
+as</code>, repositorio <code>araype/Hito1-Quemaduras</code>. La copia vieja=
+ en <code>sebas pp\Hito1-Quemaduras</code> (rama <code>rediseno-tarjetas</c=
+ode>) no se usa.</li>
+<li><strong>Unity 2022.3.62f3</strong>, con el SDK de Meta (no el XR Intera=
+ction Toolkit). La escena del build es <code>Prueba_LuzHorneada.unity</code=
+>.</li>
+<li><strong>El avatar original</strong> de Avaturn est=C3=A1 fuera del proy=
+ecto, en <code>semn13\avaturn\model.glb</code>.</li>
+</ul>
+<h2>Commits de la sesi=C3=B3n</h2>
+<table>
+<thead>
+<tr>
+<th>Commit</th>
+<th>Qu=C3=A9</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>41d6899</code></td>
+<td>La tarjeta de resultados se puede tocar y las opciones ya no se marcan =
+solas</td>
+</tr>
+<tr>
+<td><code>b06c0c8</code></td>
+<td>T=C3=ADa de Avaturn (tipo T2) con gestos en la cara y boca con la voz; =
+animaciones pasadas a Humanoid</td>
+</tr>
+<tr>
+<td><code>267683e</code></td>
+<td>Materiales Standard (sin sombras raras ni cara gris), pelo suave, mirad=
+a limitada, mano natural al esperar la taza, chompa sin cuernos ni alas</td=
+>
+</tr>
+<tr>
+<td><code>5f1ab72</code></td>
+<td>Anillo arreglado (se trababa a los 42 s) y deslizable; voces espaciales=
+; m=C3=A1s vibraci=C3=B3n; botiqu=C3=ADn con sobres de gasa; boca con visem=
+as sacados del texto</td>
+</tr>
+<tr>
+<td><code>e040d7d</code></td>
+<td>Gasa bien puesta: de los bordes, sin apretar, centrada, se amolda; cobe=
+rtura medida; venda suelta; lugares fijos en el botiqu=C3=ADn</td>
+</tr>
+</tbody>
+</table>
+<h2>Decisiones tomadas</h2>
+<ul>
+<li><strong>No se cambia al XR Interaction Toolkit:</strong> el SDK de Meta=
+ ya cumple ese papel.</li>
+<li><strong>La t=C3=ADa de Avaturn se pone al dar Play,</strong> sin tocar =
+la escena. Para volver a la de Mixamo: <code>PatientBody.useAvaturn</code> =
+apagado.</li>
+<li><strong>Visemas desde el texto,</strong> no con OVRLipSync ni el Moveme=
+nt SDK (este =C3=BAltimo lee el micr=C3=B3fono de quien juega, no un audio =
+grabado).</li>
+<li><strong>Las poses de mano se deciden despu=C3=A9s</strong> de ver en el=
+ visor c=C3=B3mo se ven las manos al agarrar.</li>
+<li><strong>Nunca se suben</strong> la escena <code>Escenario_Quemadura.uni=
+ty</code>, los archivos de <code>ProjectSettings</code>, <code>a.unity</cod=
+e> ni <code>esc.unity</code>.</li>
+</ul>
+<h2>C=C3=B3mo se prob=C3=B3</h2>
+<p>Todo en Play en el editor, sin visor, con capturas desde Unity. <strong>=
+Nada de esta sesi=C3=B3n se prob=C3=B3 en el Quest.</strong></p>
+<h2>Pendiente</h2>
+<ol>
+<li><strong>Grabar 6 voces de la narradora</strong> con ElevenLabs. Los tex=
+tos est=C3=A1n en <code>VOCES.md</code>:
+<ul>
+<li><code>guia_anillo</code> (regrabar)</li>
+<li><code>guia_err_anillo</code></li>
+<li><code>guia_err_apretar</code></li>
+<li><code>guia_err_centro_gasa</code></li>
+<li><code>guia_err_gasa_corrida</code></li>
+<li><code>guia_err_venda</code></li>
+</ul>
+</li>
+<li><strong>Hacer un APK nuevo</strong> y probar todo siguiendo <code>docs/=
+PRUEBAS_QUEST.md</code>:
+<ul>
+<li>72 fps</li>
+<li>la t=C3=ADa de cerca</li>
+<li>el anillo deslizable</li>
+<li>el sonido con aud=C3=ADfonos</li>
+<li>las vibraciones</li>
+<li>el botiqu=C3=ADn y la gasa</li>
+<li>la boca al hablar</li>
+</ul>
+</li>
+<li><strong>Ajustar con el visor</strong> los n=C3=BAmeros de la gasa y la =
+venda: grosor de la mano (1,8 cm), cu=C3=A1nto hundir para que cuente como =
+apretar (1,2 cm) y el radio que separa una venda apretada de una suelta (5,=
+5 cm).</li>
+<li><strong>Decidir las poses de mano</strong> seg=C3=BAn lo que se vea en =
+el visor.</li>
+<li><strong>Lo que ya estaba</strong> en <code>PENDIENTES.md</code>: regene=
+rar las voces TTS, variar el caso, chompa con tela simulada, l=C3=ADnea de =
+tiempo en el resumen, pruebas con usuarios e informe.</li>
+</ol>
+<h2>D=C3=B3nde est=C3=A1 cada cosa</h2>
+<ul>
+<li><strong><code>docs/CONTEXTO_2026-11-09.md</code>:</strong> este resumen=
+ en el repositorio. Su tabla de commits solo llega hasta <code>267683e</cod=
+e>; los dos =C3=BAltimos commits est=C3=A1n descritos en la lista de pendie=
+ntes, pero no en la tabla.</li>
+<li><strong><code>docs/QUEMADURA_INMERSION.md</code>:</strong> el detalle t=
+=C3=A9cnico de cada cambio (secciones 18 a 23).</li>
+<li><strong><code>docs/PENDIENTES.md</code>:</strong> qu=C3=A9 falta y en q=
+u=C3=A9 orden.</li>
+<li><strong><code>docs/PRUEBAS_QUEST.md</code>:</strong> la lista para marc=
+ar en el lab.</li>
+</ul></div>
+</div>
+
+<br>
+<h4 style=3D"color:rgb(34,34,34);font-family:arial,sans-serif;background-co=
+lor:rgb(255,255,255)"><span style=3D"font-weight:normal;font-size:x-small;c=
+olor:rgb(153,153,153);font-stretch:normal">La informaci=C3=B3n contenida en=
+ este e-mail y sus anexos es confidencial, privilegiada y est=C3=A1 dirigid=
+a exclusivamente a su destinatario, en consecuencia, solo puede ser utiliza=
+da por aquel. Si usted no es el destinatario original, no deber=C3=A1 exami=
+nar, usar, copiar o distribuir este mensaje o la informaci=C3=B3n que conti=
+ene. Si lo recibe por error, por favor reenv=C3=ADelo a la persona que se l=
+o envi=C3=B3 y elim=C3=ADnelo. Cualquier retenci=C3=B3n o uso total o parci=
+al no autorizada de este mensaje est=C3=A1 estrictamente prohibida y sancio=
+nada por ley.</span></h4>
+--00000000000047e989065fe3fe44--

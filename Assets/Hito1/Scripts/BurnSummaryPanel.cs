@@ -4,20 +4,40 @@ using UnityEngine.SceneManagement;
 
 namespace SojaExiles
 {
-    // Resumen de la practica (RF-10), frente al jugador al terminar: puntaje,
-    // pasos del protocolo hechos y faltantes, errores y errores criticos,
-    // tiempo de primera accion, tiempo de enfriamiento, la decision medica y
-    // que mejorar (una explicacion breve por cada tipo de error). Un boton
-    // vuelve a empezar la practica.
+    // Resumen de la practica (RF-10), frente al jugador al terminar. Mismo
+    // estilo que las tarjetas de la guia (panel de vidrio redondeado):
+    //   - encabezado: modo, titulo, grado de la quemadura y el puntaje;
+    //   - cuatro indicadores: primera accion, enfriamiento, errores y
+    //     errores criticos;
+    //   - la barra de los cuatro actos de la historia, con los aciertos y
+    //     errores de cada uno (E.9);
+    //   - dos columnas: los pasos del protocolo (hechos o faltantes) y la
+    //     decision medica con que mejorar;
+    //   - botones para repetir la practica o probar otro caso (el otro grado
+    //     de quemadura, que cambia la decision medica).
     public class BurnSummaryPanel : MonoBehaviour
     {
-        private const string Green = "#5BD68A";
-        private const string Red = "#F07167";
-        private const string Amber = "#F4C26B";
+        private static readonly Color Green = new Color(0.36f, 0.84f, 0.54f);
+        private static readonly Color Red = new Color(0.94f, 0.44f, 0.4f);
+        private static readonly Color Amber = new Color(0.96f, 0.76f, 0.42f);
+        private static readonly Color Accent = new Color(0.62f, 0.8f, 1f);
+        private static readonly Color Soft = new Color(0.8f, 0.85f, 0.93f);
+        private static readonly Color Muted = new Color(0.6f, 0.66f, 0.76f);
+
+        private const float Width = 1.0f;
+        private const float Height = 0.86f;
+        private const float Pad = 0.045f;
+        private const float Distance = 0.62f;
+        private const float Scale = 0.72f;
 
         public static BurnSummaryPanel Show(BurnProtocol protocol)
         {
-            Transform root = VRPanelKit.CreateRoot("PanelResumen", 1.0f, 0.15f);
+            // Al alcance de la mano (0,62 m, como las otras tarjetas) y mas
+            // chico para que quepa en la vista. Antes iba a 1 m y seguia a la
+            // cabeza: al acercarse se alejaba y los botones no se alcanzaban.
+            Transform root = VRPanelKit.CreateRoot("PanelResumen", Distance, 0.12f);
+            root.localScale = Vector3.one * Scale;
+            PanelFollow.Add(root, Distance, 0.12f, new Vector2(Width, Height) * Scale);
             BurnSummaryPanel panel = root.gameObject.AddComponent<BurnSummaryPanel>();
             panel.Build(protocol);
             return panel;
@@ -27,43 +47,231 @@ namespace SojaExiles
         {
             Transform t = transform;
             BurnSequenceManager burn = p.burnSequence;
-            const float width = 0.92f;
-            const float height = 1.1f;
-            const float left = -width / 2f + 0.05f;
-            VRPanelKit.Background(t, Vector2.zero, new Vector2(width, height), "Panel_Fondo",
-                new Color(0.07f, 0.1f, 0.16f), 0.001f);
+            float left = -Width / 2f + Pad;
+            float right = Width / 2f - Pad;
+            float top = Height / 2f - Pad;
 
-            string scoreColor = p.Score >= 80 ? Green : (p.Score >= 50 ? Amber : Red);
-            VRPanelKit.Text(t, "Resumen de la práctica", new Vector2(left, height / 2f - 0.045f), 0.042f, Color.white);
-            VRPanelKit.Text(t, $"<color={scoreColor}><b>{p.Score}</b></color> / 100",
-                new Vector2(width / 2f - 0.05f, height / 2f - 0.04f), 0.06f, Color.white, TextAnchor.UpperRight,
-                TextAlignment.Right);
+            RoundedPanel bg = RoundedPanel.Create(t, "FondoResumen", Vector2.zero, new Vector2(Width, Height), 0.002f,
+                0.04f, 0.0025f, 0.02f);
+            bg.top = new Color(0.1f, 0.14f, 0.24f, 0.97f);
+            bg.bottom = new Color(0.05f, 0.07f, 0.14f, 0.97f);
+            bg.Push();
 
+            // ---------------- encabezado ----------------
+            bool guided = BurnGuide.Instance == null || BurnGuide.Instance.Guided;
             string degree = p.Degree == BurnInjury.BurnDegree.Primero ? "primer grado" : "segundo grado superficial";
-            List<string> facts = new List<string>
-            {
-                $"Quemadura de {degree}",
-                $"Primera acción: {Seconds(p.FirstActionDelay)} después de la quemadura",
-                $"Enfriamiento: {p.SimulatedCoolingMinutes:F0} de {p.simulatedMinutes:F0} min bajo el agua",
-                $"Errores: <color={(burn.Errors > 0 ? Amber : Green)}>{burn.Errors}</color>    " +
-                $"Errores críticos: <color={(burn.CriticalErrors > 0 ? Red : Green)}>{burn.CriticalErrors}</color>",
-                "Decisión médica: " + (p.Decision == "CentroDeSalud" ? "ir al centro de salud" : "cuidarla en casa") +
-                (p.DecisionCorrect ? $" <color={Green}>(correcta)</color>" : $" <color={Red}>(incorrecta)</color>")
-            };
-            VRPanelKit.Text(t, VRPanelKit.Join(facts), new Vector2(left, height / 2f - 0.125f), 0.026f,
-                new Color(0.85f, 0.88f, 0.93f));
+            VRPanelKit.Text(t, "PRÁCTICA TERMINADA  ·  " + (guided ? "MODO GUIADO" : "MODO EVALUACIÓN"),
+                new Vector2(left, top), 0.017f, Accent);
+            VRPanelKit.Text(t, "<b>RESUMEN DE LA PRÁCTICA</b>", new Vector2(left, top - 0.03f), 0.046f, Color.white);
+            string ended = p.EndedEarly == "Menu" ? "  ·  Terminada desde el menú"
+                : p.EndedEarly == "Tiempo" ? "  ·  Se acabó el tiempo" : "";
+            VRPanelKit.Text(t, "Quemadura de " + degree + ended, new Vector2(left, top - 0.09f), 0.02f, Soft);
 
-            List<string> steps = new List<string> { "<b>Pasos del protocolo</b>" };
+            Color scoreColor = p.Score >= 80 ? Green : (p.Score >= 50 ? Amber : Red);
+            Vector2 chipCenter = new Vector2(right - 0.1f, top - 0.055f);
+            RoundedPanel chip = RoundedPanel.Create(t, "Puntaje", chipCenter, new Vector2(0.2f, 0.115f), 0.001f,
+                0.03f, 0.002f, 0.012f);
+            chip.top = new Color(0.12f, 0.17f, 0.28f, 1f);
+            chip.bottom = new Color(0.08f, 0.11f, 0.2f, 1f);
+            chip.borderLeft = scoreColor;
+            chip.borderRight = scoreColor;
+            chip.glowStrength = 0.35f;
+            chip.Push();
+            VRPanelKit.Text(t, $"<b>{p.Score}</b><size=55%> / 100</size>", chipCenter + new Vector2(0f, 0.045f), 0.06f,
+                scoreColor, TextAnchor.UpperCenter, TextAlignment.Center);
+            VRPanelKit.Text(t, "PUNTAJE", chipCenter + new Vector2(0f, -0.03f), 0.014f, Muted,
+                TextAnchor.UpperCenter, TextAlignment.Center);
+
+            // ---------------- indicadores ----------------
+            float tileTop = top - 0.15f;
+            const float tileH = 0.095f;
+            const float gap = 0.02f;
+            float tileW = (Width - 2f * Pad - 3f * gap) / 4f;
+            bool fullCooling = p.SimulatedCoolingMinutes >= p.simulatedMinutes - 0.5f;
+            Tile(t, 0, left, tileTop, tileW, tileH, gap, Seconds(p.FirstActionDelay), "Primera acción", Color.white);
+            Tile(t, 1, left, tileTop, tileW, tileH, gap,
+                $"{p.SimulatedCoolingMinutes:F0}/{p.simulatedMinutes:F0} min", "Enfriamiento",
+                fullCooling ? Green : Amber);
+            Tile(t, 2, left, tileTop, tileW, tileH, gap, burn.Errors.ToString(), "Errores",
+                burn.Errors > 0 ? Amber : Green);
+            Tile(t, 3, left, tileTop, tileW, tileH, gap, burn.CriticalErrors.ToString(), "Errores críticos",
+                burn.CriticalErrors > 0 ? Red : Green);
+
+            // ---------------- actos ----------------
+            float actTop = tileTop - tileH - 0.016f;
+            const float actH = 0.062f;
+            ActBar(t, p, left, actTop, tileW, actH, gap);
+
+            // ---------------- columnas ----------------
+            float colTop = actTop - actH - 0.016f;
+            float colBottom = -Height / 2f + Pad + 0.105f;
+            float colW = (Width - 2f * Pad - gap) / 2f;
+            float colH = colTop - colBottom;
+            Card(t, "Pasos", new Vector2(left + colW / 2f, colTop - colH / 2f), new Vector2(colW, colH));
+            Card(t, "Decision", new Vector2(right - colW / 2f, colTop - colH / 2f), new Vector2(colW, colH));
+
+            // Pasos del protocolo: punto verde (hecho) o rojo (falto).
+            float cx = left + 0.022f;
+            float y = colTop - 0.022f;
+            VRPanelKit.Text(t, "<b>PASOS DEL PROTOCOLO</b>", new Vector2(cx, y), 0.016f, Accent);
+            y -= 0.038f;
             foreach (BurnProtocol.Step step in System.Enum.GetValues(typeof(BurnProtocol.Step)))
             {
                 bool ok = p.IsDone(step);
-                steps.Add($"<color={(ok ? Green : Red)}>•</color> {BurnProtocol.StepNames[(int)step]}" +
-                    (ok ? "" : $" <color={Red}>(faltó)</color>"));
+                Color c = ok ? Green : Red;
+                RoundedPanel dot = RoundedPanel.Create(t, "EstadoPaso", new Vector2(cx + 0.006f, y - 0.0095f),
+                    Vector2.one * 0.012f, -0.0005f, 0.006f, 0f, 0.005f);
+                dot.sheen = 0f;
+                dot.SetSolid(c, 0.4f);
+                VRPanelKit.Text(t, ShortStepName(step), new Vector2(cx + 0.024f, y), 0.019f,
+                    Color.white);
+                VRPanelKit.Text(t, ok ? "Hecho" : "Faltó", new Vector2(left + colW - 0.022f, y - 0.002f), 0.016f, c,
+                    TextAnchor.UpperRight, TextAlignment.Right);
+                y -= 0.029f;
             }
 
-            VRPanelKit.Text(t, VRPanelKit.Join(steps), new Vector2(left, height / 2f - 0.33f), 0.026f, Color.white);
+            // Decision medica y que mejorar.
+            float rx = right - colW + 0.022f;
+            y = colTop - 0.022f;
+            VRPanelKit.Text(t, "<b>LLAMADA AL 106 Y DECISIÓN</b>", new Vector2(rx, y), 0.016f, Accent);
+            y -= 0.036f;
+            string decision = p.Decision == null ? "No se llamó al 106"
+                : p.Decision == "CentroDeSalud" ? "Ir al centro de salud" : "Cuidarla en casa";
+            VRPanelKit.Text(t, decision, new Vector2(rx, y), 0.021f, Color.white);
+            VRPanelKit.Text(t, p.Decision == null ? "Faltó" : p.DecisionCorrect ? "Correcta" : "Incorrecta",
+                new Vector2(right - 0.022f, y - 0.002f), 0.016f, p.DecisionCorrect ? Green : Red,
+                TextAnchor.UpperRight, TextAlignment.Right);
+            y -= 0.05f;
 
-            List<string> tips = new List<string> { "<b>Qué mejorar</b>" };
+            VRPanelKit.Text(t, "<b>QUÉ MEJORAR</b>", new Vector2(rx, y), 0.016f, Accent);
+            y -= 0.032f;
+            VRPanelKit.Text(t, Tips(p), new Vector2(rx, y), 0.0175f, Soft);
+
+            // ---------------- boton ----------------
+            float buttonY = -Height / 2f + Pad + 0.045f;
+            BurnInjury.BurnDegree same = p.Degree;
+            BurnInjury.BurnDegree other = same == BurnInjury.BurnDegree.Primero
+                ? BurnInjury.BurnDegree.SegundoSuperficial
+                : BurnInjury.BurnDegree.Primero;
+            // Los dos vuelven al panel de inicio (modo guiado o evaluacion);
+            // cambia solo la quemadura. Antes "Otro caso" parecia otro tipo
+            // de guia.
+            string otherName = other == BurnInjury.BurnDegree.Primero ? "primer grado" : "segundo grado";
+            VRPanelKit.RoundedButton(t, "Volver al inicio", new Vector2(-0.19f, buttonY), new Vector2(0.34f, 0.075f),
+                new Color(0.22f, 0.48f, 0.95f), () => Restart(same));
+            VRPanelKit.RoundedButton(t, "Otra quemadura: " + otherName, new Vector2(0.19f, buttonY), new Vector2(0.34f, 0.075f),
+                new Color(0.45f, 0.3f, 0.62f), () => Restart(other));
+            VRPanelKit.Text(t, "Los dos vuelven al inicio para elegir modo guiado o evaluación.  ·  Voces: elevenlabs.io",
+                new Vector2(0f, buttonY - 0.05f), 0.015f, Muted, TextAnchor.UpperCenter, TextAlignment.Center);
+
+            // El credito que pide el plan gratis de ElevenLabs (docs/VOCES.md)
+            // va en la linea de ayuda: en la esquina lo cortaba el borde.
+        }
+
+        // Indicador: valor grande arriba y etiqueta chica abajo.
+        private static void Tile(Transform t, int index, float left, float top, float w, float h, float gap,
+            string value, string label, Color valueColor)
+        {
+            float cx = left + w / 2f + index * (w + gap);
+            Vector2 center = new Vector2(cx, top - h / 2f);
+            Card(t, "Indicador", center, new Vector2(w, h));
+            VRPanelKit.Text(t, "<b>" + value + "</b>", new Vector2(cx, top - 0.02f), 0.036f, valueColor,
+                TextAnchor.UpperCenter, TextAlignment.Center);
+            VRPanelKit.Text(t, label, new Vector2(cx, top - h + 0.03f), 0.016f, Muted,
+                TextAnchor.UpperCenter, TextAlignment.Center);
+        }
+
+        // Los cuatro actos de la historia en orden, como una linea de tiempo:
+        // cuantos pasos se hicieron y cuantos errores hubo en cada uno. El
+        // borde dice como le fue (verde sin errores, ambar con errores, rojo
+        // con alguno critico).
+        private static readonly string[] ActNames =
+        {
+            "1 · Antes del accidente",
+            "2 · Primeros segundos",
+            "3 · Enfriamiento",
+            "4 · Cierre"
+        };
+
+        private static void ActBar(Transform t, BurnProtocol p, float left, float top, float w, float h, float gap)
+        {
+            foreach (BurnProtocol.Act act in System.Enum.GetValues(typeof(BurnProtocol.Act)))
+            {
+                int i = (int)act;
+                float cx = left + w / 2f + i * (w + gap);
+                p.CountAct(act, out int hits, out int errors, out int critical);
+                Color state = critical > 0 ? Red : errors > 0 ? Amber : Green;
+                RoundedPanel card = RoundedPanel.Create(t, "Acto", new Vector2(cx, top - h / 2f), new Vector2(w, h),
+                    0.001f, 0.018f, 0.0016f, 0.006f);
+                card.top = new Color(0.15f, 0.2f, 0.32f, 0.85f);
+                card.bottom = new Color(0.11f, 0.15f, 0.26f, 0.85f);
+                card.borderLeft = state;
+                card.borderRight = state;
+                card.glowStrength = 0.15f;
+                card.sheen = 0.03f;
+                card.Push();
+
+                VRPanelKit.Text(t, ActNames[i], new Vector2(cx, top - 0.012f), 0.015f, Accent,
+                    TextAnchor.UpperCenter, TextAlignment.Center);
+                string detail;
+                if (act == BurnProtocol.Act.Planteamiento)
+                {
+                    detail = "Tutorial";
+                }
+                else
+                {
+                    string ok = hits == 1 ? "1 paso" : hits + " pasos";
+                    int bad = errors + critical;
+                    string ko = bad == 0 ? "sin errores" : bad == 1 ? "1 error" : bad + " errores";
+                    detail = ok + " · " + ko;
+                }
+
+                VRPanelKit.Text(t, detail, new Vector2(cx, top - 0.036f), 0.016f,
+                    act == BurnProtocol.Act.Planteamiento ? Muted : state, TextAnchor.UpperCenter,
+                    TextAlignment.Center);
+                if (i < 3)
+                {
+                    // Flecha entre actos.
+                    VRPanelKit.Text(t, "›", new Vector2(cx + w / 2f + gap / 2f, top - h / 2f + 0.012f), 0.024f,
+                        Muted, TextAnchor.UpperCenter, TextAlignment.Center);
+                }
+            }
+        }
+
+        // Tarjeta interior, un poco mas clara que el fondo y sin brillo.
+        private static void Card(Transform t, string name, Vector2 center, Vector2 size)
+        {
+            RoundedPanel card = RoundedPanel.Create(t, name, center, size, 0.001f, 0.02f, 0.0012f, 0f);
+            card.top = new Color(0.15f, 0.2f, 0.32f, 0.85f);
+            card.bottom = new Color(0.11f, 0.15f, 0.26f, 0.85f);
+            card.borderLeft = new Color(0.45f, 0.6f, 0.9f, 0.45f);
+            card.borderRight = new Color(0.6f, 0.5f, 0.95f, 0.45f);
+            card.sheen = 0.03f;
+            card.Push();
+        }
+
+        // Un consejo por tipo de error, sin pasar de 8 lineas. Si no entran
+        // todos, la ultima linea dice cuantos faltan (estan en el JSON).
+        // Nombre corto de cada paso para el resumen: caben en una linea sin
+        // montarse con "Hecho" / "Faltó" (BurnProtocol.StepNames queda para
+        // el registro).
+        private static string ShortStepName(BurnProtocol.Step step)
+        {
+            switch (step)
+            {
+                case BurnProtocol.Step.ApagarFuego: return "Apagar el fuego";
+                case BurnProtocol.Step.AguaFria: return "Abrir el agua fría";
+                case BurnProtocol.Step.Enfriar: return "Enfriar 20 minutos";
+                case BurnProtocol.Step.Anillo: return "Retirar el anillo";
+                case BurnProtocol.Step.Abrigar: return "Abrigar a la persona";
+                case BurnProtocol.Step.Cubrir: return "Cubrir sin apretar";
+                case BurnProtocol.Step.DecisionMedica: return "Llamar al 106 y decidir";
+                default: return BurnProtocol.StepNames[(int)step];
+            }
+        }
+
+        private static string Tips(BurnProtocol p)
+        {
             Dictionary<string, int> counts = new Dictionary<string, int>();
             List<string> order = new List<string>();
             foreach (BurnProtocol.Mistake m in p.Mistakes)
@@ -77,28 +285,63 @@ namespace SojaExiles
                 counts[m.explanation]++;
             }
 
-            int shown = 0;
-            foreach (string explanation in order)
+            // Sin errores no basta: si faltaron pasos, se dice cuales.
+            List<string> missing = new List<string>();
+            foreach (BurnProtocol.Step step in System.Enum.GetValues(typeof(BurnProtocol.Step)))
             {
-                if (shown++ >= 4)
+                if (!p.IsDone(step))
                 {
-                    break;
+                    missing.Add(ShortStepName(step));
                 }
-
-                string times = counts[explanation] > 1 ? $" (x{counts[explanation]})" : "";
-                tips.Add(VRPanelKit.Wrap("• " + explanation + times, 62));
             }
 
             if (order.Count == 0)
             {
-                tips.Add($"<color={Green}>Seguiste el protocolo sin errores. ¡Muy bien!</color>");
+                if (missing.Count == 0)
+                {
+                    return "Seguiste el protocolo completo y sin errores.\n¡Muy bien!";
+                }
+
+                List<string> todo = new List<string>
+                {
+                    missing.Count == 1 ? "No cometiste errores, pero faltó un paso:" : "No cometiste errores, pero faltaron " + missing.Count + " pasos:"
+                };
+                for (int i = 0; i < missing.Count && i < 5; i++)
+                {
+                    todo.Add("• " + missing[i]);
+                }
+
+                if (missing.Count > 5)
+                {
+                    todo.Add("• Y " + (missing.Count - 5) + " más.");
+                }
+
+                return VRPanelKit.Join(todo);
             }
 
-            VRPanelKit.Text(t, VRPanelKit.Join(tips), new Vector2(left, height / 2f - 0.6f), 0.022f,
-                new Color(0.85f, 0.88f, 0.93f));
+            const int maxLines = 8;
+            List<string> lines = new List<string>();
+            int lineCount = 0;
+            for (int i = 0; i < order.Count; i++)
+            {
+                string explanation = order[i];
+                string times = counts[explanation] > 1 ? $" (x{counts[explanation]})" : "";
+                string tip = VRPanelKit.Wrap("• " + explanation + times, 44);
+                int n = tip.Split('\n').Length;
+                bool last = i == order.Count - 1;
+                // Deja una linea para el aviso de los que no entran.
+                if (lineCount + n > (last ? maxLines : maxLines - 1))
+                {
+                    int left = order.Count - i;
+                    lines.Add(left == 1 ? "• Y 1 error más." : $"• Y {left} errores más.");
+                    break;
+                }
 
-            VRPanelKit.Button(t, "Repetir práctica", new Vector2(0f, -height / 2f + 0.075f), new Vector2(0.3f, 0.09f),
-                new Color(0.16f, 0.42f, 0.78f), Restart);
+                lines.Add(tip);
+                lineCount += n;
+            }
+
+            return VRPanelKit.Join(lines);
         }
 
         private static string Seconds(float s)
@@ -106,8 +349,9 @@ namespace SojaExiles
             return s < 0f ? "-" : s.ToString("F1") + " s";
         }
 
-        private static void Restart()
+        private static void Restart(BurnInjury.BurnDegree degree)
         {
+            BurnInjury.NextDegree = degree;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
     }

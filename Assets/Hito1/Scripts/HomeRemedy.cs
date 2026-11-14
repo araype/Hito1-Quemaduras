@@ -4,11 +4,15 @@ using UnityEngine;
 namespace SojaExiles
 {
     // Remedio casero que NO se debe usar en una quemadura (distractor): hielo,
-    // mantequilla, pasta dental, aceite o algodon. Si el jugador lo acerca a
-    // la mano quemada, la paciente la aparta y protesta (error). Si lo pone
-    // sobre la quemadura, queda una capa sobre la piel (grasa, pasta, frio o
-    // pelusa) y la paciente grita (error critico; el algodon es error comun).
-    // La grasa y la pasta se van de a poco con el agua del grifo.
+    // mantequilla, pasta dental, aceite o algodon; del botiquin, la pomada y
+    // las curitas. Si el jugador lo acerca a la mano quemada, la paciente la
+    // aparta y protesta (error). Si lo pone sobre la quemadura, queda una
+    // capa sobre la piel (grasa, pasta, frio o pelusa) y la paciente grita
+    // (error critico; el algodon y la curita son error comun: a ella no le
+    // parecen mal). La curita queda pegada sobre la quemadura (NHS: "do not
+    // use plasters or sticky dressings"; Cruz Roja Britanica: las vendas
+    // adhesivas se pegan a la piel). La grasa y la pasta se van de a poco
+    // con el agua del grifo.
     [RequireComponent(typeof(Rigidbody))]
     public class HomeRemedy : MonoBehaviour
     {
@@ -18,7 +22,11 @@ namespace SojaExiles
             Mantequilla,
             PastaDental,
             Aceite,
-            Algodon
+            Algodon,
+            // Del botiquin (2026-11-09): no se ponen cremas ni pomadas.
+            Pomada,
+            // Del botiquin (2026-11-12): curita (aposito adhesivo).
+            Curita
         }
 
         public Remedy remedy;
@@ -61,7 +69,7 @@ namespace SojaExiles
 
         public bool IsCritical
         {
-            get { return remedy != Remedy.Algodon; }
+            get { return remedy != Remedy.Algodon && remedy != Remedy.Curita; }
         }
 
         private void Update()
@@ -109,6 +117,12 @@ namespace SojaExiles
         private void Apply(PatientBody patient, Transform hand)
         {
             Hito1FX.PlayAt(remedy == Remedy.Hielo ? "hielo_choque" : "tela_roce_3", hand.position, 0.7f);
+            if (remedy == Remedy.Curita)
+            {
+                // La curita se usa (queda pegada en la mano).
+                SimpleGrab.ForceRelease(GetComponent<Rigidbody>());
+                Destroy(gameObject);
+            }
             if (!Smears.TryGetValue(remedy, out Smear smear) || smear.renderer == null)
             {
                 smear = new Smear(patient, remedy);
@@ -148,11 +162,39 @@ namespace SojaExiles
             public Smear(PatientBody patient, Remedy remedy)
             {
                 this.remedy = remedy;
-                renderer = HandSkinMesh.Build(patient, true, 0.55f, 0.0025f, "Body", "Remedio" + remedy,
-                    "Remedio_" + remedy);
+                renderer = remedy == Remedy.Curita
+                    ? Plaster(patient)
+                    : HandSkinMesh.Build(patient, true, 0.55f, 0.0025f, "Body", "Remedio" + remedy,
+                        "Remedio_" + remedy);
                 baseColor = renderer != null && renderer.sharedMaterial != null && renderer.sharedMaterial.HasProperty("_Color")
                     ? renderer.sharedMaterial.color
                     : Color.white;
+            }
+
+            // Curita sobre la quemadura: una franja de 7 x 2 cm en el dorso,
+            // atravesada sobre el centro de la quemadura.
+            private static SkinnedMeshRenderer Plaster(PatientBody patient)
+            {
+                BurnSkinOverlay overlay = patient.GetComponent<BurnSkinOverlay>();
+                Transform hand = patient.HandBone(true);
+                HandFrame frame = HandFrame.Build(patient, true, 0.45f, "Body");
+                if (frame == null || hand == null)
+                {
+                    return null;
+                }
+
+                Vector3 local = overlay != null ? overlay.burnCenter : Vector3.zero;
+                Vector3 dorsum = overlay != null ? overlay.dorsumDirection : Vector3.back;
+                Vector3 c = frame.ToBind(hand.position + hand.rotation * local);
+                Vector3 n = frame.DirToBind(hand.rotation * dorsum);
+                float units = frame.UnitsPerMeter;
+                Vector3 across = frame.Wide;
+                Vector3 along = frame.Long;
+                SkinnedMeshRenderer r = HandSkinMesh.Build(patient, true, 0.45f, 0.0025f, "Body", "RemedioCurita",
+                    "Curita", (center, normal) => Vector3.Dot(normal, n) > 0.2f
+                        && Mathf.Abs(Vector3.Dot(center - c, across)) < 0.036f * units
+                        && Mathf.Abs(Vector3.Dot(center - c, along)) < 0.01f * units);
+                return r;
             }
 
             public void Update(float dt, PatientWetHand wet)
@@ -166,7 +208,7 @@ namespace SojaExiles
                 {
                     amount = Mathf.MoveTowards(amount, 0f, dt / 25f);
                 }
-                else if (remedy != Remedy.Algodon && wet != null && wet.Wetness > 0.8f)
+                else if (remedy != Remedy.Algodon && remedy != Remedy.Curita && wet != null && wet.Wetness > 0.8f)
                 {
                     amount = Mathf.MoveTowards(amount, 0f, dt / 8f);
                 }

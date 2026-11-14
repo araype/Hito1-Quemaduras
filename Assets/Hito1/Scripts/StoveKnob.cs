@@ -3,8 +3,9 @@ using UnityEngine;
 namespace SojaExiles
 {
     // Perilla de la cocina que controla el quemador de la olla. Se gira
-    // tocandola con la mano, igual que la llave del grifo (un punto dorado
-    // marca donde tocar mientras el fuego esta prendido). Apagar el fuego es
+    // acercando la mano y apretando (boton lateral, gatillo o pinza: ver
+    // HandPress), igual que la llave del grifo; antes bastaba con tocarla.
+    // Un punto dorado marca donde esta mientras el fuego esta prendido. Apagar el fuego es
     // lo primero ante una quemadura en la cocina: se elimina el peligro.
     // Va en la pieza de la perilla del kit (Knob.00X) mas cercana al quemador.
     // Corre despues de PotFX, que ubica el quemador en su Start.
@@ -23,7 +24,12 @@ namespace SojaExiles
         public Color onColor = new Color(1f, 0.78f, 0.15f, 0.65f);
 
         public float toggleCooldown = 0.8f;
-        public float rearmSeconds = 0.3f;
+        [Tooltip("Distancia de la mano al centro de la perilla para poder apretarla (m).")]
+        public float pressReach = 0.1f;
+        [Tooltip("Una vez apagada no se vuelve a prender al apretarla de nuevo (antes, un segundo toque la prendia y el paso ya contaba como hecho).")]
+        public bool stayOffOnceOff = true;
+        [Tooltip("Antes del accidente la paciente esta cocinando: apretar la perilla no hace nada.")]
+        public bool onlyAfterBurn = true;
 
         public bool IsOn { get; private set; }
 
@@ -32,7 +38,8 @@ namespace SojaExiles
         private float angle;
         private Renderer marker;
         private float nextToggleTime;
-        private float lastHandInsideTime = float.NegativeInfinity;
+        private HandPress press;
+        private Vector3 pressCenter;
 
         private void Awake()
         {
@@ -72,7 +79,10 @@ namespace SojaExiles
                 : outward.normalized;
 
             Renderer own = GetComponent<Renderer>();
-            Vector3 front = (own != null ? own.bounds.center : transform.position) + outward.normalized * 0.025f;
+            pressCenter = own != null ? own.bounds.center : transform.position;
+            press = new HandPress(pressReach);
+            SimpleGrab.AddGrabBlocker(BlocksGrab);
+            Vector3 front = pressCenter + outward.normalized * 0.025f;
             marker = IndicatorUtil.CreateSphere("PuntoPerilla", transform.parent, front, markerRadius,
                 indicatorMaterial, onColor);
 
@@ -96,11 +106,35 @@ namespace SojaExiles
                 ApplyRotation();
             }
 
+            if (press != null)
+            {
+                press.reach = pressReach;
+                if (press.Update(pressCenter) >= 0 && CanToggle() && Time.time >= nextToggleTime)
+                {
+                    nextToggleTime = Time.time + toggleCooldown;
+                    SetOn(!IsOn);
+                }
+            }
+
+            UpdateMarker();
             if (marker != null && marker.enabled)
             {
+                // Con la mano al alcance, el punto crece: ya se puede apretar.
                 float pulse = 1f + 0.15f * Mathf.Sin(Time.time * 4f);
-                IndicatorUtil.SetWorldDiameter(marker.transform, markerRadius * 2f * pulse);
+                float near = press != null && press.Near >= 0 ? 1.4f : 1f;
+                IndicatorUtil.SetWorldDiameter(marker.transform, markerRadius * 2f * pulse * near);
             }
+        }
+
+        private void OnDestroy()
+        {
+            SimpleGrab.RemoveGrabBlocker(BlocksGrab);
+        }
+
+        // Apretar junto a la perilla no agarra otra cosa.
+        private bool BlocksGrab(Vector3 point)
+        {
+            return press != null && isActiveAndEnabled && press.Contains(point, pressCenter) && CanToggle();
         }
 
         private void ApplyRotation()
@@ -108,29 +142,30 @@ namespace SojaExiles
             transform.localRotation = Quaternion.AngleAxis(angle, axisLocal) * offRotation;
         }
 
-        private void OnTriggerEnter(Collider other)
+        private bool CanToggle()
         {
-            if (!SimpleGrab.IsHandCollider(other))
+            if (stayOffOnceOff && !IsOn)
             {
-                return;
+                return false;
             }
 
-            bool rearmed = Time.time - lastHandInsideTime > rearmSeconds;
-            lastHandInsideTime = Time.time;
-            if (rearmed && Time.time >= nextToggleTime)
+            if (onlyAfterBurn)
             {
-                nextToggleTime = Time.time + toggleCooldown;
-                SetOn(!IsOn);
+                if (burnSequence == null)
+                {
+                    burnSequence = FindObjectOfType<BurnSequenceManager>();
+                }
+
+                if (burnSequence != null && burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle)
+                {
+                    return false;
+                }
             }
+
+            return true;
         }
 
-        private void OnTriggerStay(Collider other)
-        {
-            if (SimpleGrab.IsHandCollider(other))
-            {
-                lastHandInsideTime = Time.time;
-            }
-        }
+        private BurnSequenceManager burnSequence;
 
         public void SetOn(bool on)
         {
@@ -151,12 +186,13 @@ namespace SojaExiles
             }
         }
 
-        // El punto dorado solo se ve mientras hay fuego (invita a apagarlo).
+        // El punto dorado solo se ve mientras hay fuego (invita a apagarlo) y
+        // en modo guiado.
         private void UpdateMarker()
         {
             if (marker != null)
             {
-                marker.enabled = IsOn;
+                marker.enabled = IsOn && IndicatorUtil.HintsVisible;
             }
         }
     }

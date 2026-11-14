@@ -65,6 +65,8 @@ namespace SojaExiles
             // Primero la escala de la cocina y la ubicacion de la paciente y
             // del jugador: lo que se instala despues ya queda a escala.
             BurnStaging.Apply();
+            // Que el jugador no salga de la cocina.
+            PlayArea.FromKitchen();
 
             if (Object.FindObjectOfType<KitchenAmbience>() == null)
             {
@@ -79,6 +81,12 @@ namespace SojaExiles
             if (Object.FindObjectOfType<BurnSceneProps>() == null)
             {
                 burn.gameObject.AddComponent<BurnSceneProps>();
+            }
+
+            // Lo que cae al piso vuelve a su lugar.
+            if (Object.FindObjectOfType<FloorRecovery>() == null)
+            {
+                burn.gameObject.AddComponent<FloorRecovery>();
             }
 
             // Capa de secuencia: protocolo y puntaje, y el reloj de 20 min.
@@ -96,6 +104,24 @@ namespace SojaExiles
             if (Object.FindObjectOfType<CoolingClock>() == null)
             {
                 burn.gameObject.AddComponent<CoolingClock>();
+            }
+
+            // Llamada al 106 con el celular del meson (decision medica).
+            if (Object.FindObjectOfType<EmergencyCall>() == null)
+            {
+                burn.gameObject.AddComponent<EmergencyCall>().burnSequence = burn;
+            }
+
+            // Pausa y reinicio en cualquier momento.
+            if (Object.FindObjectOfType<PauseMenu>() == null)
+            {
+                burn.gameObject.AddComponent<PauseMenu>();
+            }
+
+            // Seguridad propia: olla caliente y agua derramada.
+            if (Object.FindObjectOfType<PlayerSafety>() == null)
+            {
+                burn.gameObject.AddComponent<PlayerSafety>().burnSequence = burn;
             }
 
             InstallHotTap();
@@ -125,8 +151,9 @@ namespace SojaExiles
                 }
             }
 
-            // La quemadura se cubre con film o gasa (CoverItem), no con el
-            // pano de cocina: el detector del pano ya no la da por cubierta.
+            // La quemadura se cubre con film (FilmRoll) o una bolsa
+            // (CoverItem), no con el pano de cocina: el detector del pano ya
+            // no la da por cubierta.
             foreach (BurnContactDetector detector in Object.FindObjectsOfType<BurnContactDetector>())
             {
                 if (detector.requiredItem == FirstAidItem.ItemType.Panuelo)
@@ -185,9 +212,34 @@ namespace SojaExiles
                     patient.gameObject.AddComponent<PatientPhysics>().burnSequence = burn;
                 }
 
+                // Las manos visibles del jugador no la atraviesan.
+                if (patient.GetComponent<PatientHandLimiter>() == null)
+                {
+                    patient.gameObject.AddComponent<PatientHandLimiter>();
+                }
+
                 if (patient.GetComponent<PatientReach>() != null && patient.GetComponent<PatientBurnArm>() == null)
                 {
                     patient.gameObject.AddComponent<PatientBurnArm>().burnSequence = burn;
+                }
+
+                // Se asusta y quiere sacar la mano del agua: hay que calmarla.
+                if (patient.GetComponent<PatientDialog>() == null)
+                {
+                    patient.gameObject.AddComponent<PatientDialog>().burnSequence = burn;
+                }
+
+                // Animaciones de Mixamo (respirar, caminar, dolor y gestos).
+                if (patient.GetComponent<PatientAnimator>() == null)
+                {
+                    patient.gameObject.AddComponent<PatientAnimator>().burnSequence = burn;
+                }
+
+                // Gestos de la cara y boca con la voz (solo si el modelo trae
+                // expresiones: la tia de Avaturn, no la de Mixamo).
+                if (patient.GetComponent<PatientFace>() == null && PatientFace.HasExpressions(patient.gameObject))
+                {
+                    patient.gameObject.AddComponent<PatientFace>().burnSequence = burn;
                 }
             }
 

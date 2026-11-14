@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Piel_Quemada_Real
+  m_Shader: {fileID: 4800000, guid: 25e6255df13e4758a523307cab1ed5ae, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _NoiseTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Heat: 1
+    - _Degree: 1
+    - _Alpha: 1
+    - _EdgeNoise: 0.45
+    - _BumpStrength: 0.45
+    m_Colors:
+    - _Erythema: {r: 0.84, g: 0.46, b: 0.42, a: 1}
+    - _DeepRed: {r: 0.6, g: 0.12, b: 0.11, a: 1}
+    - _Cooled: {r: 0.9, g: 0.58, b: 0.54, a: 1}
+    - _WoundBase: {r: 0.66, g: 0.16, b: 0.15, a: 1}
+    - _Slough: {r: 0.9, g: 0.78, b: 0.72, a: 1}
+  m_BuildTextureStacks: []

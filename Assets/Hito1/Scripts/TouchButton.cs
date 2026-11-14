@@ -1,13 +1,19 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SojaExiles
 {
-    // Boton de un panel que se aprieta dejando la mano (la esfera fisica de
-    // SimpleGrab) dentro de el un momento: una barra se llena de izquierda a
-    // derecha y al completarse hace clic y vibra. Si la mano sale antes, la
-    // barra se vacia. Asi todos los botones cuestan lo mismo y un roce al
-    // pasar no elige nada. Despues de apretarlo hay que sacar la mano para
-    // volver a usarlo.
+    // Boton de un panel, como un boton normal: se apunta y se aprieta.
+    // Apuntar es tocarlo con la punta del indice (o la esfera de la mano) o
+    // apuntarle de lejos con el rayo de la mano (ButtonPointer). Apretar es
+    // el gatillo o el boton lateral del control, o la pinza con la mano. Solo
+    // tocarlo ya no lo aprieta (antes bastaba dejar la mano 0,6 s dentro y se
+    // elegia sin querer). Cuenta el momento de apretar: si ya se tenia
+    // apretado al llegar al boton, hay que soltar y volver a apretar. Con
+    // esa mano sosteniendo algo no cuenta.
+    // Usa el tiempo sin escalar: funciona tambien con el juego en pausa
+    // (PauseMenu), y entonces mira la posicion de la mano en vez de su esfera
+    // fisica, que no se mueve sin FixedUpdate.
     [RequireComponent(typeof(BoxCollider))]
     public class TouchButton : MonoBehaviour
     {
@@ -15,11 +21,14 @@ namespace SojaExiles
         public Renderer background;
         public Color idleColor = new Color(0.16f, 0.42f, 0.78f);
         public Color pressedColor = new Color(0.45f, 0.75f, 1f);
-        [Tooltip("Segundos que hay que mantener la mano dentro del boton.")]
+        [Tooltip("Sin uso: el boton se aprieta con el gatillo o la pinza, no manteniendo la mano.")]
         public float holdSeconds = 0.6f;
-        public float cooldown = 0.8f;
+        public float cooldown = 0.5f;
         [Tooltip("Segundos desde que aparece hasta que se puede apretar (evita toques sin querer).")]
-        public float armDelay = 0.8f;
+        public float armDelay = 0.6f;
+
+        // Botones visibles (los recorre ButtonPointer para el rayo).
+        public static readonly List<TouchButton> Active = new List<TouchButton>();
 
         private BoxCollider box;
         private Transform fill;
@@ -28,16 +37,22 @@ namespace SojaExiles
         private float enabledTime;
         private float nextPress;
         private float flashUntil;
-        private float held;
-        private bool waitExit;
-        private int lastHand = -1;
-        private float nextTick;
+        private int lastHovered = -1;
+        private int lastTouchHand = -1;
+        private float lastTouchTime = -10f;
+        private const float TouchGrace = 0.4f;
         private readonly Collider[] overlap = new Collider[16];
 
-        // 0 a 1: cuanto se lleno la barra.
+        // Mano que le apunta con el rayo (-1 ninguna); la pone ButtonPointer.
+        public int RayHand { get; set; } = -1;
+
+        // Hay una mano tocandolo o apuntandole (lo usa el cursor del panel).
+        public bool Hovered { get; private set; }
+
+        // 1 mientras destella al apretarlo.
         public float Progress
         {
-            get { return Mathf.Clamp01(held / Mathf.Max(0.05f, holdSeconds)); }
+            get { return Time.unscaledTime < flashUntil ? 1f : 0f; }
         }
 
         private void Awake()
@@ -47,18 +62,46 @@ namespace SojaExiles
 
         private void OnEnable()
         {
-            enabledTime = Time.time;
-            held = 0f;
+            enabledTime = Time.unscaledTime;
             box = GetComponent<BoxCollider>();
             box.isTrigger = true;
+            RayHand = -1;
+            if (!Active.Contains(this))
+            {
+                Active.Add(this);
+            }
+
+            ButtonPointer.Ensure();
+        }
+
+        private void OnDisable()
+        {
+            Active.Remove(this);
+            RayHand = -1;
+            Hovered = false;
         }
 
         private void Start()
         {
             BuildFill();
+
+            // Un cursor por panel muestra donde esta la punta del dedo.
+            Transform panel = PanelRoot();
+            if (panel != null && panel.GetComponent<PanelFingerCursor>() == null)
+            {
+                panel.gameObject.AddComponent<PanelFingerCursor>();
+            }
         }
 
-        // Barra de llenado sobre el fondo del boton (por detras del texto).
+        // Raiz del panel: la que se dibuja encima (OverlayPanel) o, si no,
+        // el padre del boton.
+        private Transform PanelRoot()
+        {
+            OverlayPanel overlay = GetComponentInParent<OverlayPanel>();
+            return overlay != null ? overlay.transform : transform.parent;
+        }
+
+        // Destello sobre el fondo del boton al apretarlo (por detras del texto).
         private void BuildFill()
         {
             if (background == null)
@@ -67,6 +110,18 @@ namespace SojaExiles
             }
 
             size = new Vector2(box.size.x, box.size.y);
+            RoundedPanel roundedBackground = background.GetComponent<RoundedPanel>();
+            if (roundedBackground != null)
+            {
+                RoundedPanel flash = RoundedPanel.Create(transform, "Llenado", Vector2.zero, size,
+                    -0.001f, roundedBackground.radius, 0f, 0f);
+                flash.sheen = 0f;
+                flash.SetSolid(Color.Lerp(idleColor, new Color(0.02f, 0.05f, 0.12f), 0.45f), 0f);
+                fillRenderer = flash.Renderer;
+                fillRenderer.enabled = false;
+                return;
+            }
+
             GameObject go = new GameObject("Llenado");
             go.AddComponent<NoAutoCollider>();
             go.transform.SetParent(transform, false);
@@ -74,61 +129,100 @@ namespace SojaExiles
             fill = go.transform;
             fillRenderer = VRPanelKit.Background(fill, new Vector2(0.5f, 0f), new Vector2(1f, size.y), "Panel_Boton",
                 pressedColor);
-            // Mas oscura que el boton: el texto blanco se sigue leyendo.
             IndicatorUtil.SetColor(fillRenderer, Color.Lerp(idleColor, new Color(0.02f, 0.05f, 0.12f), 0.55f));
-            fill.localScale = new Vector3(0f, 1f, 1f);
+            fill.localScale = new Vector3(size.x, 1f, 1f);
+            fillRenderer.enabled = false;
         }
 
         private void Update()
         {
-            int hand = HandInside();
-            bool armed = Time.time - enabledTime >= armDelay && Time.time >= nextPress;
-            if (hand < 0)
+            float now = Time.unscaledTime;
+            int touch = HandInside();
+            // Al hacer la pinza la punta del indice se va hacia el pulgar y
+            // sale del boton justo al apretar: el toque sigue contando un
+            // momento despues de salir.
+            if (touch >= 0)
             {
-                waitExit = false;
+                lastTouchHand = touch;
+                lastTouchTime = now;
+            }
+            else if (lastTouchHand >= 0 && now - lastTouchTime <= TouchGrace)
+            {
+                touch = lastTouchHand;
             }
 
-            if (hand >= 0 && armed && !waitExit)
-            {
-                held += Time.deltaTime;
-                lastHand = hand;
-                if (Time.time >= nextTick)
-                {
-                    nextTick = Time.time + 0.12f;
-                    Buzz(hand, 0.12f + 0.2f * Progress, 0.03f);
-                }
+            int hand = touch >= 0 ? touch : RayHand;
+            Hovered = hand >= 0;
+            bool armed = now - enabledTime >= armDelay && now >= nextPress;
 
-                if (held >= holdSeconds)
-                {
-                    Press();
-                }
-            }
-            else
+            // Al llegar al boton, un toque leve.
+            if (hand >= 0 && hand != lastHovered && armed)
             {
-                held = Mathf.MoveTowards(held, 0f, Time.deltaTime * 2f);
+                Buzz(hand, 0.15f, 0.02f);
             }
 
-            IndicatorUtil.SetColor(background, Time.time < flashUntil ? pressedColor
-                : hand >= 0 && armed ? Color.Lerp(idleColor, Color.white, 0.12f) : idleColor);
-            if (fill != null)
+            lastHovered = hand;
+            if (hand >= 0 && armed && ButtonPointer.PressedDown(hand))
             {
-                fill.localScale = new Vector3(size.x * Progress, 1f, 1f);
-                fillRenderer.enabled = Progress > 0.001f;
+                Press(hand);
+            }
+
+            IndicatorUtil.SetColor(background, now < flashUntil ? pressedColor
+                : hand >= 0 && armed ? Color.Lerp(idleColor, Color.white, 0.25f) : idleColor);
+            if (fillRenderer != null)
+            {
+                fillRenderer.enabled = now < flashUntil;
             }
         }
 
-        private void Press()
+        private void Press(int hand)
         {
-            held = 0f;
-            waitExit = true;
-            nextPress = Time.time + cooldown;
-            flashUntil = Time.time + 0.25f;
+            nextPress = Time.unscaledTime + cooldown;
+            flashUntil = Time.unscaledTime + 0.25f;
+            ButtonPointer.Consume(hand);
             Hito1FX.PlayAt("perilla_clic", transform.position, 0.7f, 0.02f);
-            Buzz(lastHand, 0.5f, 0.06f);
+            Buzz(hand, 0.5f, 0.06f);
             OnPressed?.Invoke();
         }
 
-        // Mano del jugador dentro del boton: 0 izquierda, 1 derecha, -1
+        // Punto del mundo junto a este boton (para que apretar ahi no agarre
+        // un objeto que este detras del panel).
+        public bool Near(Vector3 point)
+        {
+            return box != null && isActiveAndEnabled && PointInside(point, 0.03f);
+        }
+
+        // Si el rayo corta al boton de frente dentro de su rectangulo (el
+        // frente del panel es -Z local) y a que distancia.
+        public bool RayHit(Ray ray, float maxDistance, out float distance)
+        {
+            distance = 0f;
+            if (box == null || !isActiveAndEnabled)
+            {
+                return false;
+            }
+
+            Vector3 normal = transform.forward;
+            float facing = Vector3.Dot(ray.direction, normal);
+            if (facing <= 0.05f)
+            {
+                return false;
+            }
+
+            Vector3 center = transform.TransformPoint(box.center);
+            distance = Vector3.Dot(center - ray.origin, normal) / facing;
+            if (distance < 0f || distance > maxDistance)
+            {
+                return false;
+            }
+
+            Vector3 local = transform.InverseTransformPoint(ray.GetPoint(distance)) - box.center;
+            Vector3 scale = transform.lossyScale;
+            return Mathf.Abs(local.x * scale.x) <= Mathf.Abs(box.size.x * scale.x) * 0.5f
+                && Mathf.Abs(local.y * scale.y) <= Mathf.Abs(box.size.y * scale.y) * 0.5f;
+        }
+
+        // Mano del jugador tocando el boton: 0 izquierda, 1 derecha, -1
         // ninguna. Se consulta cada cuadro (los avisos de trigger se pierden
         // si la mano queda quieta).
         private int HandInside()
@@ -136,6 +230,18 @@ namespace SojaExiles
             if (box == null)
             {
                 return -1;
+            }
+
+            // Primero la punta del indice: es con lo que uno toca un boton.
+            int tip = FingertipInside();
+            if (tip >= 0)
+            {
+                return tip;
+            }
+
+            if (Time.timeScale <= 0f)
+            {
+                return HandPointInside();
             }
 
             Vector3 center = transform.TransformPoint(box.center);
@@ -147,11 +253,68 @@ namespace SojaExiles
             {
                 if (SimpleGrab.IsHandCollider(overlap[i]))
                 {
-                    return SimpleGrab.IsLeftHandCollider(overlap[i]) ? 0 : 1;
+                    // Si esa mano tiene punta de dedo, solo cuenta el dedo: la
+                    // esfera de la palma pasaba por los botones de arriba al
+                    // bajar a otro.
+                    bool left = SimpleGrab.IsLeftHandCollider(overlap[i]);
+                    if (SimpleGrab.TryGetFingertip(left, out Vector3 _))
+                    {
+                        continue;
+                    }
+
+                    return left ? 0 : 1;
                 }
             }
 
             return -1;
+        }
+
+        // La punta del indice de cada mano dentro de la caja del boton.
+        private int FingertipInside()
+        {
+            for (int h = 0; h < 2; h++)
+            {
+                if (!SimpleGrab.TryGetFingertip(h == 0, out Vector3 p) || !PointInside(p, 0.008f))
+                {
+                    continue;
+                }
+
+                // Mas fino que la caja (que es honda para la esfera de la
+                // mano): el dedo cuenta desde 3,5 cm delante del boton hasta
+                // 3 cm detras (si lo atraviesa).
+                float depth = Vector3.Dot(p - transform.position, transform.forward);
+                if (depth >= -0.035f && depth <= 0.03f)
+                {
+                    return h;
+                }
+            }
+
+            return -1;
+        }
+
+        // Sin fisica: el punto de agarre de cada mano dentro de la caja del
+        // boton (con un margen del tamano de la esfera de la mano).
+        private int HandPointInside()
+        {
+            for (int h = 0; h < 2; h++)
+            {
+                if (SimpleGrab.TryGetHand(h == 0, out Vector3 p, out bool _) && PointInside(p, 0.02f))
+                {
+                    return h;
+                }
+            }
+
+            return -1;
+        }
+
+        private bool PointInside(Vector3 p, float margin)
+        {
+            Vector3 local = transform.InverseTransformPoint(p) - box.center;
+            Vector3 scale = transform.lossyScale;
+            Vector3 half = box.size * 0.5f;
+            return Mathf.Abs(local.x * scale.x) <= Mathf.Abs(half.x * scale.x) + margin
+                && Mathf.Abs(local.y * scale.y) <= Mathf.Abs(half.y * scale.y) + margin
+                && Mathf.Abs(local.z * scale.z) <= Mathf.Abs(half.z * scale.z) + margin;
         }
 
         private static BurnHaptics haptics;

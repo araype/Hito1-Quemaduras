@@ -27,6 +27,10 @@ namespace SojaExiles
 
         public string bonePrefix = "mixamorig8:";
 
+        [Tooltip("Al dar Play, cambia el modelo de Mixamo por la tia de Avaturn "
+            + "(Resources/Hito1Avatar/TiaAvaturn), que tiene gestos en la cara.")]
+        public bool useAvaturn = true;
+
         [Header("Brazos")]
         public ArmMode rightMode = ArmMode.Rest;
         public ArmMode leftMode = ArmMode.Rest;
@@ -73,6 +77,11 @@ namespace SojaExiles
         [HideInInspector] public float rightPalmDown;
         [HideInInspector] public float leftPalmDown;
         [HideInInspector] public float palmDownTiltDegrees = 15f;
+        // 0 a 1: mano como sosteniendo una taza (muneca recta, palma hacia
+        // adentro, pulgar arriba). Solo en modo Reach (PatientBurnArm al
+        // recibir un objeto).
+        [HideInInspector] public float rightGrip;
+        [HideInInspector] public float leftGrip;
 
         [Header("Caminar")]
         [Tooltip("Largo de un paso (m). Un ciclo completo son dos pasos.")]
@@ -109,10 +118,34 @@ namespace SojaExiles
 
         private bool ready;
 
+        // ---------------- animaciones (Mixamo) ----------------
+        // Con un Animator con controlador (lo pone PatientAnimator), las
+        // animaciones mueven cadera, piernas, torso y cabeza (respirar,
+        // caminar, gestos) y este script suma encima lo suyo: inclinarse,
+        // girar el torso, mirar y las reacciones. Los brazos siguen la
+        // animacion mientras estan en reposo y pasan suave a la cinematica
+        // inversa cuando van a un objetivo (la mano quemada, la taza, el
+        // cuello). Sin controlador, todo sigue como antes (pose de bind).
+        [Header("Animaciones")]
+        [Tooltip("Segundos para pasar un brazo de la animacion a la cinematica inversa y al reves.")]
+        public float armAnimBlendSeconds = 0.35f;
+        private Animator animator;
+
+        public bool Animated
+        {
+            get
+            {
+                return animator != null && animator.isActiveAndEnabled && animator.runtimeAnimatorController != null;
+            }
+        }
+
         private class Arm
         {
             public float side;              // +1 derecha, -1 izquierda
             public Transform shoulder, upper, fore, hand, middle1, thumb1;
+            // Falanges de cada dedo (pulgar, indice, medio, anular, menique),
+            // de la base a la punta; la ultima es el extremo, sin rotar.
+            public Transform[][] fingers;
             public float upperLength, foreLength;
             public Vector3 upperAxisLocal, upperHingeLocal;
             public Vector3 foreAxisLocal, foreHingeLocal;
@@ -124,6 +157,14 @@ namespace SojaExiles
             public Vector3 blendFromLocal;  // muneca al empezar la transicion (espacio del paciente)
             public Vector3 lastWrist;
             public bool hasLastWrist;
+
+            // Con animaciones (PatientAnimator): huesos del brazo, su indice en
+            // la pose de bind, la rotacion que puso la animacion este cuadro y
+            // cuanto manda la cinematica inversa (0 = la animacion).
+            public Transform[] bones;
+            public int[] bindIndex;
+            public Quaternion[] animRotations;
+            public float ikWeight;
         }
 
         private class Leg
@@ -189,6 +230,17 @@ namespace SojaExiles
             return arm.upperLength + arm.foreLength;
         }
 
+        // Punto frente a la palma donde va el centro de un objeto que sostiene
+        // (a 'distance' de la palma, a la altura de los dedos). Asi el objeto
+        // toca la mano en vez de flotar al costado.
+        public Vector3 PalmGripPoint(bool rightSide, float distance)
+        {
+            Arm arm = rightSide ? right : left;
+            Vector3 fingers = arm.hand.rotation * arm.fingersLocal;
+            Vector3 palm = -(arm.hand.rotation * arm.dorsumLocal);
+            return arm.hand.position + fingers.normalized * 0.045f + palm.normalized * distance;
+        }
+
         // Ultima posicion resuelta de la muneca (sirve para que un "asa" de
         // agarre quede donde esta la mano).
         public Vector3 WristPosition(bool rightSide)
@@ -226,6 +278,18 @@ namespace SojaExiles
             reactLiftVelocity += liftMetersPerSecond;
         }
 
+        [Tooltip("Cuanto puede cruzar la mano al otro lado del cuerpo (m), al tirar del brazo.")]
+        public float crossBodyLimit = 0.08f;
+
+        [Tooltip("Cuanto puede subir la mano por encima del hombro (m), al tirar del brazo.")]
+        public float maxAboveShoulder = 0.25f;
+
+        [Header("Mano relajada")]
+        [Tooltip("Flexion de los dedos (grados por falange). 0 = dedos rectos, como en la T-pose.")]
+        public float fingerCurlDegrees = 14f;
+        [Tooltip("Flexion de la muneca hacia la palma con el brazo colgando o llevado (grados).")]
+        public float wristRelaxDegrees = 10f;
+
         // Lleva un punto al espacio que la mano puede alcanzar de verdad:
         // dentro del largo del brazo, no detras de la espalda y no dentro del
         // torso. Lo usan los scripts que dejan al jugador arrastrar la mano.
@@ -240,6 +304,7 @@ namespace SojaExiles
             Vector3 shoulderPos = ShoulderPosition(rightSide);
             float reach = ArmLength(rightSide) * reachFraction;
             Vector3 flatForward = Flat(transform.forward);
+            Vector3 ownSide = Flat(transform.right).normalized * (rightSide ? 1f : -1f);
 
             for (int i = 0; i < 2; i++)
             {
@@ -272,6 +337,20 @@ namespace SojaExiles
                         point += dir * (torsoClearance - distance);
                     }
                 }
+
+                // No pasa al otro lado del cuerpo mas que crossBodyLimit: si
+                // no, el brazo atraviesa el pecho.
+                float lateral = Vector3.Dot(point - hips.position, ownSide);
+                if (lateral < -crossBodyLimit)
+                {
+                    point += ownSide * (-crossBodyLimit - lateral);
+                }
+
+                // Con la mano quemada no la levanta por encima de la cabeza.
+                if (point.y > shoulderPos.y + maxAboveShoulder)
+                {
+                    point.y = shoulderPos.y + maxAboveShoulder;
+                }
             }
 
             return point;
@@ -281,6 +360,12 @@ namespace SojaExiles
 
         private void Awake()
         {
+            if (useAvaturn)
+            {
+                DisableLegacyPosers();
+                PatientModelSwap.Apply(this);
+            }
+
             ready = FindBones() && CaptureBindPose();
             if (!ready)
             {
@@ -290,9 +375,12 @@ namespace SojaExiles
             }
 
             DisableLegacyPosers();
+            animator = GetComponent<Animator>();
             ResetToBind();
             SetupArm(right);
             SetupArm(left);
+            CollectArmBones(right);
+            CollectArmBones(left);
             ComputeKneelDrop();
 
             right.currentMode = right.previousMode = rightMode;
@@ -309,12 +397,114 @@ namespace SojaExiles
             float dt = Mathf.Min(Time.deltaTime, 0.05f);
             UpdateSprings(dt);
 
+            if (Animated)
+            {
+                LateUpdateAnimated(dt);
+                return;
+            }
+
             ResetToBind();
             ApplyLegs();
             ApplySpine();
             ApplyHead();
             ApplyArm(right, rightMode, rightTarget);
             ApplyArm(left, leftMode, leftTarget);
+        }
+
+        // La animacion ya dejo su pose (el Animator corre antes que
+        // LateUpdate). La cadera no avanza por su cuenta (Walking de Mixamo
+        // camina hacia adelante; quien mueve a la paciente es PatientReach):
+        // conserva la altura de la animacion y el lugar de la pose de bind.
+        private void LateUpdateAnimated(float dt)
+        {
+            CaptureArmAnimation(right);
+            CaptureArmAnimation(left);
+            Vector3 animatedHips = hips.localPosition;
+            hips.localPosition = new Vector3(hipsBindLocalPosition.x, animatedHips.y, hipsBindLocalPosition.z);
+
+            // Los brazos parten de la pose de bind: la cinematica inversa mide
+            // sus ejes ahi.
+            ResetArmToBind(right);
+            ResetArmToBind(left);
+
+            ApplyLegs();
+            ApplySpine();
+            ApplyHead();
+            ApplyArm(right, rightMode, rightTarget);
+            ApplyArm(left, leftMode, leftTarget);
+            BlendArmWithAnimation(right, rightMode, rightTarget, dt);
+            BlendArmWithAnimation(left, leftMode, leftTarget, dt);
+        }
+
+        private void CollectArmBones(Arm arm)
+        {
+            List<Transform> bones = new List<Transform>();
+            foreach (Transform t in new[] { arm.shoulder, arm.upper, arm.fore, arm.hand })
+            {
+                if (t != null)
+                {
+                    bones.Add(t);
+                }
+            }
+
+            if (arm.fingers != null)
+            {
+                foreach (Transform[] chain in arm.fingers)
+                {
+                    bones.AddRange(chain);
+                }
+            }
+
+            List<Transform> kept = new List<Transform>();
+            List<int> index = new List<int>();
+            foreach (Transform bone in bones)
+            {
+                int i = System.Array.IndexOf(resetBones, bone);
+                if (i >= 0)
+                {
+                    kept.Add(bone);
+                    index.Add(i);
+                }
+            }
+
+            arm.bones = kept.ToArray();
+            arm.bindIndex = index.ToArray();
+            arm.animRotations = new Quaternion[arm.bones.Length];
+        }
+
+        private static void CaptureArmAnimation(Arm arm)
+        {
+            for (int i = 0; i < arm.bones.Length; i++)
+            {
+                arm.animRotations[i] = arm.bones[i].localRotation;
+            }
+        }
+
+        private void ResetArmToBind(Arm arm)
+        {
+            for (int i = 0; i < arm.bones.Length; i++)
+            {
+                arm.bones[i].localRotation = bindLocalRotations[arm.bindIndex[i]];
+            }
+        }
+
+        // En reposo manda la animacion (el brazo cuelga y se mueve con ella);
+        // con un objetivo, la cinematica inversa. El paso es suave.
+        private void BlendArmWithAnimation(Arm arm, ArmMode mode, Transform target, float dt)
+        {
+            bool ik = mode != ArmMode.Rest && !(mode == ArmMode.Reach && target == null);
+            float speed = dt / Mathf.Max(0.01f, armAnimBlendSeconds);
+            arm.ikWeight = Mathf.MoveTowards(arm.ikWeight, ik ? 1f : 0f, speed);
+            float w = Mathf.SmoothStep(0f, 1f, arm.ikWeight);
+            if (w >= 0.999f)
+            {
+                return;
+            }
+
+            for (int i = 0; i < arm.bones.Length; i++)
+            {
+                arm.bones[i].localRotation = Quaternion.Slerp(arm.animRotations[i], arm.bones[i].localRotation, w);
+            }
         }
 
         // ---------------- preparacion ----------------
@@ -363,6 +553,8 @@ namespace SojaExiles
                 middle1 = Get("LeftHandMiddle1"),
                 thumb1 = Get("LeftHandThumb1")
             };
+            right.fingers = FindFingers("Right", Get);
+            left.fingers = FindFingers("Left", Get);
             rightLeg = new Leg
             {
                 upLeg = Get("RightUpLeg"), leg = Get("RightLeg"), foot = Get("RightFoot"), toe = Get("RightToeBase")
@@ -377,6 +569,31 @@ namespace SojaExiles
                 && left.upper != null && left.fore != null && left.hand != null
                 && rightLeg.upLeg != null && rightLeg.leg != null && rightLeg.foot != null
                 && leftLeg.upLeg != null && leftLeg.leg != null && leftLeg.foot != null;
+        }
+
+        private static readonly string[] FingerNames = { "Thumb", "Index", "Middle", "Ring", "Pinky" };
+
+        private static Transform[][] FindFingers(string side, System.Func<string, Transform> get)
+        {
+            Transform[][] result = new Transform[FingerNames.Length][];
+            for (int f = 0; f < FingerNames.Length; f++)
+            {
+                List<Transform> chain = new List<Transform>();
+                for (int i = 1; i <= 4; i++)
+                {
+                    Transform t = get(side + "Hand" + FingerNames[f] + i);
+                    if (t == null)
+                    {
+                        break;
+                    }
+
+                    chain.Add(t);
+                }
+
+                result[f] = chain.ToArray();
+            }
+
+            return result;
         }
 
         // Lee la T-pose de las matrices de bind de la malla. No depende de la
@@ -518,7 +735,11 @@ namespace SojaExiles
             Vector3 fwd = transform.forward;
             hips.position += up * (reactLift - kneelDrop * kneel);
 
-            ApplyWalk(up);
+            // Con animaciones, los pasos los da Walking (PatientAnimator).
+            if (!Animated)
+            {
+                ApplyWalk(up);
+            }
 
             if (kneel <= 0.001f)
             {
@@ -591,8 +812,12 @@ namespace SojaExiles
             spine1.rotation = Quaternion.SlerpUnclamped(Quaternion.identity, q, 0.35f) * spine1.rotation;
             spine2.rotation = Quaternion.SlerpUnclamped(Quaternion.identity, q, 0.35f) * spine2.rotation;
 
-            // Al inspirar el pecho se abre (va un poco hacia atras).
-            spine2.rotation = Quaternion.AngleAxis(-breath * breathChestDegrees, rightAxis) * spine2.rotation;
+            // Al inspirar el pecho se abre (va un poco hacia atras). Con
+            // animaciones, la respiracion ya viene en ellas.
+            if (!Animated)
+            {
+                spine2.rotation = Quaternion.AngleAxis(-breath * breathChestDegrees, rightAxis) * spine2.rotation;
+            }
         }
 
         private void ApplyHead()
@@ -663,10 +888,26 @@ namespace SojaExiles
             }
 
             float palmDown = arm.side > 0f ? rightPalmDown : leftPalmDown;
-            if (palmDown > 0.001f && arm.currentMode == ArmMode.Reach)
+            float flat = arm.currentMode == ArmMode.Reach ? Mathf.Clamp01(palmDown) : 0f;
+            if (flat > 0.001f)
             {
-                LayHandFlat(arm, Mathf.Clamp01(palmDown));
+                LayHandFlat(arm, flat);
             }
+
+            float grip = arm.side > 0f ? rightGrip : leftGrip;
+            grip = arm.currentMode == ArmMode.Reach ? Mathf.Clamp01(grip) : 0f;
+            if (grip > 0.001f)
+            {
+                GripPose(arm, grip, outward);
+            }
+
+            // Mano relajada: la muneca cede un poco hacia la palma y los dedos
+            // se doblan levemente (en la T-pose quedaban rectos y rigidos).
+            // Bajo el chorro la mano va mas plana; en el cuello, la muneca la
+            // fija AimHandAtNeck. Sosteniendo la taza la muneca queda recta
+            // (GripPose) y los dedos se cierran un poco mas.
+            RelaxHand(arm, wristRelaxDegrees * (1f - flat) * (1f - neckWeight) * (1f - grip),
+                fingerCurlDegrees * (1f - 0.5f * flat) + 25f * grip);
 
             // Sacudir la mano (reflejo al quemarse): flexion de la muneca.
             float shake = arm.side > 0f ? rightHandShake : leftHandShake;
@@ -776,6 +1017,84 @@ namespace SojaExiles
             Quaternion wanted = Quaternion.LookRotation(fingers, dorsum)
                 * Quaternion.Inverse(Quaternion.LookRotation(arm.fingersLocal, arm.dorsumLocal));
             arm.hand.rotation = Quaternion.Slerp(arm.hand.rotation, wanted, weight);
+        }
+
+        // Mano de sostener una taza: los dedos siguen al antebrazo (muneca
+        // recta, apenas hacia arriba), el dorso hacia afuera y la palma hacia
+        // adentro. Antes la mano conservaba el giro de la T-pose y la muneca
+        // se doblaba de forma rara al recibir la taza.
+        private void GripPose(Arm arm, float weight, Vector3 outward)
+        {
+            Vector3 along = arm.hand.position - arm.fore.position;
+            if (along.sqrMagnitude < 1e-6f)
+            {
+                return;
+            }
+
+            along.Normalize();
+            Vector3 side = Vector3.Cross(Vector3.up, along);
+            Vector3 fingers = side.sqrMagnitude > 1e-6f ? Quaternion.AngleAxis(-8f, side.normalized) * along : along;
+            Vector3 dorsum = Vector3.ProjectOnPlane(outward, fingers);
+            if (dorsum.sqrMagnitude < 1e-6f)
+            {
+                return;
+            }
+
+            Quaternion wanted = Quaternion.LookRotation(fingers, dorsum.normalized)
+                * Quaternion.Inverse(Quaternion.LookRotation(arm.fingersLocal, arm.dorsumLocal));
+            arm.hand.rotation = Quaternion.Slerp(arm.hand.rotation, wanted, weight);
+        }
+
+        // Cuanto se dobla cada dedo (pulgar a menique) y cada falange.
+        private static readonly float[] FingerCurlShare = { 0.35f, 0.8f, 1f, 1.15f, 1.3f };
+        private static readonly float[] PhalanxCurlShare = { 0.8f, 1.2f, 0.8f };
+
+        private void RelaxHand(Arm arm, float wristDegrees, float fingerDegrees)
+        {
+            Vector3 fingersDir = arm.hand.rotation * arm.fingersLocal;
+            Vector3 palm = -(arm.hand.rotation * arm.dorsumLocal);
+            if (Mathf.Abs(wristDegrees) > 0.01f)
+            {
+                Vector3 axis = Vector3.Cross(fingersDir, palm);
+                if (axis.sqrMagnitude > 1e-8f)
+                {
+                    arm.hand.rotation = Quaternion.AngleAxis(wristDegrees, axis.normalized) * arm.hand.rotation;
+                    palm = -(arm.hand.rotation * arm.dorsumLocal);
+                }
+            }
+
+            if (arm.fingers == null || fingerDegrees < 0.01f)
+            {
+                return;
+            }
+
+            for (int f = 0; f < arm.fingers.Length; f++)
+            {
+                Transform[] chain = arm.fingers[f];
+                for (int i = 0; i < chain.Length && i < PhalanxCurlShare.Length; i++)
+                {
+                    // Gira la falange hacia la palma alrededor de su propia
+                    // bisagra (perpendicular al hueso y a la palma). La
+                    // ultima de Avaturn no tiene hueso de punta: usa la
+                    // direccion de la anterior.
+                    if (i + 1 >= chain.Length && i == 0)
+                    {
+                        break;
+                    }
+
+                    Vector3 dir = i + 1 < chain.Length
+                        ? chain[i + 1].position - chain[i].position
+                        : chain[i].position - chain[i - 1].position;
+                    Vector3 axis = Vector3.Cross(dir, palm);
+                    if (axis.sqrMagnitude < 1e-10f)
+                    {
+                        continue;
+                    }
+
+                    float angle = fingerDegrees * FingerCurlShare[f] * PhalanxCurlShare[i];
+                    chain[i].rotation = Quaternion.AngleAxis(angle, axis.normalized) * chain[i].rotation;
+                }
+            }
         }
 
         private void AimHandAtNeck(Arm arm, Vector3 torsoUp, Vector3 torsoFwd, Vector3 outward, float weight)

@@ -31,6 +31,8 @@ namespace SojaExiles
         public float grabRadius = 0.08f;
         // Punto de agarre relativo al anchor del control (en metros).
         public Vector3 controllerGrabOffset = new Vector3(0f, 0f, 0.03f);
+        [Tooltip("Punta del indice relativa al anchor del control, si no hay esqueleto de mano (m). La usan los botones de los paneles.")]
+        public Vector3 controllerFingertipOffset = new Vector3(0f, -0.015f, 0.09f);
         public float pinchGrabThreshold = 0.8f;
         public float pinchReleaseThreshold = 0.5f;
         // Si el objeto queda trabado (p.ej. contra el meson) y la mano se
@@ -42,9 +44,22 @@ namespace SojaExiles
         [Tooltip("Respaldo: agarrar tambien los objetos que maneja el Interaction SDK de Meta.")]
         public bool grabInteractionSdkObjects;
 
+        [Tooltip("Apaga el agarre a distancia de Meta: tomaba objetos lejos de la mano (la olla desde el otro lado del meson).")]
+        public bool disableDistanceGrab = true;
+
+        [Tooltip("Al agarrar, el objeto se acerca hasta tocar la mano en vez de quedar flotando a la distancia a la que estaba.")]
+        public bool snapToHand = true;
+
         [Header("Colision de las manos")]
         public bool handCollisions = true;
         public float handColliderRadius = 0.03f;
+
+        [Tooltip("Los objetos sueltos (taza, celular, pano...) no chocan con el cuerpo ni con las esferas de las manos "
+            + "del jugador: las manos los hacian saltar en el meson o salir disparados al ir a agarrarlos, y en el piso "
+            + "frenaban al jugador. Se siguen agarrando igual.")]
+        public bool loosePropsIgnorePlayer = true;
+        private readonly HashSet<Collider> looseProps = new HashSet<Collider>();
+        private float nextLooseScan;
 
         private class Hand
         {
@@ -58,11 +73,17 @@ namespace SojaExiles
             public bool pressed;
             public bool poseValid;
             public Vector3 position;
+            public Vector3 fingertip;
             public Quaternion rotation;
 
             public Rigidbody body;
             public SphereCollider bodyCollider;
             public Held held;
+
+            // Agarres de Meta de esta mano: se apagan mientras SimpleGrab
+            // sostiene algo, para no tomar dos objetos con la misma mano.
+            public readonly List<MonoBehaviour> metaGrab = new List<MonoBehaviour>();
+            public bool metaEnabled = true;
         }
 
         private class Held
@@ -101,6 +122,10 @@ namespace SojaExiles
         // izquierda (la paciente lo usa para saber de donde la tomaron).
         public static event System.Action<Collider, Rigidbody, bool> OnGrabbed;
 
+        // Aviso cuando un objeto se suelta solo porque la mano se alejo
+        // demasiado (se tiro muy fuerte o muy rapido).
+        public static event System.Action<Rigidbody> OnPulledAway;
+
         // Suelta el objeto si alguna mano lo tiene (por ejemplo, cuando la
         // paciente recibe la taza).
         public static void ForceRelease(Rigidbody rb)
@@ -120,6 +145,52 @@ namespace SojaExiles
             }
         }
 
+#if UNITY_EDITOR
+        // Mano simulada, solo en el editor: para probar sin visor (desde el MCP
+        // de Unity) agarrar, tirar de puertas, etc., pasando por el mismo
+        // codigo que las manos reales. Indice 0 = izquierda, 1 = derecha.
+        public static readonly bool[] SimActive = new bool[2];
+        public static readonly Vector3[] SimPosition = new Vector3[2];
+        public static readonly Quaternion[] SimRotation = { Quaternion.identity, Quaternion.identity };
+        public static readonly bool[] SimPressed = new bool[2];
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ClearSimulatedHands()
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                SimActive[i] = false;
+                SimPressed[i] = false;
+            }
+        }
+
+        private bool Simulated(Hand hand)
+        {
+            return SimActive[hand == left ? 0 : 1];
+        }
+#endif
+
+        // Pone 'rb' en esa mano del jugador como si la hubiera agarrado (la
+        // gasa que sale del sobre queda en la mano que tenia el sobre). Falso
+        // si esa mano ya tiene algo o no se esta siguiendo.
+        public static bool ForceGrab(Rigidbody rb, bool leftHand)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                SimpleGrab grab = Instances[i];
+                Hand hand = leftHand ? grab.left : grab.right;
+                if (hand == null || hand.held != null || !hand.poseValid)
+                {
+                    continue;
+                }
+
+                grab.Grab(hand, rb, Vector3.zero);
+                return true;
+            }
+
+            return false;
+        }
+
         // Posicion del punto de agarre de una mano del jugador.
         public static bool TryGetHand(bool leftHand, out Vector3 position, out bool holding)
         {
@@ -136,6 +207,25 @@ namespace SojaExiles
 
             position = Vector3.zero;
             holding = false;
+            return false;
+        }
+
+        // Punta del indice de la mano visible (con manos o con controles, que
+        // tambien dibujan una mano). Con eso se aprietan los botones de los
+        // paneles, como se tocaria una pantalla.
+        public static bool TryGetFingertip(bool leftHand, out Vector3 position)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                Hand hand = leftHand ? Instances[i].left : Instances[i].right;
+                if (hand.poseValid)
+                {
+                    position = hand.fingertip;
+                    return true;
+                }
+            }
+
+            position = Vector3.zero;
             return false;
         }
 
@@ -159,6 +249,105 @@ namespace SojaExiles
             position = Vector3.zero;
             pressed = false;
             holding = false;
+            return false;
+        }
+
+        // Punto de la mano real, sin el freno visual de PatientHandLimiter
+        // (la mano que se ve se queda en la superficie de la paciente). Con
+        // su mano bajo el chorro, la mano visible chocaba con la de ella
+        // antes de llegar a la llave del grifo, que esta a 3 cm.
+        public static bool TryGetRawHandPoint(bool leftHand, out Vector3 position)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                SimpleGrab grab = Instances[i];
+                Hand hand = leftHand ? grab.left : grab.right;
+                if (!hand.poseValid)
+                {
+                    continue;
+                }
+
+                position = hand.position;
+#if UNITY_EDITOR
+                if (grab.Simulated(hand))
+                {
+                    return true;
+                }
+#endif
+                if (hand.trackedHand != null && hand.trackedHand.IsTracked && grab.TryGetPinchPoint(hand, out Vector3 pinch))
+                {
+                    position = pinch;
+                }
+                else if (hand.anchor != null && OVRInput.IsControllerConnected(hand.controller))
+                {
+                    position = hand.anchor.TransformPoint(grab.controllerGrabOffset);
+                }
+
+                return true;
+            }
+
+            position = Vector3.zero;
+            return false;
+        }
+
+        // Rayo para apuntar a los botones de los paneles (ButtonPointer) y si
+        // esa mano aprieta (gatillo, boton lateral o pinza). Con manos, el
+        // rayo del sistema (OVRHand.PointerPose); con controles, hacia donde
+        // apunta el control. Se lee aqui y no del estado de agarre porque en
+        // pausa los botones tambien deben responder.
+        public static bool TryGetPointer(bool leftHand, out Ray ray, out bool pressed, out bool holding)
+        {
+            ray = default;
+            pressed = false;
+            holding = false;
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                SimpleGrab grab = Instances[i];
+                Hand hand = leftHand ? grab.left : grab.right;
+                holding = hand.held != null;
+#if UNITY_EDITOR
+                if (grab.Simulated(hand))
+                {
+                    int s = leftHand ? 0 : 1;
+                    ray = new Ray(SimPosition[s], SimRotation[s] * Vector3.forward);
+                    pressed = SimPressed[s];
+                    return true;
+                }
+#endif
+                if (hand.anchor == null)
+                {
+                    continue;
+                }
+
+                if (hand.trackedHand != null && hand.trackedHand.IsTracked)
+                {
+                    if (!hand.trackedHand.IsPointerPoseValid || hand.trackedHand.PointerPose == null)
+                    {
+                        return false;
+                    }
+
+                    // PointerPose queda en la raiz de la escena con valores del
+                    // espacio de seguimiento: si el rig se movio (inicio,
+                    // teletransporte), el rayo salia lejos de la mano. Se pasa
+                    // por el TrackingSpace (padre de los anchors).
+                    Transform pose = hand.trackedHand.PointerPose;
+                    Transform space = pose.parent == null ? hand.anchor.parent : null;
+                    ray = space != null
+                        ? new Ray(space.TransformPoint(pose.position), space.TransformDirection(pose.forward))
+                        : new Ray(pose.position, pose.forward);
+                    pressed = hand.trackedHand.GetFingerPinchStrength(OVRHand.HandFinger.Index) >= grab.pinchGrabThreshold;
+                    return true;
+                }
+
+                if (OVRInput.IsControllerConnected(hand.controller))
+                {
+                    ray = new Ray(hand.anchor.position, hand.anchor.forward);
+                    pressed = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, hand.controller)
+                        || OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, hand.controller);
+                    return true;
+                }
+            }
+
             return false;
         }
 
@@ -325,6 +514,8 @@ namespace SojaExiles
 
         private void Start()
         {
+            CollectMetaInteractors();
+
             if (grabInteractionSdkObjects)
             {
                 return;
@@ -339,6 +530,99 @@ namespace SojaExiles
                 {
                     Physics.IgnoreCollision(col, left.bodyCollider, true);
                     Physics.IgnoreCollision(col, right.bodyCollider, true);
+                }
+            }
+        }
+
+        // Busca los agarres del Interaction SDK de cada mano (manos y
+        // controles). Los de distancia se apagan.
+        private void CollectMetaInteractors()
+        {
+            foreach (MonoBehaviour mb in FindObjectsOfType<MonoBehaviour>(true))
+            {
+                if (!(mb is Oculus.Interaction.IInteractorView))
+                {
+                    continue;
+                }
+
+                string type = mb.GetType().Name;
+                if (!type.Contains("Grab") || type.Contains("Use"))
+                {
+                    continue;
+                }
+
+                if (type.StartsWith("Distance"))
+                {
+                    if (disableDistanceGrab)
+                    {
+                        mb.enabled = false;
+                    }
+
+                    continue;
+                }
+
+                int side = SideOf(mb.transform);
+                if (side == 0 || left.metaGrab.Contains(mb) || right.metaGrab.Contains(mb))
+                {
+                    continue;
+                }
+
+                // Si la mano ya sostiene algo, el agarre nuevo nace apagado.
+                Hand owner = side < 0 ? left : right;
+                if (mb.enabled)
+                {
+                    mb.enabled = owner.metaEnabled;
+                    owner.metaGrab.Add(mb);
+                }
+            }
+        }
+
+        // -1 izquierda, 1 derecha, 0 si no se sabe (por los nombres del rig).
+        private static int SideOf(Transform t)
+        {
+            for (; t != null; t = t.parent)
+            {
+                if (t.name.Contains("Left"))
+                {
+                    return -1;
+                }
+
+                if (t.name.Contains("Right"))
+                {
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
+
+        private static bool MetaHolding(Hand hand)
+        {
+            foreach (MonoBehaviour mb in hand.metaGrab)
+            {
+                if (mb != null && mb.enabled && ((Oculus.Interaction.IInteractorView)mb).HasSelectedInteractable)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void SyncMetaGrab(Hand hand)
+        {
+            bool wanted = hand.held == null;
+            if (wanted == hand.metaEnabled)
+            {
+                return;
+            }
+
+            hand.metaEnabled = wanted;
+            foreach (MonoBehaviour mb in hand.metaGrab)
+            {
+                if (mb != null)
+                {
+                    mb.enabled = wanted;
                 }
             }
         }
@@ -376,10 +660,104 @@ namespace SojaExiles
             }
         }
 
+        // El rig se arma en runtime: si en Start todavia no estaban los
+        // agarres de Meta, se vuelven a buscar cada segundo durante un rato.
+        private float nextMetaLookup;
+
         private void Update()
         {
+            if ((left.metaGrab.Count == 0 || right.metaGrab.Count == 0)
+                && Time.unscaledTime >= nextMetaLookup && Time.unscaledTime < 30f)
+            {
+                nextMetaLookup = Time.unscaledTime + 1f;
+                CollectMetaInteractors();
+            }
+
             UpdateInput(left, right);
             UpdateInput(right, left);
+            SyncMetaGrab(left);
+            SyncMetaGrab(right);
+
+            if (loosePropsIgnorePlayer && Time.unscaledTime >= nextLooseScan)
+            {
+                // Muchos se crean en runtime (BurnSceneProps, la taza, el
+                // celular, las tiras de film): se revisa cada segundo.
+                nextLooseScan = Time.unscaledTime + 1f;
+                IgnoreLooseProps();
+            }
+        }
+
+        private void IgnoreLooseProps()
+        {
+            // Tampoco chocan con el cuerpo de la paciente: al voltearse o mover
+            // los brazos junto al meson lanzaba lo que habia encima. (Agarrar,
+            // cubrir y sacar el anillo no usan esas colisiones.)
+            PatientBody patient = FindObjectOfType<PatientBody>();
+            List<Collider> patientCols = new List<Collider>();
+            if (patient != null)
+            {
+                foreach (Collider c in patient.GetComponentsInChildren<Collider>())
+                {
+                    if (!c.isTrigger)
+                    {
+                        patientCols.Add(c);
+                    }
+                }
+            }
+
+            if (patientCols.Count != patientColliderCount)
+            {
+                patientColliderCount = patientCols.Count;
+                foreach (Collider col in looseProps)
+                {
+                    IgnoreAll(col, patientCols);
+                }
+            }
+
+            PatientReach reach = patient != null ? patient.GetComponent<PatientReach>() : null;
+            Rigidbody patientHand = reach != null ? reach.target : null;
+            foreach (Grabbable g in FindObjectsOfType<Grabbable>())
+            {
+                Rigidbody rb = g.GetComponent<Rigidbody>();
+                // La mano de la paciente (su objetivo, fuera de su jerarquia) y
+                // lo que es parte de ella se siguen tocando (sacar el anillo,
+                // llevarla del brazo).
+                if (rb == null || rb == patientHand || g.GetComponentInParent<PatientBody>() != null)
+                {
+                    continue;
+                }
+
+                foreach (Collider col in CollidersOf(rb))
+                {
+                    if (col == null || col.isTrigger || !looseProps.Add(col))
+                    {
+                        continue;
+                    }
+
+                    IgnoreAll(col, playerColliders);
+                    IgnoreAll(col, patientCols);
+                }
+            }
+
+            looseProps.RemoveWhere(c => c == null);
+        }
+
+        private int patientColliderCount = -1;
+
+        private static void IgnoreAll(Collider col, List<Collider> others)
+        {
+            if (col == null)
+            {
+                return;
+            }
+
+            foreach (Collider other in others)
+            {
+                if (other != null)
+                {
+                    Physics.IgnoreCollision(col, other, true);
+                }
+            }
         }
 
         private void FixedUpdate()
@@ -396,7 +774,7 @@ namespace SojaExiles
             bool wasPressed = hand.pressed;
             hand.pressed = hand.poseValid && ReadPressed(hand);
 
-            if (hand.pressed && !wasPressed && hand.held == null && !Blocked(hand.position))
+            if (hand.pressed && !wasPressed && hand.held == null && !Blocked(hand.position) && !MetaHolding(hand))
             {
                 TryGrab(hand, otherHand);
             }
@@ -408,6 +786,17 @@ namespace SojaExiles
 
         private void UpdatePose(Hand hand)
         {
+#if UNITY_EDITOR
+            if (Simulated(hand))
+            {
+                int i = hand == left ? 0 : 1;
+                hand.position = SimPosition[i];
+                hand.fingertip = SimPosition[i];
+                hand.rotation = SimRotation[i];
+                hand.poseValid = true;
+                return;
+            }
+#endif
             if (hand.anchor == null && cameraRig != null)
             {
                 hand.anchor = hand == left ? cameraRig.leftHandAnchor : cameraRig.rightHandAnchor;
@@ -430,13 +819,29 @@ namespace SojaExiles
 
             hand.rotation = hand.anchor.rotation;
 
+            // La mano que se ve (HandVisual del SDK de Meta, con manos o con
+            // controles): se agarra en la pinza de sus dedos. Antes el punto
+            // salia de OVRSkeleton o de un desfase fijo del control y no
+            // coincidia con la mano dibujada: el objeto quedaba flotando a
+            // varios centimetros de los dedos.
+            bool usable = (hand.trackedHand != null && hand.trackedHand.IsTracked)
+                || OVRInput.IsControllerConnected(hand.controller);
+            if (usable && TryVisiblePinch(hand == left, out Vector3 visiblePinch, out Vector3 visibleTip))
+            {
+                hand.position = visiblePinch;
+                hand.fingertip = visibleTip;
+                hand.poseValid = true;
+                return;
+            }
+
             if (hand.trackedHand != null && hand.trackedHand.IsTracked)
             {
                 // Con hand tracking el agarre ocurre en la pinza: punto medio
                 // entre la punta del pulgar y la del indice.
-                hand.position = TryGetPinchPoint(hand, out Vector3 pinch)
-                    ? pinch
-                    : hand.anchor.position;
+                bool skeletonOk = TryGetPinchPoint(hand, out Vector3 pinch);
+                hand.position = skeletonOk ? pinch : hand.anchor.position;
+                hand.fingertip = skeletonOk ? hand.indexTip.position
+                    : hand.anchor.TransformPoint(controllerFingertipOffset);
                 hand.poseValid = true;
                 return;
             }
@@ -444,8 +849,53 @@ namespace SojaExiles
             if (OVRInput.IsControllerConnected(hand.controller))
             {
                 hand.position = hand.anchor.TransformPoint(controllerGrabOffset);
+                hand.fingertip = hand.anchor.TransformPoint(controllerFingertipOffset);
                 hand.poseValid = true;
             }
+        }
+
+        private static Oculus.Interaction.HandVisual[] handVisuals = new Oculus.Interaction.HandVisual[0];
+        private static float nextVisualLookup;
+
+        // Pinza (punto medio entre las puntas del pulgar y del indice) y punta
+        // del indice de la mano visible de ese lado, si se esta dibujando.
+        private static bool TryVisiblePinch(bool leftHand, out Vector3 pinch, out Vector3 indexTip)
+        {
+            pinch = Vector3.zero;
+            indexTip = Vector3.zero;
+            if (Time.unscaledTime >= nextVisualLookup)
+            {
+                // El rig se arma en runtime: se buscan cada 2 s.
+                nextVisualLookup = Time.unscaledTime + 2f;
+                handVisuals = FindObjectsOfType<Oculus.Interaction.HandVisual>();
+            }
+
+            Oculus.Interaction.Input.Handedness side = leftHand
+                ? Oculus.Interaction.Input.Handedness.Left
+                : Oculus.Interaction.Input.Handedness.Right;
+            foreach (Oculus.Interaction.HandVisual visual in handVisuals)
+            {
+                if (visual == null || !visual.isActiveAndEnabled || !visual.IsVisible)
+                {
+                    continue;
+                }
+
+                Oculus.Interaction.Input.IHand h = visual.Hand;
+                if (h == null || !h.IsTrackedDataValid || h.Handedness != side)
+                {
+                    continue;
+                }
+
+                if (h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandThumbTip, out Pose thumb)
+                    && h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandIndexTip, out Pose index))
+                {
+                    pinch = (thumb.position + index.position) * 0.5f;
+                    indexTip = index.position;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool TryGetPinchPoint(Hand hand, out Vector3 point)
@@ -489,6 +939,12 @@ namespace SojaExiles
 
         private bool ReadPressed(Hand hand)
         {
+#if UNITY_EDITOR
+            if (Simulated(hand))
+            {
+                return SimPressed[hand == left ? 0 : 1];
+            }
+#endif
             if (OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, hand.controller)
                 || OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, hand.controller))
             {
@@ -538,7 +994,9 @@ namespace SojaExiles
                 Release(otherHand);
             }
 
-            Grab(hand, closest);
+            // Lo que falta para que el objeto toque la mano.
+            Vector3 snap = snapToHand ? hand.position - ClosestPoint(closestCollider, hand.position) : Vector3.zero;
+            Grab(hand, closest, snap);
             OnGrabbed?.Invoke(closestCollider, closest, hand == left);
         }
 
@@ -581,7 +1039,7 @@ namespace SojaExiles
             return col.ClosestPoint(point);
         }
 
-        private void Grab(Hand hand, Rigidbody rb)
+        private void Grab(Hand hand, Rigidbody rb, Vector3 snap)
         {
             pending.RemoveAll(p => p.rb == rb);
 
@@ -597,10 +1055,17 @@ namespace SojaExiles
                 maxAngularVelocity = rb.maxAngularVelocity
             };
 
+            // Solo se acercan a la mano los objetos que giran con ella (la mano
+            // de la paciente no: la mueve su brazo).
+            if (held.grabbable != null && !held.grabbable.trackRotation)
+            {
+                snap = Vector3.zero;
+            }
+
             Quaternion inverseHand = Quaternion.Inverse(hand.rotation);
-            held.localPosition = inverseHand * (rb.position - hand.position);
+            held.localPosition = inverseHand * (rb.position + snap - hand.position);
             held.localRotation = inverseHand * rb.rotation;
-            held.worldOffset = rb.position - hand.position;
+            held.worldOffset = rb.position + snap - hand.position;
 
             rb.isKinematic = false;
             rb.useGravity = false;
@@ -700,11 +1165,19 @@ namespace SojaExiles
             if (delta.magnitude > limit)
             {
                 Release(hand);
+                OnPulledAway?.Invoke(rb);
                 return;
             }
 
             float dt = Time.fixedDeltaTime;
-            rb.velocity = Vector3.ClampMagnitude(delta / dt, maxLinearSpeed);
+            // Con followSharpness el objeto sigue a la mano como con un
+            // resorte (la mano de la paciente); si no, al instante.
+            float sharpness = held.grabbable != null ? held.grabbable.followSharpness : 0f;
+            Vector3 wanted = sharpness > 0f ? delta * Mathf.Min(sharpness, 1f / dt) : delta / dt;
+            float maxSpeed = held.grabbable != null && held.grabbable.maxFollowSpeed > 0f
+                ? Mathf.Min(maxLinearSpeed, held.grabbable.maxFollowSpeed)
+                : maxLinearSpeed;
+            rb.velocity = Vector3.ClampMagnitude(wanted, maxSpeed);
 
             Quaternion rotationDelta = targetRotation * Quaternion.Inverse(rb.rotation);
             rotationDelta.ToAngleAxis(out float angle, out Vector3 axis);
@@ -785,9 +1258,12 @@ namespace SojaExiles
                     continue;
                 }
 
+                // Los objetos sueltos siguen sin chocar con el jugador al
+                // soltarlos (ver loosePropsIgnorePlayer).
+                bool keep = !ignore && looseProps.Contains(col);
                 foreach (Collider player in playerColliders)
                 {
-                    Physics.IgnoreCollision(col, player, ignore);
+                    Physics.IgnoreCollision(col, player, ignore || keep);
                 }
             }
         }

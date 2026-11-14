@@ -9,7 +9,10 @@ namespace SojaExiles
     //     chorro y el jugador la sostiene (mas fuerte si el agua es caliente);
     //   - pulsos cada vez mas seguidos al acercar la mano al fuego prendido;
     //   - un golpe corto y fuerte ante un error (dos ante un error critico);
-    //   - un toque leve al hacer algo bien.
+    //   - un toque leve al hacer algo bien;
+    //   - un toque corto en la mano que agarra algo (como sentir el objeto);
+    //   - aspera en las dos manos al cortar una tira de film (FilmStrip);
+    //   - suave mientras se desliza la bolsa por la mano quemada (CoverItem).
     // Con seguimiento de manos (sin controles) no hace nada.
     public class BurnHaptics : MonoBehaviour
     {
@@ -32,6 +35,14 @@ namespace SojaExiles
         private Rigidbody patientHand;
         private WaterStreamFX[] streams;
 
+        // La de la escena (la usan FilmStrip y CoverItem).
+        public static BurnHaptics Current { get; private set; }
+
+        private void Awake()
+        {
+            Current = this;
+        }
+
         private void Start()
         {
             if (burnSequence == null)
@@ -50,6 +61,12 @@ namespace SojaExiles
             PatientReach reach = FindObjectOfType<PatientReach>();
             patientHand = reach != null ? reach.target : null;
             streams = FindObjectsOfType<WaterStreamFX>();
+            SimpleGrab.OnGrabbed += HandleGrab;
+        }
+
+        private void HandleGrab(Collider touched, Rigidbody body, bool left)
+        {
+            Buzz(left ? 0 : 1, 0.3f, 0.04f, 0f, 0.8f);
         }
 
         private void OnDestroy()
@@ -58,6 +75,12 @@ namespace SojaExiles
             {
                 burnSequence.OnEvent -= HandleEvent;
                 burnSequence.OnStateChanged -= HandleState;
+            }
+
+            SimpleGrab.OnGrabbed -= HandleGrab;
+            if (Current == this)
+            {
+                Current = null;
             }
 
             Stop(0);
@@ -86,8 +109,8 @@ namespace SojaExiles
 
                 pulses[h].Add(new Pulse
                 {
-                    start = Time.time + delay,
-                    end = Time.time + delay + seconds,
+                    start = Time.unscaledTime + delay,
+                    end = Time.unscaledTime + delay + seconds,
                     amplitude = amplitude,
                     frequency = frequency
                 });
@@ -143,27 +166,32 @@ namespace SojaExiles
                 for (int i = list.Count - 1; i >= 0; i--)
                 {
                     Pulse p = list[i];
-                    if (Time.time >= p.end)
+                    if (Time.unscaledTime >= p.end)
                     {
                         list.RemoveAt(i);
                         continue;
                     }
 
-                    if (Time.time >= p.start && p.amplitude > amplitude)
+                    if (Time.unscaledTime >= p.start && p.amplitude > amplitude)
                     {
                         amplitude = p.amplitude;
                         frequency = p.frequency;
                     }
                 }
 
-                float water = WaterOnHeldHand(left);
-                if (water > amplitude)
+                // En pausa solo vibran los botones del menu (tiempo sin
+                // escalar), no el agua ni el fuego.
+                if (!PauseMenu.Paused)
                 {
-                    amplitude = water;
-                    frequency = 0.3f;
-                }
+                    float water = WaterOnHeldHand(left);
+                    if (water > amplitude)
+                    {
+                        amplitude = water;
+                        frequency = 0.3f;
+                    }
 
-                BurnerWarning(h);
+                    BurnerWarning(h);
+                }
 
                 amplitude *= intensity;
                 OVRInput.Controller controller = left ? OVRInput.Controller.LTouch : OVRInput.Controller.RTouch;
@@ -199,7 +227,7 @@ namespace SojaExiles
 
         private void BurnerWarning(int h)
         {
-            if (pot == null || !pot.BurnerOn || rig == null || Time.time < nextBurnerPulse[h])
+            if (pot == null || !pot.BurnerOn || rig == null || Time.unscaledTime < nextBurnerPulse[h])
             {
                 return;
             }
@@ -218,7 +246,7 @@ namespace SojaExiles
 
             float k = 1f - d / burnerWarnDistance;
             Buzz(h, Mathf.Lerp(0.25f, 0.7f, k), 0.05f);
-            nextBurnerPulse[h] = Time.time + Mathf.Lerp(0.5f, 0.12f, k);
+            nextBurnerPulse[h] = Time.unscaledTime + Mathf.Lerp(0.5f, 0.12f, k);
         }
 
         private void Stop(int h)
