@@ -128,7 +128,8 @@ namespace SojaExiles
                 hint = "Acerca la mano a la perilla que brilla y apriétala (botón lateral o pinza). Así nadie más se quema.",
                 clip = "guia_apagar" },
             new StepInfo { id = StepId.AbrirAgua, title = "Abre el agua fría",
-                hint = "Es la llave del punto azul: acerca la mano y apriétala (botón lateral o pinza).", clip = "guia_agua" },
+                hint = "Toma la palanca del caño (botón lateral o pinza) y gírala un poco hacia ti: primero sale fría.",
+                clip = "guia_agua" },
             // El anillo va antes del chorro: ella ofrece la mano a la altura del
             // pecho y se alcanza facil (bajo el agua costaba mucho). Si se lo
             // salta, se puede sacar despues, tambien bajo el chorro.
@@ -275,6 +276,9 @@ namespace SojaExiles
         private static void ClearPendingMode()
         {
             pendingMode = null;
+            caseDegreeOption = 0;
+            caseSizeOption = 0;
+            caseZoneOption = 0;
         }
 
         private void OnDestroy()
@@ -351,15 +355,23 @@ namespace SojaExiles
                 yield return ChooseMode();
                 ChoosingMode = false;
 
+                // El caso de quemadura se arma al cargar la escena
+                // (BurnInjury.Awake): si en el menu se eligio otro, se recarga
+                // con ese caso y el modo ya elegido.
                 // Si mientras estaba el menu el jugador boto o movio algo,
                 // abrio una llave, giro la perilla o volco la olla, la
-                // practica no empezaria con la cocina inicial: se recarga la
-                // escena con el modo ya elegido.
-                if (SceneDisturbed())
+                // practica no empezaria con la cocina inicial: tambien se
+                // recarga, con el mismo caso.
+                BurnCase wanted = ChosenCase(BurnCase.Current);
+                if (wanted != null || SceneDisturbed())
                 {
                     pendingMode = guided;
-                    // Con el mismo caso de quemadura.
-                    if (BurnCase.Current != null)
+                    if (wanted != null)
+                    {
+                        Debug.Log("[BurnGuide] Caso elegido en el menu: " + wanted + ". Se recarga la escena.");
+                        BurnCase.Next = wanted;
+                    }
+                    else if (BurnCase.Current != null)
                     {
                         BurnCase.Next = BurnCase.Current.Copy();
                     }
@@ -412,25 +424,40 @@ namespace SojaExiles
             bool chosen = false;
             Transform root = VRPanelKit.CreateRoot("PanelInicio", 0.6f, 0.15f);
             // Mismo estilo que la tarjeta del narrador (VRPanelKit.CardPanel).
-            // Los dos botones son pildoras del mismo tamano y brillo: ninguna
-            // opcion se sugiere sobre la otra.
+            // Los dos botones de modo son pildoras del mismo tamano y brillo:
+            // ninguna opcion se sugiere sobre la otra. Arriba de ellos, el
+            // caso de quemadura (RF-11): cada boton pasa a la siguiente opcion
+            // al tocarlo; "al azar" deja la que salio.
             const float left = -0.28f;
-            Vector2 menuSize = new Vector2(0.62f, 0.4f);
-            VRPanelKit.CardPanel(root, Vector2.zero, menuSize);
+            const float modeY = -0.15f;
+            Vector2 menuSize = new Vector2(0.62f, 0.46f);
+            VRPanelKit.CardPanel(root, new Vector2(0f, -0.03f), menuSize);
             VRPanelKit.Text(root, "Primeros auxilios  ·  Antes de empezar", new Vector2(left, 0.17f), 0.016f,
                 VRPanelKit.CardLabelColor);
             VRPanelKit.BoldText(root, "Quemadura en la cocina", new Vector2(left, 0.145f), 0.034f, Color.white);
             VRPanelKit.Text(root, VRPanelKit.Wrap("Aviso: esta práctica incluye gritos de dolor y una quemadura visible. " +
                     "Puedes quitarte el visor cuando quieras.", 60), new Vector2(left, 0.09f), 0.018f,
                 VRPanelKit.CardWarningColor);
-            VRPanelKit.Text(root, "Apunta a un botón y aprieta el gatillo (o haz la pinza):", new Vector2(left, 0.03f), 0.018f,
+
+            VRPanelKit.Text(root, "Caso (toca para cambiar):", new Vector2(left, 0.03f), 0.016f,
+                VRPanelKit.CardLabelColor);
+            Color caseColor = new Color(0.24f, 0.33f, 0.5f);
+            Vector2 caseButton = new Vector2(0.18f, 0.055f);
+            CaseButton(root, new Vector2(-0.19f, -0.02f), caseButton, caseColor, DegreeLabels,
+                () => caseDegreeOption, v => caseDegreeOption = v);
+            CaseButton(root, new Vector2(0f, -0.02f), caseButton, caseColor, SizeLabels,
+                () => caseSizeOption, v => caseSizeOption = v);
+            CaseButton(root, new Vector2(0.19f, -0.02f), caseButton, caseColor, ZoneLabels,
+                () => caseZoneOption, v => caseZoneOption = v);
+
+            VRPanelKit.Text(root, "Apunta a un botón y aprieta el gatillo (o haz la pinza):", new Vector2(left, -0.075f), 0.018f,
                 VRPanelKit.CardHintColor);
-            VRPanelKit.RoundedButton(root, "Modo guiado", new Vector2(-0.14f, -0.05f), new Vector2(0.26f, 0.08f),
+            VRPanelKit.RoundedButton(root, "Modo guiado", new Vector2(-0.14f, modeY), new Vector2(0.26f, 0.08f),
                 new Color(0.22f, 0.48f, 0.95f), () => { guided = true; chosen = true; });
-            VRPanelKit.RoundedButton(root, "Modo evaluación", new Vector2(0.14f, -0.05f), new Vector2(0.26f, 0.08f),
+            VRPanelKit.RoundedButton(root, "Modo evaluación", new Vector2(0.14f, modeY), new Vector2(0.26f, 0.08f),
                 new Color(0.52f, 0.36f, 0.9f), () => { guided = false; chosen = true; });
             VRPanelKit.Text(root, VRPanelKit.Wrap("Guiado: te indica cada paso. Evaluación: lo haces solo y se mide.", 64),
-                new Vector2(left, -0.11f), 0.016f, VRPanelKit.CardHintColor);
+                new Vector2(left, -0.21f), 0.016f, VRPanelKit.CardHintColor);
 
 
             Say("guia_bienvenida");
@@ -443,8 +470,8 @@ namespace SojaExiles
 
             // El mismo brillo en las dos opciones: ninguna se sugiere sobre la
             // otra. Van pegados al panel, que se mueve.
-            Highlight(root.TransformPoint(new Vector3(-0.14f, -0.05f, -0.01f)), 0f).transform.SetParent(root, true);
-            Highlight(root.TransformPoint(new Vector3(0.14f, -0.05f, -0.01f)), 0f).transform.SetParent(root, true);
+            Highlight(root.TransformPoint(new Vector3(-0.14f, modeY, -0.01f)), 0f).transform.SetParent(root, true);
+            Highlight(root.TransformPoint(new Vector3(0.14f, modeY, -0.01f)), 0f).transform.SetParent(root, true);
 
             while (!chosen)
             {
@@ -453,6 +480,83 @@ namespace SojaExiles
 
             Destroy(root.gameObject);
             StopNarration();
+        }
+
+        // ---------------- caso elegido en el menu ----------------
+
+        // Opcion de cada boton del caso (0 = al azar). Se recuerdan mientras
+        // el juego siga abierto: en las pruebas con usuarios se elige una vez.
+        private static int caseDegreeOption;
+        private static int caseSizeOption;
+        private static int caseZoneOption;
+
+        private static readonly string[] DegreeLabels = { "Grado: al azar", "Primer grado", "Segundo grado" };
+        private static readonly string[] SizeLabels = { "Tamaño: al azar", "Pequeña", "Mediana", "Grande" };
+        private static readonly string[] ZoneLabels = { "Zona: al azar", "Dorso", "Nudillos" };
+
+        // Boton que pasa a la siguiente opcion al tocarlo.
+        private static void CaseButton(Transform root, Vector2 center, Vector2 size, Color color, string[] labels,
+            System.Func<int> get, System.Action<int> set)
+        {
+            // Se arma con la etiqueta mas larga para que todas quepan con la
+            // misma letra.
+            string longest = labels[0];
+            foreach (string l in labels)
+            {
+                longest = l.Length > longest.Length ? l : longest;
+            }
+
+            TextMesh text = null;
+            TouchButton button = VRPanelKit.RoundedButton(root, longest, center, size, color, () =>
+            {
+                set((get() + 1) % labels.Length);
+                if (text != null)
+                {
+                    text.text = labels[get()];
+                }
+            });
+            text = button.GetComponentInChildren<TextMesh>();
+            if (text != null)
+            {
+                text.text = labels[Mathf.Clamp(get(), 0, labels.Length - 1)];
+            }
+        }
+
+        // Caso pedido en el menu, o null si el de la partida ya sirve (lo
+        // "al azar" se queda como salio). Con las tres opciones fijas, la
+        // forma de la mancha tambien es fija: todos ven la misma quemadura.
+        private static BurnCase ChosenCase(BurnCase current)
+        {
+            if (caseDegreeOption == 0 && caseSizeOption == 0 && caseZoneOption == 0)
+            {
+                return null;
+            }
+
+            BurnCase c = current != null ? current.Copy() : BurnCase.Random();
+            if (caseDegreeOption > 0)
+            {
+                c.degree = caseDegreeOption == 1 ? BurnInjury.BurnDegree.Primero : BurnInjury.BurnDegree.SegundoSuperficial;
+            }
+
+            if (caseSizeOption > 0)
+            {
+                c.size = (BurnCase.Size)(caseSizeOption - 1);
+            }
+
+            if (caseZoneOption > 0)
+            {
+                c.zone = caseZoneOption == 1 ? BurnCase.Zone.Dorso : BurnCase.Zone.Nudillos;
+            }
+
+            bool allFixed = caseDegreeOption > 0 && caseSizeOption > 0 && caseZoneOption > 0;
+            if (allFixed)
+            {
+                c.seed = 1000 + caseDegreeOption * 100 + caseSizeOption * 10 + caseZoneOption;
+            }
+
+            bool same = current != null && c.degree == current.degree && c.size == current.size
+                && c.zone == current.zone && (!allFixed || c.seed == current.seed);
+            return same ? null : c;
         }
 
         private void ApplyMode()
@@ -1428,7 +1532,8 @@ namespace SojaExiles
 
                     break;
                 case StepId.AbrirAgua:
-                    if (coldTap != null)
+                    // La palanca del grifo brilla sola (FaucetLever): sin esfera.
+                    if (coldTap != null && FaucetLever.Current == null)
                     {
                         points.Add(coldTap.transform.position);
                         radius = 0.045f;
@@ -1605,6 +1710,18 @@ namespace SojaExiles
 
         // ---------------- correcciones ----------------
 
+        // Con la palanca del grifo (FaucetLever) ya no hay llave caliente con
+        // punto: se corrige diciendo como volver al agua fria.
+        private static string ErrCaliente
+        {
+            get
+            {
+                return FaucetLever.Current != null
+                    ? "Está saliendo caliente. Regresa la palanca hacia arriba, hasta que salga fría."
+                    : "Esa es la llave caliente. Ciérrala y usa la del punto azul.";
+            }
+        }
+
         private void HandleEvent(BurnSequenceManager.BurnEvent e, string detail, BurnSequenceManager.Severity severity)
         {
             if (!guided || !stepsActive)
@@ -1622,10 +1739,10 @@ namespace SojaExiles
                         break;
                     }
 
-                    Correct("guia_err_caliente", "Esa es la llave caliente. Ciérrala y usa la del punto azul.");
+                    Correct("guia_err_caliente", ErrCaliente);
                     break;
                 case BurnSequenceManager.BurnEvent.HotWaterOnBurn:
-                    Correct("guia_err_caliente", "Esa es la llave caliente. Ciérrala y usa la del punto azul.");
+                    Correct("guia_err_caliente", ErrCaliente);
                     break;
                 case BurnSequenceManager.BurnEvent.RemedyNear:
                 case BurnSequenceManager.BurnEvent.RemedyApplied:

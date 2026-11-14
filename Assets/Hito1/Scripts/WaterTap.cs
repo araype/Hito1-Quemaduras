@@ -31,6 +31,8 @@ namespace SojaExiles
         public float toggleCooldown = 0.8f;
         [Tooltip("Distancia de la mano a la llave para poder apretarla (m).")]
         public float pressReach = 0.1f;
+        [Tooltip("La mueve la palanca del grifo (FaucetLever): sin punto y sin apretar.")]
+        public bool leverDriven;
 
         public bool IsOpen { get; private set; }
 
@@ -93,7 +95,7 @@ namespace SojaExiles
         // Apretar junto a la llave no agarra otra cosa.
         private bool BlocksGrab(Vector3 point)
         {
-            return press != null && press.Contains(point, transform.position);
+            return !leverDriven && press != null && press.Contains(point, transform.position);
         }
 
         // Otra llave queda mas cerca de ese punto que esta.
@@ -127,7 +129,7 @@ namespace SojaExiles
 
         private void Update()
         {
-            if (press != null)
+            if (press != null && !leverDriven)
             {
                 press.reach = pressReach;
                 if (press.Update(transform.position, OtherCloser) >= 0 && Time.time >= nextToggleTime)
@@ -142,7 +144,7 @@ namespace SojaExiles
                 return;
             }
 
-            marker.enabled = IndicatorUtil.HintsVisible;
+            marker.enabled = IndicatorUtil.HintsVisible && !leverDriven;
 
             // Pulso suave para llamar la atencion mientras esta cerrada; con
             // la mano al alcance el punto crece (ya se puede apretar).

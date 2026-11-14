@@ -275,7 +275,7 @@ namespace SojaExiles
                 int left = Mathf.Max(1, Mathf.CeilToInt(protocol.simulatedMinutes - protocol.SimulatedCoolingMinutes));
                 Ask("Quiere sacar la mano del agua. ¿Qué le dices?",
                     new Option { id = 0, text = $"Aguanta un poco más: faltan {left} minutos y así no se hace más profunda." },
-                    new Option { id = 3, text = "Espera, te templo un poco el agua con la llave caliente." },
+                    new Option { id = 3, text = FaucetLever.Current != null ? "Espera, te templo un poco el agua." : "Espera, te templo un poco el agua con la llave caliente." },
                     new Option { id = 1, text = "Sácala un rato y luego la volvemos a poner." },
                     new Option { id = 2, text = "Mejor te pongo hielo, enfría más rápido." });
 

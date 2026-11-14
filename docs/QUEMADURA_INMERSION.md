@@ -1176,3 +1176,53 @@ Continuar" y al continuar llega el accidente. Sin errores en la consola.
 sale bien con el esqueleto real, si aparece sin querer al mirar algo con la
 mano levantada, si se alcanza cómodo con la otra mano) ni con controles en
 el simulador.
+
+## 34. Palanca del caño en lugar de las esferas (`cano-y-casos`, 2026-11-14)
+
+Las dos llaves del grifo eran puntos invisibles marcados con una esfera
+azul y otra roja que se apretaban. El grifo del modelo (`Kitchen_01.fbx`)
+ya trae la palanca lateral como pieza aparte (`Faucet_Handle`), así que no
+hizo falta tocar el modelo del lavadero.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Palanca | Como un grifo de palanca lateral real (mezcladora secuencial): arriba está cerrado; al girarla hacia el jugador sale fría (12° a 50°), luego tibia (hasta 78°) y al final caliente (hasta 100°), con 3° de margen en los bordes. Se toma con el botón lateral, el gatillo o la pinza a menos de 8 cm de la palanca y se gira con la mano; al soltarla queda donde se dejó. Un apretón corto (menos de 0,35 s) sin girar la abre en frío o la cierra. Clic y vibración al pasar de una zona a otra. | `FaucetLever` (nuevo) |
+| Las llaves de siempre | Siguen las dos `WaterTap` (fría y caliente) sin punto ni apretón (`leverDriven`): la palanca las abre según la zona (fría: la fría; tibia: las dos; caliente: la caliente). `Heat`, `Flowing`, los eventos, el enfriamiento y templar el agua no cambian. De tibia a caliente se avisa `HotWaterOn` (ahora sale solo caliente). | `WaterTap`, `Hito1RuntimeBootstrap.InstallFaucetLever` |
+| Copia que se mueve | La palanca original es estática (batching): al dar Play se esconde y se pone una copia con la misma malla y material (`Resources/Hito1FX/PalancaGrifo.prefab`, menú **Hito1 > Preparar palanca del grifo**). Usa sondas de luz en vez del lightmap. No cambia la escena. Si falta el prefab, quedan las llaves con puntos. | `FaucetLever.Install`, `FaucetLeverSetup` (editor) |
+| Pistas | Marcas azul y roja de 9 mm en el costado del cubo, donde sale fría y donde sale caliente. En modo guiado, después del accidente y con el grifo cerrado, la palanca brilla suave (más con la mano cerca) en vez del punto que latía; el paso "Abre el agua fría" ya no pone la esfera. | `FaucetLever.UpdateGlow`, `BurnGuide` |
+| Textos | Paso 2: "Toma la palanca del caño… gírala un poco hacia ti: primero sale fría". Error: "Está saliendo caliente. Regresa la palanca hacia arriba…". Panel del minuto 9: "te templo un poco el agua". `guia_agua` y `guia_err_caliente` se regeneraron con la voz de Windows (Sabina), como las demás que esperan ElevenLabs. | `BurnGuide`, `PatientDialog`, `docs/VOCES.md` |
+
+**Probado en Play** (editor, sin visor, con la mano simulada de
+`SimpleGrab`): la palanca copiada se ve en su sitio y la original se
+esconde; tomarla y girarla paso a paso abre la fría a unos 24°, pasa a
+tibia (Heat 0,5) a unos 54° y a caliente (Heat 1, fría cerrada) a unos 89°;
+el chorro sale y no quedan esferas. Sin errores nuevos en la consola.
+**No se probó:** el apretón corto (la mano simulada no hace toques de menos
+de 0,35 s), volver a cerrarla girando, el brillo del modo guiado tras el
+accidente, la partida completa ni nada en el Quest (ver `PENDIENTES.md`, G).
+
+## 35. Elegir el caso en el menú de inicio (RF-11, `cano-y-casos`, 2026-11-14)
+
+El menú de inicio tiene una fila "Caso (toca para cambiar)" con tres
+botones sobre los de modo: **Grado** (al azar, primer grado, segundo
+grado), **Tamaño** (al azar, pequeña, mediana, grande) y **Zona** (al azar,
+dorso, nudillos). Cada toque pasa a la opción siguiente. Lo que queda "al
+azar" se deja como salió.
+
+- El caso se arma al cargar la escena (`BurnInjury.Awake`): si lo elegido
+  no coincide con el caso actual, al tocar el modo se recarga la escena con
+  ese caso y el modo ya elegido (igual que cuando se movió algo durante el
+  menú), sin volver a mostrar el menú.
+- Con las tres opciones fijas, la forma de la mancha y las ampollas también
+  son fijas (semilla 1000 + opciones): todos los participantes de las
+  pruebas ven la misma quemadura. Sirve igual en modo evaluación.
+- Las opciones se recuerdan mientras el juego siga abierto (también tras
+  "Repetir" u "Otro caso" en el resumen: "Otro caso" solo cambia lo que
+  esté al azar). Se borran al cerrar el juego o al dar Play de nuevo.
+- Código: `BurnGuide.ChooseMode`, `CaseButton`, `ChosenCase`.
+
+**Probado en Play** (editor, sin visor; los botones se pulsaron por
+código): el menú se ve con la fila nueva; segundo grado, grande y nudillos
+recargó la escena con `SegundoSuperficial/Grande/Nudillos/1232`, sin menú y
+con la palanca del caño instalada. **No se probó:** tocar los botones con
+el dedo o el rayo, ni en el Quest.

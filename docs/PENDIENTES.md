@@ -59,7 +59,8 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
   `guia_abrigo`, `guia_preparar`, `guia_cubrir`, `guia_err_pano`,
   `guia_err_curita`, `guia_err_anillo`, `guia_err_calma`,
   `guia_err_aguantar`, `guia_err_olla`, `guia_err_charco`, `guia_llamar`,
-  `guia_apagar`, `guia_frio_lejos` (sección 29) y `op_centro`
+  `guia_apagar`, `guia_frio_lejos` (sección 29), `guia_agua` y
+  `guia_err_caliente` (palanca del caño, sección 34) y `op_centro`
   (textos en `docs/VOCES.md`).
 - **Voces de la tía que siguen como TTS** (`voz_ansiosa`, `voz_calmada`,
   `voz_asustada`, `voz_frio`, `voz_aguanto`, `voz_templada`, `voz_aprieta`,
@@ -73,7 +74,6 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 |---|---|---|---|
 | 0 | Probar la consolidación en el editor (sección 0) | Sin esto lo demás se construye sobre algo no probado. | Mediano |
 | 1 | Regenerar voces (sección 1) | Se puede hacer en paralelo. | Chico |
-| 2 | Variar el caso (E.1): falta elegirlo en el menú de inicio | Los casos ya varían (sección 32 de `QUEMADURA_INMERSION.md`). | Chico |
 | 4 | Línea de tiempo en el resumen; distractores; práctica de perilla en el tutorial (opcional) | Mejoras de la experiencia. | Variable |
 | 4b | Probar la tía de Avaturn en el Quest; poses de mano y háptica (F) | Lo que más suma a la inmersión según la revisión de herramientas. | Grande |
 | 5 | **Validación final en el Quest** con las manos y fps (G); pruebas con usuarios e informe | Al final, con todo estable. | Mediano |
@@ -108,18 +108,17 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 
 ## E. Arco del juego
 
-- **Variar el caso (E.1, RF-11), lo que falta** (los casos están hechos:
-  `QUEMADURA_INMERSION.md`, sección 32): elegir el caso en el menú de
-  inicio (grado y extensión, o al azar), también en modo evaluación para
-  que las pruebas con usuarios comparen el mismo caso. La frase del
-  operador `op_casa` dice "si solo está roja y es pequeña": en un caso de
-  primer grado grande habría que regrabarla sin "y es pequeña". La
-  quemadura profunda (piel blanca) quedó fuera por ahora.
+- **Variar el caso (E.1, RF-11), lo que falta** (los casos y su elección
+  en el menú están hechos: `QUEMADURA_INMERSION.md`, secciones 32 y 35):
+  la frase del operador `op_casa` dice "si solo está roja y es pequeña":
+  en un caso de primer grado grande habría que regrabarla sin "y es
+  pequeña". La quemadura profunda (piel blanca) quedó fuera por ahora.
 - **Distractores:** teléfono que suena, segunda hornilla, la tía que insiste
   en la mantequilla.
 - **Línea de tiempo** en el resumen: qué hizo el jugador y cuándo, comparado
   con lo ideal.
-- **Practicar una perilla o una llave en el tutorial (E.11, opcional).**
+- **Practicar la perilla o la palanca del caño en el tutorial (E.11,
+  opcional).**
 
 ## F. Inmersión (revisión de herramientas, 2026-11-09)
 
@@ -191,8 +190,8 @@ texturas de 1024 por objeto de mano.
   meson al acercarse, llamada en espera), brazo de la tía, agarre doble, agarre distante, paño, **tirar
   el film con las dos manos** (sostener el rollo, tomar el borde con la otra
   mano, cortar y soltar la tira a lo largo; solo se probó colocando las
-  tiras por código), **templar el agua en el minuto 9** (tocar la llave
-  caliente con la fría abierta; el panel tiene ahora 4 respuestas), pisar el
+  tiras por código), **templar el agua en el minuto 9** (girar la palanca
+  del caño hasta tibia; el panel tiene ahora 4 respuestas), pisar el
   charco (solo aviso; no se probó), gesto de pausa, que los paneles de la
   tía no estorben mientras se le sostiene el brazo, **la llamada al 106**
   (tocar "Llamar 106" en la pantalla con la otra mano o llevarlo a la oreja;
@@ -203,14 +202,23 @@ texturas de 1024 por objeto de mano.
   bajo el agua) y revisar que la tarjeta no se vuelva demasiado larga con
   la línea "Cuando puedas"; si tapa, mostrarla solo en la tarjeta completa
   o acortar las etiquetas (`BurnGuide.SideLabel`).
-- **Perilla y llaves que se aprietan** (sección 29, solo compilado): con el
-  simulador y en el Quest, con controles y con la pinza, que se accionen al
-  apretar y no al pasar la mano, que con las dos llaves cerca se abra la
-  que se apunta y que el alcance (8 cm, `pressReach`) no sea muy corto.
-- **Llaves con su mano bajo el chorro** (sección 30): en el simulador y en
-  el Quest, abrir la caliente con la fría abierta y cerrar la fría mientras
-  ella tiene la mano en el agua. Si no responde, mirar la línea
-  `[HandPress]` de la consola (dice a cuántos cm se apretó).
+- **Palanca del caño** (`QUEMADURA_INMERSION.md`, sección 34, probada
+  en Play solo con la mano simulada): en el simulador y en el Quest, con
+  controles y con la pinza, tomarla y girarla hacia uno (fría, tibia,
+  caliente) y volver a cerrarla; el apretón corto que abre en frío; que se
+  alcance con su mano bajo el chorro; que el clic y la vibración marquen
+  cada zona; que el brillo en modo guiado se note sin las esferas; que las
+  marcas azul y roja se vean (son de 9 mm) y que la palanca copiada no se
+  vea más oscura que el grifo (usa sondas de luz, no el lightmap). Templar
+  en el minuto 9 ahora es girarla hasta tibia.
+- **Caso elegido en el menú** (sección 35): tocar los tres botones con el
+  dedo y con el rayo; que la recarga tras elegir el modo no se note fea en
+  el visor (pantalla negra unos segundos).
+- **Perilla que se aprieta** (sección 29, solo compilado): con el
+  simulador y en el Quest, con controles y con la pinza, que se accione al
+  apretar y no al pasar la mano y que el alcance (8 cm, `pressReach`) no
+  sea muy corto. Las llaves del grifo ya no se aprietan: ver la palanca del
+  caño arriba.
 - **Manta abierta por delante** (sección 30, solo compilado): con las
   capturas del usuario se vio que la manta se cerraba por delante y tapaba
   sus brazos. Revisar en Play que ahora quede abierta como un chal, que no

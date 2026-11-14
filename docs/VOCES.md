@@ -20,6 +20,8 @@ las demás: `guia_bienvenida`, `guia_anillo`, `guia_abrigo`,
 `guia_err_charco` y `op_centro`. Después (mismo día) `guia_abrigo` con
 texto nuevo y `voz_pide_manta` (tía, Sabina con tono más grave). Dicen lo correcto pero suenan menos
 naturales y con otra voz: **reemplazarlas con ElevenLabs** (mismo nombre).
+El 2026-11-14 se sumaron `guia_agua` y `guia_err_caliente` (Sabina), que
+ahora hablan de la palanca del caño en vez del punto azul.
 
 **Estado:** las 45 frases y tres quejidos nuevos (`voz_dolor_3` a `voz_dolor_5`)
 se generaron con ElevenLabs (plan gratis) y se pasaron al juego el
@@ -91,7 +93,7 @@ en una emergencia).
 | `guia_evaluacion` | Accidente (modo evaluación) | Se quemó la mano con agua hirviendo. Atiéndela como aprendiste. |
 | `guia_apagar` | Paso 1 | Primero, apaga la hornilla para que nadie más se queme. Acerca la mano a la perilla que brilla y apriétala. (Regrabada el 2026-11-12 con Sabina: antes decía "toca"; falta ElevenLabs.) |
 | `guia_frio_lejos` | La tía se queja del frío y el jugador está lejos | Tu tía se queja de que el agua está muy fría. Vuelve con ella antes de que saque la mano. (Nueva, 2026-11-12, Sabina; falta ElevenLabs.) |
-| `guia_agua` | Paso 2 | Ahora abre la llave de agua fría, la del punto azul. |
+| `guia_agua` | Paso 2 | Ahora abre el agua fría: toma la palanca del caño y gírala un poco hacia ti. |
 | `guia_llevar` | Paso 3 | Tómala del antebrazo, no de la mano quemada, y llévala hasta el chorro. Suelta su mano cerca del agua y ella la pondrá debajo. |
 | `guia_anillo` | Paso 4 | Quítale el anillo antes de que la mano se hinche. Pellizca el punto dorado con tu mano libre, con el botón lateral o juntando el pulgar y el índice, y deslízalo hacia la punta de su dedo. (**Regrabar**, 2026-11-09: el audio actual todavía dice "mantén apretado".) |
 | `guia_abrigo` | Paso 5 | El agua fría también le enfría el cuerpo. Sal de la cocina hacia la sala: la manta está doblada en el sofá, detrás de la mesa de centro. Sigue las flechas del piso y suéltala sobre sus hombros. (Regrabada el 2026-11-12 con Sabina: ahora dice dónde está la sala.) |
@@ -100,7 +102,7 @@ en una emergencia).
 | `guia_cubrir` | Paso 9 | Ya está enfriada. Cúbrela sin apretar: desliza la bolsa por su mano hasta la muñeca, o apoya tiras de film a lo largo. (**Regrabar**, 2026-11-12: el audio actual dice "gasa"; mientras tanto solo el texto.) |
 | `guia_decidir` | Paso 8 | Por último, decide si necesita atención médica. Mira bien la quemadura. |
 | `guia_volver` | Sacó la mano del agua | Su mano salió del agua y el reloj se pausó. Vuelve a ponerla bajo el chorro. |
-| `guia_err_caliente` | Error: agua caliente | Esa es la llave caliente. Ciérrala y usa la del punto azul. |
+| `guia_err_caliente` | Error: agua caliente | Está saliendo caliente. Regresa la palanca hacia arriba, hasta que salga fría. |
 | `guia_err_mano` | Error: la toma de la mano | Sujétala del antebrazo: tocar la quemadura le duele. |
 | `guia_err_pano` | Error: paño de cocina | El paño de cocina suelta pelusa. Usa film o una bolsa limpia. (**Regrabar**, 2026-11-12: el audio actual dice "gasa"; mientras tanto solo el texto.) |
 | `guia_err_curita` | Error: curita sobre la quemadura | Las curitas se pegan a la piel quemada. Cúbrela con film o una bolsa limpia. (**Nueva**, 2026-11-12; mientras tanto solo el texto.) |

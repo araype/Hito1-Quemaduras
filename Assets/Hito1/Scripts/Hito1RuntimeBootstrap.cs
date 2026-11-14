@@ -131,6 +131,7 @@ namespace SojaExiles
             }
 
             InstallHotTap();
+            InstallFaucetLever();
 
             foreach (WaterTap tap in Object.FindObjectsOfType<WaterTap>())
             {
@@ -300,6 +301,41 @@ namespace SojaExiles
             hot.openColor = new Color(1f, 0.55f, 0.35f, 0.45f);
             cold.pair = hot;
             go.SetActive(true);
+        }
+
+        // Palanca lateral del grifo (la del modelo) en lugar de los puntos de
+        // las dos llaves: ver FaucetLever.
+        private static void InstallFaucetLever()
+        {
+            if (Object.FindObjectOfType<FaucetLever>() != null)
+            {
+                return;
+            }
+
+            WaterTap cold = null;
+            WaterTap hot = null;
+            foreach (WaterTap tap in Object.FindObjectsOfType<WaterTap>())
+            {
+                if (tap.hot)
+                {
+                    hot = tap;
+                }
+                else
+                {
+                    cold = tap;
+                }
+            }
+
+            if (cold == null || hot == null || cold.pair != hot)
+            {
+                return;
+            }
+
+            if (FaucetLever.Install(cold, hot) != null)
+            {
+                cold.leverDriven = true;
+                hot.leverDriven = true;
+            }
         }
 
         // Perilla del kit (Knob.00X) mas cercana a la olla: la que apaga su
