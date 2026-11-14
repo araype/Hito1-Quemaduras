@@ -207,8 +207,16 @@ namespace SojaExiles
             get { return BurnInjury.Instance != null ? BurnInjury.Instance.degree : BurnInjury.BurnDegree.SegundoSuperficial; }
         }
 
+        // Caso de la partida (grado, extension y zona); null sin paciente.
+        public BurnCase Case
+        {
+            get { return BurnInjury.Instance != null ? BurnInjury.Instance.Case : BurnCase.Current; }
+        }
+
         // Segundo grado con ampollas en la mano: hay que ir al centro de
-        // salud. Una de primer grado pequena se cuida en casa.
+        // salud. Primer grado (solo roja) se cuida en casa aunque sea
+        // grande: la extension no cambia la decision mientras sea en la mano
+        // (guia LSEBN: el enrojecimiento no cuenta como superficie quemada).
         public bool NeedsMedicalCare
         {
             get { return Degree == BurnInjury.BurnDegree.SegundoSuperficial; }
@@ -682,7 +690,7 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnEvent.MedicalDecision:
                     return NeedsMedicalCare
                         ? "Una quemadura con ampollas en la mano necesita revisión médica."
-                        : "Una quemadura de primer grado pequeña se cuida en casa; consulta si empeora.";
+                        : "Si solo está roja, sin ampollas, se cuida en casa aunque sea grande; consulta si salen ampollas o empeora.";
                 case BurnSequenceManager.BurnEvent.StepMissed:
                     switch (detail)
                     {
@@ -744,6 +752,9 @@ namespace SojaExiles
             public string fecha;
             public string modo;
             public string grado;
+            public string extension;
+            public string zona;
+            public int semillaCaso;
             public int puntaje;
             public int errores;
             public int erroresCriticos;
@@ -765,6 +776,9 @@ namespace SojaExiles
                 fecha = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 modo = BurnGuide.Instance != null ? (BurnGuide.Instance.Guided ? "Guiado" : "Evaluacion") : "SinGuia",
                 grado = Degree.ToString(),
+                extension = Case != null ? Case.size.ToString() : "",
+                zona = Case != null ? Case.zone.ToString() : "",
+                semillaCaso = Case != null ? Case.seed : 0,
                 puntaje = Score,
                 errores = burnSequence.Errors,
                 erroresCriticos = burnSequence.CriticalErrors,

@@ -4,9 +4,11 @@ using UnityEngine.SceneManagement;
 namespace SojaExiles
 {
     // Pausa y reinicio en cualquier momento (E.10, RNF-03). Se abre con el
-    // boton de menu del control izquierdo (con las manos, el gesto de menu
-    // de la mano izquierda: pellizco mirando la palma) o manteniendo B o Y
-    // un segundo. En el editor tambien con Escape o P y, en Windows, con F9
+    // boton de menu del control izquierdo o manteniendo B o Y un segundo;
+    // con las manos, con el boton "Pausa" de la muneca izquierda
+    // (WristPauseButton; el gesto de menu del sistema tambien llega como
+    // Button.Start, pero no se confirmo en el visor). El tutorial ensena a
+    // abrirla (BurnGuide.PauseTutorial). En el editor tambien con Escape o P y, en Windows, con F9
     // (pausa) y F8 (terminar y ver resumen) aunque el teclado lo tenga la
     // ventana del simulador de Meta.
     // Pausado: el tiempo se detiene (Time.timeScale = 0: el reloj, el
@@ -110,7 +112,7 @@ namespace SojaExiles
 
         // Hay pausa desde que se elige el modo hasta el resumen. En el panel
         // de inicio todavia no empezo nada, y el resumen ya trae sus botones.
-        private static bool CanPause
+        public static bool CanPause
         {
             get
             {
@@ -153,9 +155,10 @@ namespace SojaExiles
         public void Restart()
         {
             SetPaused(false);
-            if (BurnInjury.Instance != null)
+            // Vuelve al inicio con el mismo caso.
+            if (BurnCase.Current != null)
             {
-                BurnInjury.NextDegree = BurnInjury.Instance.degree;
+                BurnCase.Next = BurnCase.Current.Copy();
             }
 
             Debug.Log("[PauseMenu] Volver al inicio");

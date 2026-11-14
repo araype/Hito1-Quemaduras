@@ -118,6 +118,12 @@ namespace SojaExiles
                 burn.gameObject.AddComponent<PauseMenu>();
             }
 
+            // Pausa con las manos: boton en la muneca izquierda.
+            if (Object.FindObjectOfType<WristPauseButton>() == null)
+            {
+                burn.gameObject.AddComponent<WristPauseButton>();
+            }
+
             // Seguridad propia: olla caliente y agua derramada.
             if (Object.FindObjectOfType<PlayerSafety>() == null)
             {

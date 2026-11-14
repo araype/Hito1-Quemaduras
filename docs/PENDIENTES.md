@@ -73,7 +73,7 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 |---|---|---|---|
 | 0 | Probar la consolidación en el editor (sección 0) | Sin esto lo demás se construye sobre algo no probado. | Mediano |
 | 1 | Regenerar voces (sección 1) | Se puede hacer en paralelo. | Chico |
-| 2 | Variar el caso (E.1) | Que no se pueda memorizar la secuencia. El tamaño de la quemadura cambia cuánto film hace falta. | Grande |
+| 2 | Variar el caso (E.1): falta elegirlo en el menú de inicio | Los casos ya varían (sección 32 de `QUEMADURA_INMERSION.md`). | Chico |
 | 4 | Línea de tiempo en el resumen; distractores; práctica de perilla en el tutorial (opcional) | Mejoras de la experiencia. | Variable |
 | 4b | Probar la tía de Avaturn en el Quest; poses de mano y háptica (F) | Lo que más suma a la inmersión según la revisión de herramientas. | Grande |
 | 5 | **Validación final en el Quest** con las manos y fps (G); pruebas con usuarios e informe | Al final, con todo estable. | Mediano |
@@ -108,11 +108,13 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 
 ## E. Arco del juego
 
-- **Variar el caso (E.1, RF-11):** grado (`BurnInjury.randomDegree`),
-  extensión, zona y quizá edad. Hoy solo el botón "Otro caso" cambia el grado.
-  Con la llamada al 106 ya hecha, decidir si en los casos leves el operador
-  debe decir que no hacía falta llamar (las guías piden llamar solo en casos
-  graves: quemadura grande, cara, eléctrica).
+- **Variar el caso (E.1, RF-11), lo que falta** (los casos están hechos:
+  `QUEMADURA_INMERSION.md`, sección 32): elegir el caso en el menú de
+  inicio (grado y extensión, o al azar), también en modo evaluación para
+  que las pruebas con usuarios comparen el mismo caso. La frase del
+  operador `op_casa` dice "si solo está roja y es pequeña": en un caso de
+  primer grado grande habría que regrabarla sin "y es pequeña". La
+  quemadura profunda (piel blanca) quedó fuera por ahora.
 - **Distractores:** teléfono que suena, segunda hornilla, la tía que insiste
   en la mantequilla.
 - **Línea de tiempo** en el resumen: qué hizo el jugador y cuándo, comparado
@@ -217,6 +219,11 @@ texturas de 1024 por objeto de mano.
 - **Una sola mano en el simulador** (sección 30, solo compilado): A/X con
   el celular en la mano llama; A/X con el rollo corta una tira y la deja en
   esa mano. Menú Hito1 > Práctica (F9 pausa, F10 terminar).
+- **Pausa con las manos** (`QUEMADURA_INMERSION.md`, sección 33): en el
+  Quest, que el botón "Pausa" aparezca al mirar la palma izquierda y no al
+  usar la mano para otra cosa, que se apriete cómodo con la otra mano, y
+  el paso 3 del tutorial con manos y con controles. Grabar una voz del
+  narrador para ese paso (hoy solo tarjeta).
 - **Caja de film y bolsa importadas** (`QUEMADURA_INMERSION.md`, sección
   31): en el Quest, que la bolsa transparente se vea en el cajón, que la
   solapa del film sobre la tapa de la caja se encuentre con la mano y que

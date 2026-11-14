@@ -59,7 +59,8 @@ namespace SojaExiles
 
             // ---------------- encabezado ----------------
             bool guided = BurnGuide.Instance == null || BurnGuide.Instance.Guided;
-            string degree = p.Degree == BurnInjury.BurnDegree.Primero ? "primer grado" : "segundo grado superficial";
+            string degree = p.Case != null ? p.Case.Describe()
+                : (p.Degree == BurnInjury.BurnDegree.Primero ? "primer grado" : "segundo grado superficial");
             VRPanelKit.Text(t, "PRÁCTICA TERMINADA  ·  " + (guided ? "MODO GUIADO" : "MODO EVALUACIÓN"),
                 new Vector2(left, top), 0.017f, Accent);
             VRPanelKit.Text(t, "<b>RESUMEN DE LA PRÁCTICA</b>", new Vector2(left, top - 0.03f), 0.046f, Color.white);
@@ -149,18 +150,14 @@ namespace SojaExiles
 
             // ---------------- boton ----------------
             float buttonY = -Height / 2f + Pad + 0.045f;
-            BurnInjury.BurnDegree same = p.Degree;
-            BurnInjury.BurnDegree other = same == BurnInjury.BurnDegree.Primero
-                ? BurnInjury.BurnDegree.SegundoSuperficial
-                : BurnInjury.BurnDegree.Primero;
-            // Los dos vuelven al panel de inicio (modo guiado o evaluacion);
-            // cambia solo la quemadura. Antes "Otro caso" parecia otro tipo
-            // de guia.
-            string otherName = other == BurnInjury.BurnDegree.Primero ? "primer grado" : "segundo grado";
-            VRPanelKit.RoundedButton(t, "Volver al inicio", new Vector2(-0.19f, buttonY), new Vector2(0.34f, 0.075f),
+            BurnCase same = p.Case != null ? p.Case.Copy() : null;
+            // Los dos vuelven al panel de inicio (modo guiado o evaluacion):
+            // el mismo caso u otro al azar (grado, extension o zona
+            // distintos). Los menus con eleccion del caso van despues.
+            VRPanelKit.RoundedButton(t, "Repetir este caso", new Vector2(-0.19f, buttonY), new Vector2(0.34f, 0.075f),
                 new Color(0.22f, 0.48f, 0.95f), () => Restart(same));
-            VRPanelKit.RoundedButton(t, "Otra quemadura: " + otherName, new Vector2(0.19f, buttonY), new Vector2(0.34f, 0.075f),
-                new Color(0.45f, 0.3f, 0.62f), () => Restart(other));
+            VRPanelKit.RoundedButton(t, "Otro caso al azar", new Vector2(0.19f, buttonY), new Vector2(0.34f, 0.075f),
+                new Color(0.45f, 0.3f, 0.62f), () => Restart(BurnCase.RandomOtherThan(same)));
             VRPanelKit.Text(t, "Los dos vuelven al inicio para elegir modo guiado o evaluación.  ·  Voces: elevenlabs.io",
                 new Vector2(0f, buttonY - 0.05f), 0.015f, Muted, TextAnchor.UpperCenter, TextAlignment.Center);
 
@@ -349,9 +346,9 @@ namespace SojaExiles
             return s < 0f ? "-" : s.ToString("F1") + " s";
         }
 
-        private static void Restart(BurnInjury.BurnDegree degree)
+        private static void Restart(BurnCase next)
         {
-            BurnInjury.NextDegree = degree;
+            BurnCase.Next = next;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
     }

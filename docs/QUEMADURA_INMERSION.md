@@ -1105,3 +1105,74 @@ caja. Sin errores en la consola. **No se probó:** tirar una tira entera,
 cubrir la quemadura con la tira o con la bolsa, ni nada en el Quest (cómo
 se ve la bolsa transparente en el cajón con la luz del visor, y si la
 solapa sobre la tapa se encuentra con la mano).
+
+## 32. Casos distintos de quemadura (RF-11, `main`, 2026-11-14)
+
+Antes siempre era la misma quemadura (segundo grado, mediana, en el dorso):
+solo el botón "Otra quemadura" del resumen cambiaba el grado. Ahora cada
+partida trae un caso al azar, siempre en el dorso de la mano derecha (la
+mano, el accidente, las poses, el agua y la llamada no cambian).
+
+| Variable | Valores | Qué cambia |
+|---|---|---|
+| Grado | Primer grado / segundo grado superficial | Ampollas, color y la decisión médica (igual que antes: con ampollas, centro de salud; solo roja, en casa). |
+| Extensión | Pequeña (radio ×0,62), mediana (la de antes, 4 cm) y grande (×1,45, casi todo el dorso) | Cuántas tiras de film hacen falta (`FilmCoverage` mide sobre la mancha), cuántas ampollas salen (3, 6 o 10) y qué tan rápido se hincha (grande ×0,9 del tiempo, pequeña ×1,1). |
+| Zona | Dorso / nudillos (centro 3 cm más hacia los dedos) | En los nudillos la mano se hincha antes (×0,85), así que sacar el anillo es más urgente. En el peor caso (grande en los nudillos) el anillo se traba tras unos 100 s sin agua (antes 135 s; con 42 s no daba tiempo). |
+
+- La extensión no cambia la decisión: en la mano manda el grado (guía
+  LSEBN: el enrojecimiento no cuenta como superficie quemada). El consejo
+  del resumen ahora dice "si solo está roja, sin ampollas, se cuida en casa
+  aunque sea grande".
+- Cada caso tiene una semilla: el mismo caso repetido tiene la misma mancha
+  y las mismas ampollas.
+- El caso se mantiene al volver al inicio desde la pausa y si la escena se
+  recarga al elegir el modo. En el resumen, los botones son "Repetir este
+  caso" y "Otro caso al azar" (cambia al menos el grado, la extensión o la
+  zona). El encabezado del resumen dice el caso completo ("segundo grado
+  superficial, grande, en los nudillos") y el JSON de la sesión guarda
+  `extension`, `zona` y `semillaCaso`.
+- `BurnInjury.randomCase` (encendido) reemplaza a `randomDegree`, y
+  `BurnCase.Next` a `BurnInjury.NextDegree`.
+
+| Dónde | |
+|---|---|
+| `BurnCase.cs` (nuevo) | El caso, cómo se elige y sus efectos. |
+| `BurnInjury` | Elige el caso en `Awake`; ampollas e hinchazón según el caso; ampollas con la semilla. |
+| `BurnSkinOverlay.Paint` | Radio y centro de la mancha según el caso (los campos quedan con la mancha real para `HomeRemedy`). |
+| `BurnProtocol`, `BurnSummaryPanel`, `PauseMenu`, `BurnGuide` | Caso en el resumen y el JSON; repetir el caso u otro al azar. |
+
+**Probado en Play** (editor, sin visor; el estado "quemada" se forzó por
+código solo para mirar el aspecto): cuatro casos (segundo grado pequeña en
+el dorso, segundo grado grande en los nudillos, primer grado grande en el
+dorso y segundo grado mediana en los nudillos) se ven distintos, con 3, 6 y
+10 ampollas según la extensión; en los nudillos la mancha llega al anillo.
+Sin errores en la consola. **No se probó:** una partida completa con cada
+caso (cuántas tiras pide la grande, si una sola tira cubre de más la
+pequeña, que el anillo en los nudillos no se trabe antes de que la guía lo
+pida), cómo queda el encabezado largo del resumen, ni nada en el Quest.
+
+## 33. Pausa con las manos y cómo se aprende (`main`, 2026-11-14)
+
+Con las manos solo se podía pausar con el gesto de menú del sistema (mano
+izquierda), que nunca se confirmó en el visor, y nada le decía a un
+jugador nuevo que la pausa existía.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Botón en la muñeca | Jugando con las manos, al mirar la palma izquierda (unos 50° hacia los ojos, la mano a menos de 70 cm y vacía) aparece una píldora "Pausa" sobre la muñeca, 3,5 cm hacia la cara y 2 cm hacia el codo (lejos de los dedos de esa mano). Se toca con la otra mano y se hace la pinza, como cualquier botón. Aparece tras 0,35 s y se esconde al girar la palma. No aparece con controles (ahí está el botón de menú), con algo en esa mano, en el panel de inicio, en el resumen ni con la pausa abierta. | `WristPauseButton` (nuevo), `SimpleGrab.TryGetPalm` |
+| Palma | Se calcula con la muñeca y los nudillos del índice y del meñique de la mano que se ve (Interaction SDK). | `SimpleGrab.TryVisibleJoints` |
+| Tutorial 3 de 3 | Después de entregar la taza: "Abre la pausa", con la indicación según lo que usa (controles: botón de menú del control izquierdo o mantener B/Y; manos: mirar la palma y tocar "Pausa"). El botón de la muñeca brilla cuando aparece. Al abrirla: "Así se pausa la práctica. Toca Continuar para seguir"; al continuar llega el accidente. Si en 45 s no la abre, sigue igual (`pauseTutorialTimeout`). Sin voz del narrador en este paso (solo la tarjeta). | `BurnGuide.PauseTutorial` |
+
+Los tutoriales 1 y 2 ahora dicen "de 3". `PauseMenu.CanPause` pasó a
+público.
+
+**Probado en Play** (editor, sin visor, con las manos simuladas de
+`SimpleGrab`): en el panel de inicio el botón no aparece; después sí, con la
+palma hacia la cara; tocarlo con la otra mano y apretar abre la pausa; no
+aparece con la taza en esa mano ni con la palma hacia abajo; el paso 3
+cambia la indicación de controles a manos, al pausar muestra "Toca
+Continuar" y al continuar llega el accidente. Sin errores en la consola.
+**No se probó:** con manos reales en el Quest (si la normal de la palma
+sale bien con el esqueleto real, si aparece sin querer al mirar algo con la
+mano levantada, si se alcanza cómodo con la otra mano) ni con controles en
+el simulador.

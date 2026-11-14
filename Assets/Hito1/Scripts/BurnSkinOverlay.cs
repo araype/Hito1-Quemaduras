@@ -51,6 +51,7 @@ namespace SojaExiles
         private float targetHeat;
         private float targetAlpha;
         private float cooledAmount;
+        private bool casePainted;
 
         private void Start()
         {
@@ -197,8 +198,21 @@ namespace SojaExiles
                 return;
             }
 
-            BurnSkinPattern.Paint(overlay, hand, burnCenter, dorsumDirection, burnRadius, SecondDegree,
-                Random.Range(0, 100000));
+            // Extension y zona del caso de la partida (BurnCase). Se guardan
+            // en los campos para que los demas (remedios caseros) usen la
+            // mancha real. Los valores del inspector son los de la mediana en
+            // el dorso.
+            BurnCase burnCase = injury != null ? injury.Case : null;
+            int seed = Random.Range(0, 100000);
+            if (burnCase != null && !casePainted)
+            {
+                casePainted = true;
+                burnRadius *= burnCase.RadiusFactor;
+                burnCenter += Vector3.up * burnCase.TowardFingers;
+                seed = burnCase.seed;
+            }
+
+            BurnSkinPattern.Paint(overlay, hand, burnCenter, dorsumDirection, burnRadius, SecondDegree, seed);
         }
 
         private SkinnedMeshRenderer BuildOverlay()

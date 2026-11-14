@@ -14,7 +14,9 @@ namespace SojaExiles
     //   - el agua caliente vuelve a quemar: todo empeora mas rapido.
     // La hinchazon engrosa el hueso de la mano (el modelo no tiene
     // blendshapes); la capa de la quemadura y la piel la siguen porque usan
-    // los mismos huesos. Va en el paciente (el objeto con PatientBody).
+    // los mismos huesos. El caso de la partida (BurnCase) fija el grado, la
+    // cantidad de ampollas y que tan rapido se hincha. Va en el paciente (el
+    // objeto con PatientBody).
     [RequireComponent(typeof(PatientBody))]
     public class BurnInjury : MonoBehaviour
     {
@@ -26,13 +28,12 @@ namespace SojaExiles
 
         public BurnSequenceManager burnSequence;
         public BurnDegree degree = BurnDegree.SegundoSuperficial;
-        [Tooltip("Elige el grado al azar en cada partida.")]
-        public bool randomDegree;
+        [Tooltip("Elige el caso (grado, extension y zona) al azar en cada partida (RF-11). Si esta apagado, usa 'degree' con la extension mediana en el dorso.")]
+        public bool randomCase = true;
         public bool rightHand = true;
 
-        // Grado pedido para la proxima partida (boton "Otro caso" del
-        // resumen). Sobrevive a la recarga de la escena y se usa una vez.
-        public static BurnDegree? NextDegree;
+        // Caso de esta partida (BurnCase): grado, extension y zona.
+        public BurnCase Case { get; private set; }
 
         [Header("Hinchazon")]
         [Tooltip("Cuanto engrosa la mano hinchada del todo (0,12 = 12 %).")]
@@ -100,15 +101,10 @@ namespace SojaExiles
         {
             body = GetComponent<PatientBody>();
             Instance = this;
-            if (NextDegree.HasValue)
-            {
-                degree = NextDegree.Value;
-                NextDegree = null;
-            }
-            else if (randomDegree)
-            {
-                degree = Random.value < 0.5f ? BurnDegree.Primero : BurnDegree.SegundoSuperficial;
-            }
+            Case = BurnCase.Choose(randomCase, degree);
+            degree = Case.degree;
+            blisterCount = Case.BlisterCount;
+            swellSecondsUntreated *= Case.SwellTimeFactor;
         }
 
         private void OnDestroy()
@@ -134,7 +130,7 @@ namespace SojaExiles
 
             hand = body.HandBone(rightHand);
             handBaseScale = hand.localScale;
-            Debug.Log("[BurnInjury] Quemadura de " + (degree == BurnDegree.Primero ? "primer grado" : "segundo grado superficial"));
+            Debug.Log("[BurnInjury] Quemadura de " + Case.Describe() + " (" + Case + ")");
 
             // La capa de la quemadura se arma en el Start de BurnSkinOverlay.
             yield return null;
@@ -275,6 +271,9 @@ namespace SojaExiles
                 }
             }
 
+            // Mismo caso, mismas ampollas.
+            Random.State saved = Random.state;
+            Random.InitState(Case != null ? Case.seed * 7 + 3 : 0);
             List<Vector3> used = new List<Vector3>();
             int tries = 0;
             while (blisters.Count < blisterCount && tries++ < 400)
@@ -330,6 +329,7 @@ namespace SojaExiles
                 });
             }
 
+            Random.state = saved;
             Debug.Log($"[BurnInjury] {blisters.Count} ampollas preparadas");
         }
 

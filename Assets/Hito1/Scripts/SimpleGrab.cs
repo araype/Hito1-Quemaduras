@@ -290,6 +290,99 @@ namespace SojaExiles
             return false;
         }
 
+        // Muneca, normal de la palma (hacia afuera de la palma) y direccion de
+        // los dedos de una mano seguida con hand tracking. Falso con
+        // controles (tienen el boton de menu) o si la mano no se ve. La usa
+        // WristPauseButton. En el editor, con la mano simulada: muneca en
+        // SimPosition, palma hacia SimRotation * atras y dedos hacia arriba.
+        public static bool TryGetPalm(bool leftHand, out Vector3 wrist, out Vector3 palmNormal, out Vector3 toFingers)
+        {
+            wrist = Vector3.zero;
+            palmNormal = Vector3.forward;
+            toFingers = Vector3.up;
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                SimpleGrab grab = Instances[i];
+                Hand hand = leftHand ? grab.left : grab.right;
+#if UNITY_EDITOR
+                if (grab.Simulated(hand))
+                {
+                    int s = leftHand ? 0 : 1;
+                    wrist = SimPosition[s];
+                    palmNormal = SimRotation[s] * Vector3.back;
+                    toFingers = SimRotation[s] * Vector3.up;
+                    return true;
+                }
+#endif
+                if (hand.trackedHand == null || !hand.trackedHand.IsTracked)
+                {
+                    continue;
+                }
+
+                if (TryVisibleJoints(leftHand, out Vector3 w, out Vector3 index, out Vector3 pinky))
+                {
+                    Vector3 a = index - w;
+                    Vector3 b = pinky - w;
+                    // Mano izquierda con la palma hacia la cara y los dedos
+                    // arriba: el indice queda a la derecha y el menique a la
+                    // izquierda; Cross(menique, indice) sale de la palma. En
+                    // la derecha es al reves.
+                    Vector3 n = leftHand ? Vector3.Cross(b, a) : Vector3.Cross(a, b);
+                    if (n.sqrMagnitude < 1e-8f)
+                    {
+                        return false;
+                    }
+
+                    wrist = w;
+                    palmNormal = n.normalized;
+                    toFingers = ((a + b) * 0.5f).normalized;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Muneca y nudillos del indice y del menique de la mano visible.
+        private static bool TryVisibleJoints(bool leftHand, out Vector3 wrist, out Vector3 index, out Vector3 pinky)
+        {
+            wrist = index = pinky = Vector3.zero;
+            if (Time.unscaledTime >= nextVisualLookup)
+            {
+                nextVisualLookup = Time.unscaledTime + 2f;
+                handVisuals = FindObjectsOfType<Oculus.Interaction.HandVisual>();
+            }
+
+            Oculus.Interaction.Input.Handedness side = leftHand
+                ? Oculus.Interaction.Input.Handedness.Left
+                : Oculus.Interaction.Input.Handedness.Right;
+            foreach (Oculus.Interaction.HandVisual visual in handVisuals)
+            {
+                if (visual == null || !visual.isActiveAndEnabled || !visual.IsVisible)
+                {
+                    continue;
+                }
+
+                Oculus.Interaction.Input.IHand h = visual.Hand;
+                if (h == null || !h.IsTrackedDataValid || h.Handedness != side)
+                {
+                    continue;
+                }
+
+                if (h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandWristRoot, out Pose pw)
+                    && h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandIndex1, out Pose pi)
+                    && h.GetJointPose(Oculus.Interaction.Input.HandJointId.HandPinky1, out Pose pp))
+                {
+                    wrist = pw.position;
+                    index = pi.position;
+                    pinky = pp.position;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         // Rayo para apuntar a los botones de los paneles (ButtonPointer) y si
         // esa mano aprieta (gatillo, boton lateral o pinza). Con manos, el
         // rayo del sistema (OVRHand.PointerPose); con controles, hacia donde

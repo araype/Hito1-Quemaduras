@@ -62,6 +62,8 @@ namespace SojaExiles
         public float bringTimeout = 0f;
         [Tooltip("Cada cuanto se repite la indicacion del tutorial mientras se espera (s).")]
         public float tutorialReminder = 25f;
+        [Tooltip("Segundos que espera el paso de la pausa del tutorial antes de seguir sin el.")]
+        public float pauseTutorialTimeout = 45f;
 
         // El panel de inicio (modo guiado o evaluacion) esta abierto: todavia
         // no empezo nada, asi que no hay pausa.
@@ -356,6 +358,12 @@ namespace SojaExiles
                 if (SceneDisturbed())
                 {
                     pendingMode = guided;
+                    // Con el mismo caso de quemadura.
+                    if (BurnCase.Current != null)
+                    {
+                        BurnCase.Next = BurnCase.Current.Copy();
+                    }
+
                     SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
                     yield break;
                 }
@@ -556,7 +564,7 @@ namespace SojaExiles
             // 1. Agarrar.
             if (mug != null)
             {
-                ShowCard("Tutorial 1 de 2", "Agarra la taza del mesón",
+                ShowCard("Tutorial 1 de 3", "Agarra la taza del mesón",
                     "Acerca la mano y aprieta el botón lateral del control, o junta el pulgar y el índice.");
                 Say("guia_agarrar");
                 HighlightFollow(mug.transform, 0.07f);
@@ -577,7 +585,7 @@ namespace SojaExiles
                 ClearHighlights();
 
                 // 2. Caminar y entregar.
-                ShowCard("Tutorial 2 de 2", "Llévale la taza a tu tía",
+                ShowCard("Tutorial 2 de 3", "Llévale la taza a tu tía",
                     "Camina con el joystick izquierdo (sin controles: pellizca con el dedo medio izquierdo).");
                 StopNarration();
                 Say("guia_caminar");
@@ -632,6 +640,12 @@ namespace SojaExiles
                 yield return new WaitForSeconds(1.8f);
             }
 
+            // 3. Pausa: un jugador nuevo no sabe que existe ni como se abre.
+            if (!Over)
+            {
+                yield return PauseTutorial();
+            }
+
             StopNarration();
             if (Over)
             {
@@ -647,6 +661,65 @@ namespace SojaExiles
             {
                 accident.Trigger(accidentAfterTutorial);
             }
+        }
+
+        // Ensena a abrir y cerrar la pausa, segun como juega: con controles
+        // el boton de menu del control izquierdo (o mantener B/Y); con las
+        // manos, el boton de la muneca izquierda (WristPauseButton). Si no lo
+        // hace en 'pauseTutorialTimeout' segundos sigue igual (la tarjeta de
+        // la pausa no debe trabar la historia).
+        private IEnumerator PauseTutorial()
+        {
+            float waited = 0f;
+            string shownHint = null;
+            bool highlighted = false;
+            while (!PauseMenu.Paused && !Over && waited < pauseTutorialTimeout)
+            {
+                waited += Time.unscaledDeltaTime;
+                string hint = PauseHint();
+                if (hint != shownHint)
+                {
+                    shownHint = hint;
+                    ShowCard("Tutorial 3 de 3", "Abre la pausa", hint);
+                }
+
+                WristPauseButton wrist = WristPauseButton.Instance;
+                bool wristVisible = wrist != null && wrist.Visible;
+                if (wristVisible && !highlighted)
+                {
+                    HighlightFollow(wrist.ButtonTransform, 0.05f);
+                    highlighted = true;
+                }
+                else if (!wristVisible && highlighted)
+                {
+                    ClearHighlights();
+                    highlighted = false;
+                }
+
+                yield return null;
+            }
+
+            ClearHighlights();
+            if (PauseMenu.Paused)
+            {
+                ShowCard("Tutorial 3 de 3", "Así se pausa la práctica",
+                    "El reloj se detiene. Toca \"Continuar\" para seguir.");
+                while (PauseMenu.Paused && !Over)
+                {
+                    yield return null;
+                }
+            }
+
+            HideCard();
+        }
+
+        // Indicacion para abrir la pausa con lo que esta usando el jugador.
+        private static string PauseHint()
+        {
+            bool hands = SimpleGrab.TryGetPalm(true, out Vector3 _, out Vector3 _, out Vector3 _);
+            return hands
+                ? "Mira la palma de tu mano izquierda: aparece \"Pausa\" en la muñeca. Tócalo con la otra mano y haz la pinza."
+                : "Aprieta el botón de menú del control izquierdo (el de tres rayas), o mantén B o Y un segundo.";
         }
 
         private bool NearPatient(Vector3 point)
