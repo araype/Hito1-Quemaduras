@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Manual de instalación y despliegue</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<header class="doc-head">
+  <p class="doc-kicker">Manual de instalación y despliegue</p>
+  <h1>Simulador VR de primeros auxilios ante una quemadura doméstica</h1>
+  <p class="doc-sub">Cómo descargar el proyecto, abrirlo en Unity, probarlo en la PC e instalarlo en un visor Meta Quest.</p>
+  <div class="doc-meta">
+    <span>CS2H01 Interacción Humano-Computador · UTEC</span>
+    <span>Unity 2022.3.62f3 · Meta XR SDK 201</span>
+    <span>Noviembre 2026</span>
+  </div>
+</header>
+
+<p>No hace falta experiencia previa con Unity. Si ya tienes Unity y el visor configurados, puedes saltar a la sección 6.</p>
+
+<ol class="toc">
+  <li>Qué necesitas</li>
+  <li>Descargar el proyecto</li>
+  <li>Abrir el proyecto en Unity</li>
+  <li>Probar en la PC (opcional)</li>
+  <li>Preparar el visor Meta Quest</li>
+  <li>Compilar e instalar en el visor</li>
+  <li>Abrir y usar la aplicación</li>
+  <li>Recuperar los registros de sesión</li>
+  <li>Problemas comunes</li>
+</ol>
+
+<h2><span class="n">1</span>Qué necesitas</h2>
+<table>
+  <tr><th>Elemento</th><th>Detalle</th></tr>
+  <tr><td>PC</td><td>Windows 10 u 11, 16 GB de RAM y unos 15 GB libres. El proyecto pesa cerca de 1 GB y Unity genera otros 10 GB al importarlo.</td></tr>
+  <tr><td>Unity Hub</td><td>Se descarga de <code>unity.com/download</code>.</td></tr>
+  <tr><td>Unity 2022.3.62f3</td><td>Se instala desde Unity Hub con el módulo <b>Android Build Support</b>, que incluye OpenJDK y el Android SDK y NDK.</td></tr>
+  <tr><td>Git y Git LFS</td><td>Se descargan de <code>git-scm.com</code>; Git LFS viene incluido. Es obligatorio: los modelos, texturas y audios se guardan con LFS.</td></tr>
+  <tr><td>Visor</td><td>Meta Quest 2, 3 o Pro, con un cable USB-C de datos.</td></tr>
+  <tr><td>Cuenta de Meta</td><td>Con una organización de desarrollador (gratis), para activar el modo desarrollador.</td></tr>
+  <tr><td>Opcional</td><td><b>Meta Horizon Link</b>, para probar en la PC con el visor puesto, y <b>Meta Quest Developer Hub</b>, para instalar el APK y ver los archivos del visor.</td></tr>
+</table>
+
+<h2><span class="n">2</span>Descargar el proyecto</h2>
+<p>Abre una terminal (Git Bash o PowerShell) en la carpeta donde quieras guardarlo y ejecuta:</p>
+<pre>git lfs install
+git clone https://github.com/araype/Hito1-Quemaduras.git
+cd Hito1-Quemaduras
+git checkout mejoras-demo</pre>
+<div class="note"><b>Rama.</b> La versión más reciente está en <code>mejoras-demo</code>. Cuando se una a <code>main</code>, basta con quedarse en <code>main</code>.</div>
+<div class="warn"><b>Sin Git LFS la escena queda vacía.</b> Los archivos <code>.fbx</code>, <code>.glb</code>, <code>.png</code> y <code>.wav</code> se descargan como textos de pocas líneas y no aparecen personajes ni sonidos. Si te pasó, ejecuta <code>git lfs pull</code> dentro de la carpeta.</div>
+
+<h2><span class="n">3</span>Abrir el proyecto en Unity</h2>
+<ol>
+  <li>En Unity Hub, entra a <b>Installs → Install Editor</b> e instala la versión <b>2022.3.62f3</b> con <b>Android Build Support</b> y sus dos subopciones.</li>
+  <li>Entra a <b>Projects → Add → Add project from disk</b> y elige la carpeta <code>Hito1-Quemaduras</code>.</li>
+  <li>Ábrelo. La primera vez Unity importa todo y puede tardar de 15 a 30 minutos.</li>
+  <li>En la ventana <b>Project</b>, abre con doble clic la escena <code>Assets/Hito1/Escenas/Escenario_Quemadura.unity</code>.</li>
+</ol>
+<figure>
+  <img src="img/editor.png" alt="Editor de Unity con la escena abierta">
+  <figcaption><span class="fig">Figura 1.</span> Unity con la escena <i>Escenario_Quemadura</i> abierta. En la jerarquía están el jugador (<i>OVRCameraRigInteraction</i>), la tía (<i>Familiarartefacto</i>) y <i>BurnSequenceManager</i>, que controla la práctica.</figcaption>
+</figure>
+<div class="note"><b>Es normal no ver todos los objetos.</b> El botiquín, el film, la bolsa, la manta, los remedios y el reloj los crea el código al dar Play.</div>
+
+<h2><span class="n">4</span>Probar en la PC <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></h2>
+<p>Sirve para revisar cambios sin compilar. El visor se conecta a la PC con <b>Meta Horizon Link</b>, por cable o Air Link.</p>
+<ol>
+  <li>Abre Meta Horizon Link en la PC, conecta el visor y, dentro del visor, activa <b>Link</b>.</li>
+  <li>En Unity, pulsa <b>Play</b>. La aplicación se ve en el visor y en la ventana <i>Game</i>.</li>
+  <li>Para detenerla, pulsa <b>Play</b> otra vez.</li>
+</ol>
+<div class="note"><b>Sin visor</b> se puede usar el Meta XR Simulator: menú <i>Meta → Meta XR Simulator → Activate</i> y luego Play. En el editor, <b>F9</b> pausa o continúa y <b>F8</b> termina la práctica y muestra el resumen.</div>
+
+<h2><span class="n">5</span>Preparar el visor Meta Quest</h2>
+<p>Se hace una sola vez por visor.</p>
+<ol>
+  <li>Crea una organización de desarrollador en <code>developers.meta.com</code> con tu cuenta de Meta.</li>
+  <li>En la app <b>Meta Horizon</b> del celular, entra a <b>Dispositivos → tu visor → Ajustes del visor</b> y activa <b>Modo desarrollador</b>.</li>
+  <li>Reinicia el visor.</li>
+  <li>Conecta el visor a la PC por USB-C. Dentro del visor aparece <i>¿Permitir depuración USB?</i>: marca <i>Permitir siempre desde esta computadora</i> y acepta.</li>
+</ol>
+
+<h2><span class="n">6</span>Compilar e instalar en el visor</h2>
+<h3>Revisar la configuración</h3>
+<p>El proyecto ya viene configurado. Solo comprueba que esté así:</p>
+<table class="wide-first">
+  <tr><th>Dónde</th><th>Valor esperado</th></tr>
+  <tr><td>File → Build Settings → Platform</td><td>Android, con el logo de Unity al lado</td></tr>
+  <tr><td>Scenes In Build</td><td>Solo <code>Escenario_Quemadura</code> marcada</td></tr>
+  <tr><td>XR Plug-in Management, pestaña Android</td><td>OpenXR y Meta XR feature group marcados</td></tr>
+  <tr><td>Player → Other Settings</td><td>IL2CPP, ARM64, Vulkan, espacio de color Linear y Android 12L (API 32) como mínimo</td></tr>
+</table>
+<figure class="narrow">
+  <img src="img/build_settings.png" alt="Ventana Build Settings">
+  <figcaption><span class="fig">Figura 2.</span> <i>File → Build Settings</i>: plataforma Android activa y solo la escena principal en el build. Si Android no tiene el logo de Unity al lado, selecciónalo y pulsa <b>Switch Platform</b>.</figcaption>
+</figure>
+<figure>
+  <img src="img/xr_management.png" alt="XR Plug-in Management">
+  <figcaption><span class="fig">Figura 3.</span> <i>Edit → Project Settings → XR Plug-in Management</i>, pestaña Android: OpenXR con el grupo de Meta.</figcaption>
+</figure>
+<figure>
+  <img src="img/player_settings.png" alt="Player Settings">
+  <figcaption><span class="fig">Figura 4.</span> <i>Edit → Project Settings → Player</i>, pestaña Android. El nombre del producto, <i>Pruebalaptop_agarrecubo</i>, es el que aparece en la biblioteca del visor.</figcaption>
+</figure>
+
+<h3>Opción A: compilar e instalar de una vez (recomendada)</h3>
+<ol>
+  <li>Con el visor conectado por cable, abre <b>File → Build Settings</b>.</li>
+  <li>En <b>Run Device</b>, pulsa <b>Refresh</b> y elige tu visor.</li>
+  <li>Pulsa <b>Build And Run</b> y elige una carpeta para el APK, por ejemplo <code>Builds/</code>.</li>
+  <li>La primera compilación tarda de 10 a 25 minutos. Al terminar, la app se abre sola en el visor.</li>
+</ol>
+<h3>Opción B: generar el APK e instalarlo después</h3>
+<ol>
+  <li>En Build Settings, pulsa <b>Build</b> y guarda el APK.</li>
+  <li>Arrastra el APK a <b>Meta Quest Developer Hub</b> (<i>Device Manager → Apps</i>) o instálalo desde la terminal:</li>
+</ol>
+<pre>adb install -r Builds/QuemaduraVR.apk</pre>
+<div class="note"><b>Dónde está adb.</b> Viene con Unity en <code>C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Data\PlaybackEngines\AndroidPlayer\SDK\platform-tools\</code>.</div>
+
+<h2><span class="n">7</span>Abrir y usar la aplicación</h2>
+<ol>
+  <li>En el visor, abre la <b>Biblioteca</b> de apps.</li>
+  <li>Cambia el filtro a <b>Fuentes desconocidas</b>.</li>
+  <li>Abre <b>Pruebalaptop_agarrecubo</b>.</li>
+  <li>Elige <b>Modo guiado</b> (te indica cada paso) o <b>Modo evaluación</b> (lo haces solo y se mide).</li>
+</ol>
+<figure>
+  <img src="img/app_menu.png" alt="Menú de inicio">
+  <figcaption><span class="fig">Figura 5.</span> Menú de inicio, con el aviso de contenido y los dos modos.</figcaption>
+</figure>
+
+<h3>Controles</h3>
+<table class="three">
+  <tr><th>Acción</th><th>Con controles</th><th>Con las manos</th></tr>
+  <tr><td>Agarrar y soltar</td><td>Botón lateral o gatillo</td><td>Pinza pulgar–índice</td></tr>
+  <tr><td>Botones, perilla y llaves</td><td>Acercar la mano y apretar el gatillo</td><td>Tocar con el índice y hacer la pinza</td></tr>
+  <tr><td>Apuntar de lejos</td><td>Rayo del control</td><td>Rayo de la mano</td></tr>
+  <tr><td>Caminar</td><td>Joystick izquierdo, o caminar en el espacio real</td><td>Pinza del dedo medio izquierdo</td></tr>
+  <tr><td>Girar</td><td>Joystick derecho, en giros de 45°</td><td>Girar el cuerpo</td></tr>
+  <tr><td>Pausa</td><td>Botón de menú izquierdo, o mantener B o Y un segundo</td><td>Gesto de menú de la mano</td></tr>
+</table>
+
+<h3>Qué vas a ver</h3>
+<div class="grid">
+  <figure><img src="img/real_cocina.png" alt="Cocina"><figcaption>La tía cocina y, en el tutorial, te pide una taza.</figcaption></figure>
+  <figure><img src="img/real_accidente.png" alt="Accidente"><figcaption>Se vuelca la olla y se quema la mano.</figcaption></figure>
+</div>
+<figure class="narrow">
+  <img src="img/real_agua.png" alt="Agua fría">
+  <figcaption>Enfriar con agua fría: el reloj de pared cuenta los 20 minutos en 90 segundos reales. Al terminar aparece un resumen con el puntaje, los pasos hechos y los errores.</figcaption>
+</figure>
+
+<h2><span class="n">8</span>Recuperar los registros de sesión</h2>
+<p>Cada partida se guarda en el visor como un archivo JSON con el modo, el puntaje, los errores, los tiempos y la decisión médica. Son los datos de la evaluación con usuarios.</p>
+<p><b>Ruta en el visor</b></p>
+<pre>/sdcard/Android/data/com.DefaultCompany.Pruebalaptop_agarrecubo/files/sesiones_quemadura/</pre>
+<p><b>Copiarlos a la PC</b>, con el visor conectado por cable:</p>
+<pre>adb pull /sdcard/Android/data/com.DefaultCompany.Pruebalaptop_agarrecubo/files/sesiones_quemadura/ ./sesiones</pre>
+<p>También se ven en Meta Quest Developer Hub, en <i>Device Manager → File Manager</i>. Las partidas jugadas en el editor quedan en <code>%USERPROFILE%\AppData\LocalLow\DefaultCompany\Pruebalaptop_agarrecubo\sesiones_quemadura\</code>.</p>
+
+<h2><span class="n">9</span>Problemas comunes</h2>
+<table class="wide-first">
+  <tr><th>Problema</th><th>Solución</th></tr>
+  <tr><td>La escena no tiene personajes o se ve vacía</td><td>Faltan los archivos de Git LFS: ejecuta <code>git lfs install</code> y luego <code>git lfs pull</code>.</td></tr>
+  <tr><td>El visor no aparece en Run Device</td><td>Revisa que el modo desarrollador esté activo, usa un cable de datos, acepta la depuración USB dentro del visor y pulsa <b>Refresh</b>.</td></tr>
+  <tr><td>Error de Android SDK o JDK al compilar</td><td>Reinstala el módulo Android Build Support, con sus subopciones, desde Unity Hub.</td></tr>
+  <tr><td>Error al resolver <code>com.coplaydev.unity-mcp</code></td><td>Es una herramienta de desarrollo que se descarga con Git. Instala Git o quita esa línea de <code>Packages/manifest.json</code>; la aplicación no la necesita.</td></tr>
+  <tr><td>Al dar Play no se ve nada en el visor</td><td>Abre Meta Horizon Link, conecta el visor y activa Link dentro del visor antes de dar Play.</td></tr>
+  <tr><td>La app no aparece en la biblioteca</td><td>Cambia el filtro a Fuentes desconocidas.</td></tr>
+  <tr><td>Va lento o con tirones</td><td>Usa la versión compilada (APK) en lugar de Play con Link, y cierra las demás apps del visor.</td></tr>
+</table>
+
+</body>
+</html>

@@ -175,6 +175,11 @@ texturas de 1024 por objeto de mano.
   del micrófono de quien juega, no de un audio grabado.
 - Ver también F (poses de mano, háptica) y E (distractores, línea de tiempo).
 
+## M. Manuales de instalación
+
+- **Revisar los manuales** (`docs/manuales/PENDIENTE_REVISAR.md`): sobre todo
+  la sección de problemas comunes, que no se probó en otra PC ni en el visor.
+
 ## G. Validación, pruebas e informe
 
 - **Probar en el Quest con las manos** todo lo hecho en el editor. Con más
