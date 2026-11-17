@@ -1287,3 +1287,35 @@ los pasos faltantes: sin textos montados, 4 tarjetas por página, 4 páginas.
 simulada no tiene dedos), el ajuste de `extendedRatio`, `curledRatio`,
 `thumbDownRatio` y `thumbUpRatio`, la espera de la queja del frío durante un
 enfriamiento real, ni nada en el Quest.
+
+## 38. Teletransporte con la L y paso en el tutorial (`main`, 2026-11-17)
+
+En el Quest Pro el arco del teletransporte de la sección 37 no salía. Causa:
+señalar pedía medio y anular doblados, y con esos dedos doblados
+`SimpleGrab` ya toma la mano por cerrada (puño, `palmCloseRatio` 0,8);
+`HandTeleport` se apagaba con la mano cerrada. Solo funcionaba en una franja
+muy angosta de doblez. Además el gesto no se enseñaba en ningún lado.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Gesto estándar | El del Interaction SDK de Meta (pose `LShape` y `TeleportHandInteractor` del paquete): la mano en **L**, como una pistola (índice y pulgar estirados, medio y anular doblados), adelante y con la palma hacia abajo o de costado. Sale el arco. **Juntar el pulgar al costado del índice** salta. Para otro salto hay que volver a abrir la L. | `HandTeleport.ReadPose` |
+| Bien diferenciado | La L tiene que empezar con el pulgar abierto (señalar un botón con el pulgar recogido no saca el arco); con la palma hacia arriba o hacia la cara no cuenta (es la pausa de la muñeca); el puño dobla también el índice; la pinza de agarrar junta las puntas. Mientras la mano vacía está en la L, `SimpleGrab` no la toma por puño ni por pinza y los gestos de caminar no cuentan. | `HandTeleport.Aiming`, `SimpleGrab.ReadPressed`, `HandTeleport.Busy` |
+| Puntería estable | La dirección sale del hombro (estimado) a los nudillos, mezclada con la del índice (`fingerWeight` 0,35), como el SDK de Meta. Se salta al destino de 0,12 s antes de cerrar el pulgar (al cerrarlo la mano se mueve). Un temblor de hasta 0,2 s no apaga el arco. | `HandTeleport.lostGrace`, `targetLag` |
+| Gráficos | Arco punteado que avanza hacia el destino. Destino válido: anillo azul con un relleno que se carga a medida que el pulgar se acerca al índice y una flecha hacia donde se quedará mirando. No válido: anillo gris con una X. Texto junto a la mano ("Junta el pulgar al índice para ir" / "Apunta a un lugar libre del piso") en los 3 primeros saltos y en el tutorial. Al saltar, parpadeo de 0,2 s (menos mareo) y un sonido. | `HandTeleport.Draw`, `DrawHint`, `Jump`; `Resources/Hito1Audio/teleport_salto.wav` (sintetizado) |
+| Tutorial | Ahora tiene 4 pasos: **1. Ve hasta el círculo verde** (meta con un haz de luz a 1,4–2,6 m, en un piso al que se puede saltar y con espacio alrededor), 2. agarrar la taza, 3. llevársela, 4. pausa. Con las manos explica la L; con controles, caminar o el joystick. Cuenta cualquier salto o llegar al círculo; si no lo hace en 90 s sigue igual. Voz nueva `guia_teleport` (Sabina, TTS). El texto del paso de la manta también explica la L. | `BurnGuide.MoveTutorial`, `FindMoveGoal`, `HandTeleport.ShowGoal` |
+| Pausa de la muñeca | Al acercar el dedo de la otra mano, el visor pierde o gira la mano izquierda y el botón se escondía justo al ir a tocarlo. Ahora, con el dedo a menos de 18 cm, el botón se queda quieto donde estaba hasta 2 s aunque no se vea la palma, y con el dedo a menos de 7 cm deja de seguir el temblor de la muñeca. | `WristPauseButton.approachDistance`, `approachHold` |
+
+**Probado en Play** (editor con Quest Link sin visor puesto, manos
+simuladas; el salto con `HandTeleport.SimAim` / `SimPinch`): compila sin
+errores. Tutorial en modo guiado: la meta apareció a 1,5 m, con la L hacia
+ella el arco y el anillo salieron azules con el texto de ayuda; al juntar el
+pulgar hubo parpadeo, el jugador quedó en la meta y el tutorial pasó a
+"Tutorial 2 de 4". Con el pulgar cerrado no hubo segundo salto ni arco.
+Contra una pared: anillo gris con X, texto "Apunta a un lugar libre del
+piso" y sin salto. Pausa: con el dedo derecho a 6 cm y la palma girada, el
+botón siguió visible y quieto, y se escondió pasados los 2 s.
+**No se probó:** la L, la palma y el pulgar con manos reales (la mano
+simulada no tiene dedos: `extendedRatio` 1,1, `curledRatio` 1,0,
+`thumbOpenRatio` 0,55, `thumbClosedRatio` 0,3, `maxPalmUp` 0,5 están
+estimados), que `SimpleGrab` no agarre con la L ni el botón de la muñeca
+con la oclusión real. Nada en el Quest.

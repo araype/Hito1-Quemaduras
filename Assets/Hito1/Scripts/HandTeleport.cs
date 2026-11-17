@@ -1,5 +1,7 @@
+using System.Collections;
 using System.Collections.Generic;
 using Oculus.Interaction.Input;
+using TMPro;
 using UnityEngine;
 
 namespace SojaExiles
@@ -7,24 +9,38 @@ namespace SojaExiles
     // Teletransporte con las manos (sin controles) para ir lejos, por ejemplo
     // de la cocina a la sala por la manta. Caminar en el cuarto real sirve
     // para lo cercano, pero al salir del limite del Quest el visor oculta el
-    // juego (prueba en el Quest Pro, 2026-11-17). Al teletransportarse, el
-    // limite viaja con el jugador: en el destino vuelve a tener todo su
-    // espacio real para agacharse o rodear la mesa.
+    // juego. Al teletransportarse, el limite viaja con el jugador.
     //
-    //  - Apuntar: indice estirado y medio y anular doblados (como senalar),
-    //    con la mano adelante. Sale un arco hasta el piso y un anillo donde
-    //    se llegaria (azul si se puede, gris si no).
-    //  - Saltar: con el pulgar arriba, bajarlo sobre el dedo medio (como
-    //    disparar). Si el pulgar ya estaba abajo al empezar a apuntar, hay
-    //    que levantarlo primero: al senalar con naturalidad el pulgar queda
-    //    sobre el medio y saltaria sin querer.
+    // Gesto (2026-11-17): el mismo del Interaction SDK de Meta (pose "LShape"
+    // del paquete y TeleportHandInteractor): la mano en "L", como una
+    // pistola, y juntar el pulgar al indice para saltar.
+    //  - Apuntar: indice y pulgar estirados, medio y anular doblados, la
+    //    mano adelante con la palma hacia abajo o de costado (no hacia
+    //    arriba ni hacia la cara: eso es la pausa de la muneca). Sale un arco
+    //    punteado hasta el piso y un circulo donde se llegaria (azul si se
+    //    puede, gris con una X si no) con una flecha hacia donde se quedara
+    //    mirando.
+    //  - Saltar: juntar el pulgar al costado del indice (cerrar la L). El
+    //    circulo se va llenando mientras el pulgar se acerca. Para volver a
+    //    saltar hay que abrir la L otra vez.
+    //  - Se diferencia de los demas gestos: la pinza de botones y de agarrar
+    //    junta las puntas del pulgar y el indice con los demas dedos sueltos;
+    //    agarrar con la mano entera dobla tambien el indice; la pausa es con
+    //    la palma hacia la cara; tocar botones con el dedo es con el pulgar
+    //    recogido (el arco solo sale si la L empieza con el pulgar abierto).
+    //  - La direccion sale del hombro hacia los nudillos (como el SDK de
+    //    Meta), mezclada con la del indice: no tiembla al cerrar el pulgar.
+    //    Ademas se salta al destino de un instante antes de cerrar.
     //  - Solo se llega al piso por donde se puede caminar (PlayArea), sin
     //    muebles encima y a no mas de 'maxDistance'.
     //  - No con la mano que sostiene algo, ni mientras se lleva a la paciente
-    //    del antebrazo (ella se quedaria atras). Con la otra mano si: lo que
-    //    se sostiene (la manta) viaja con el jugador.
+    //    del antebrazo. Con la otra mano si: lo que se sostiene viaja con el
+    //    jugador.
+    // Antes (hasta 2026-11-17) se senalaba con el indice y se bajaba el
+    // pulgar sobre el medio: con medio y anular doblados SimpleGrab tomaba la
+    // mano por cerrada (puno) y el arco no salia casi nunca en el visor.
     // VRLocomotion ignora los gestos de caminar de una mano mientras apunta
-    // (Busy): el pulgar sobre el medio es tambien el gesto de caminar.
+    // (Busy) y SimpleGrab no agarra con ella (Aiming).
     [RequireComponent(typeof(VRLocomotion))]
     public class HandTeleport : MonoBehaviour
     {
@@ -32,32 +48,46 @@ namespace SojaExiles
         public float maxDistance = 5f;
         [Tooltip("Distancia minima del salto (m): mas cerca se camina.")]
         public float minDistance = 0.7f;
-        [Tooltip("Segundos que hay que mantener la pose de apuntar antes de que salga el arco.")]
-        public float holdSeconds = 0.25f;
+        [Tooltip("Segundos que hay que mantener la L antes de que salga el arco.")]
+        public float holdSeconds = 0.15f;
         [Tooltip("Velocidad inicial del arco (m/s): mas alta, llega mas lejos.")]
         public float launchSpeed = 7f;
         [Tooltip("Indice estirado: distancia de la punta al centro de la palma, en largos de palma.")]
-        public float extendedRatio = 1.15f;
+        public float extendedRatio = 1.1f;
         [Tooltip("Medio y anular doblados: distancia de la punta al centro de la palma, en largos de palma.")]
-        public float curledRatio = 0.95f;
-        [Tooltip("Pulgar abajo (salta) si su punta queda a menos de esto del medio, en largos de palma.")]
-        public float thumbDownRatio = 0.35f;
-        [Tooltip("Pulgar arriba (listo para saltar) si su punta queda a mas de esto, en largos de palma.")]
-        public float thumbUpRatio = 0.55f;
+        public float curledRatio = 1.0f;
+        [Tooltip("Pulgar abierto (L) si su punta queda a mas de esto del indice, en largos de palma.")]
+        public float thumbOpenRatio = 0.55f;
+        [Tooltip("Pulgar junto al indice (salta) si su punta queda a menos de esto, en largos de palma.")]
+        public float thumbClosedRatio = 0.3f;
+        [Tooltip("Coseno maximo entre la palma y 'arriba' (0,5 = 60 grados): con la palma hacia arriba no apunta.")]
+        public float maxPalmUp = 0.5f;
+        [Tooltip("Coseno maximo entre la palma y la direccion a los ojos: mirandose la palma no apunta (pausa).")]
+        public float maxPalmToEyes = 0.6f;
         [Tooltip("La mano debe estar al menos a esta distancia de la cabeza (m): pegada al cuerpo no apunta.")]
-        public float minReach = 0.22f;
+        public float minReach = 0.2f;
         [Tooltip("Sin arco si la punta del indice esta a menos de esto de un boton (m): se esta por tocarlo.")]
         public float buttonClearance = 0.15f;
+        [Tooltip("Segundos que se tolera perder la pose (temblor, mano tapada) sin apagar el arco.")]
+        public float lostGrace = 0.2f;
+        [Tooltip("Peso de la direccion del indice frente a la del brazo (hombro a nudillos).")]
+        [Range(0f, 1f)] public float fingerWeight = 0.35f;
+        [Tooltip("Se salta al destino de este tiempo antes (s): al cerrar el pulgar la mano se mueve un poco.")]
+        public float targetLag = 0.12f;
+        [Tooltip("Muestra el texto de ayuda junto a la mano durante los primeros saltos.")]
+        public int hintTeleports = 3;
         public float cooldownSeconds = 0.6f;
 
-        public Color validColor = new Color(0.2f, 0.65f, 1f, 0.9f);
-        public Color invalidColor = new Color(0.6f, 0.62f, 0.68f, 0.5f);
+        public Color validColor = new Color(0.25f, 0.7f, 1f, 0.95f);
+        public Color invalidColor = new Color(0.62f, 0.64f, 0.7f, 0.6f);
 
         private const float ArcStep = 0.03f;
         private const int ArcMaxSteps = 60;
         private const float BusyAfterSeconds = 0.5f;
+        private const float RingRadius = 0.28f;
 
         private static readonly float[] busyUntil = { -1f, -1f };
+        private static readonly bool[] aiming = new bool[2];
 
         // True si esa mano esta apuntando para teletransportarse (o lo acaba
         // de hacer): sus gestos de caminar no cuentan.
@@ -66,71 +96,184 @@ namespace SojaExiles
             return Time.unscaledTime < busyUntil[leftHand ? 0 : 1];
         }
 
-        // Veces que se teletransporto en la partida (para el registro).
+        // True si esa mano esta en la L (aunque el arco todavia no salga):
+        // SimpleGrab no agarra con ella (cerrar el pulgar no es una pinza).
+        public static bool Aiming(bool leftHand)
+        {
+            return aiming[leftHand ? 0 : 1];
+        }
+
+        // Veces que se teletransporto en la partida (para el registro y el
+        // tutorial).
         public static int Count { get; private set; }
+
+        // El tutorial lo pone en true: el texto de ayuda sale siempre.
+        public static bool ForceHints;
+
+        public static HandTeleport Instance { get; private set; }
 
 #if UNITY_EDITOR
         // Mano simulada (con SimpleGrab.SimActive / SimPosition / SimRotation):
-        // SimAim apunta hacia SimRotation * adelante; SimThumbDown baja el
-        // pulgar. Para probar desde el MCP de Unity sin visor.
+        // SimAim hace la L apuntando hacia SimRotation * adelante; SimPinch
+        // junta el pulgar al indice. Para probar desde el MCP de Unity sin
+        // visor.
         public static readonly bool[] SimAim = new bool[2];
-        public static readonly bool[] SimThumbDown = new bool[2];
+        public static readonly bool[] SimPinch = new bool[2];
+#endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ClearSimulated()
+        private static void ClearStatics()
         {
             for (int i = 0; i < 2; i++)
             {
+#if UNITY_EDITOR
                 SimAim[i] = false;
-                SimThumbDown[i] = false;
+                SimPinch[i] = false;
+#endif
                 busyUntil[i] = -1f;
+                aiming[i] = false;
             }
 
             Count = 0;
+            ForceHints = false;
+            Instance = null;
         }
-#endif
+
+        private struct Sample
+        {
+            public float time;
+            public bool valid;
+            public Vector3 point;
+        }
 
         private class HandState
         {
-            public float aimSince = -1f;
-            public bool thumbArmed;
+            public float poseSince = -1f;
+            public float lostSince = -1f;
+            public bool active;
+            public bool armed;
+            public float progress;
             public bool hasTarget;
             public bool targetValid;
             public Vector3 target;
+            public Vector3 hintAnchor;
+            public readonly List<Sample> history = new List<Sample>();
             public LineRenderer arc;
             public LineRenderer ring;
+            public LineRenderer arrow;
+            public LineRenderer cross;
+            public MeshRenderer fill;
+            public TextMeshPro hint;
         }
 
         private readonly HandState[] hands = { new HandState(), new HandState() };
         private readonly List<Vector3> arcPoints = new List<Vector3>();
         private VRLocomotion locomotion;
-        private Material material;
+        private Material lineMaterial;
+        private Material dotMaterial;
+        private Texture2D dotTexture;
+        private Mesh discMesh;
         private float nextTeleport;
         private float nextLookup;
+        private bool jumping;
         private Oculus.Interaction.HandVisual[] visuals = new Oculus.Interaction.HandVisual[0];
         private TouchButton[] buttons = new TouchButton[0];
+        private Renderer blink;
+        private AudioClip jumpClip;
+
+        // Meta del tutorial (circulo en el piso con un haz de luz).
+        private Transform goal;
+        private LineRenderer goalRing;
+        private LineRenderer goalBeam;
 
         private void Awake()
         {
+            Instance = this;
             locomotion = GetComponent<VRLocomotion>();
-            material = new Material(Shader.Find("Sprites/Default"));
-            material.renderQueue = 3002;
+            lineMaterial = new Material(Shader.Find("Sprites/Default"));
+            lineMaterial.renderQueue = 3002;
+            dotTexture = BuildDotTexture();
+            dotMaterial = new Material(lineMaterial);
+            dotMaterial.mainTexture = dotTexture;
+            dotMaterial.mainTextureScale = new Vector2(14f, 1f);
+            discMesh = BuildDisc(48);
             for (int i = 0; i < 2; i++)
             {
-                hands[i].arc = CreateLine("ArcoTeleport" + i, false);
-                hands[i].ring = CreateLine("DestinoTeleport" + i, true);
+                HandState s = hands[i];
+                s.arc = CreateLine("ArcoTeleport" + i, false, 0.02f, dotMaterial);
+                s.arc.textureMode = LineTextureMode.Tile;
+                s.ring = CreateLine("DestinoTeleport" + i, true, 0.02f, lineMaterial);
+                s.arrow = CreateLine("FlechaTeleport" + i, false, 0.025f, lineMaterial);
+                s.cross = CreateLine("NoTeleport" + i, false, 0.02f, lineMaterial);
+                s.fill = CreateDisc("RellenoTeleport" + i);
+                s.hint = CreateHint("AyudaTeleport" + i);
             }
+
+            jumpClip = Hito1FX.Clip("teleport_salto");
         }
 
         private void OnDestroy()
         {
-            if (material != null)
+            if (Instance == this)
             {
-                Destroy(material);
+                Instance = null;
             }
+
+            Destroy(lineMaterial);
+            Destroy(dotMaterial);
+            Destroy(dotTexture);
+            Destroy(discMesh);
+            HideGoal();
         }
 
-        private LineRenderer CreateLine(string name, bool loop)
+        // ---------------- construccion ----------------
+
+        private static Texture2D BuildDotTexture()
+        {
+            // Un punto redondo por tramo: el arco se ve punteado.
+            const int w = 32, h = 32;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Repeat;
+            tex.filterMode = FilterMode.Bilinear;
+            Color[] pixels = new Color[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float dx = (x + 0.5f - w * 0.5f) / (w * 0.32f);
+                    float dy = (y + 0.5f - h * 0.5f) / (h * 0.5f);
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    pixels[y * w + x] = new Color(1f, 1f, 1f, Mathf.Clamp01((1f - d) * 3f));
+                }
+            }
+
+            tex.SetPixels(pixels);
+            tex.Apply();
+            return tex;
+        }
+
+        private static Mesh BuildDisc(int segments)
+        {
+            Mesh mesh = new Mesh { name = "DiscoTeleport" };
+            Vector3[] vertices = new Vector3[segments + 1];
+            int[] triangles = new int[segments * 3];
+            vertices[0] = Vector3.zero;
+            for (int i = 0; i < segments; i++)
+            {
+                float a = i * Mathf.PI * 2f / segments;
+                vertices[i + 1] = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                triangles[i * 3] = 0;
+                triangles[i * 3 + 1] = 1 + (i + 1) % segments;
+                triangles[i * 3 + 2] = 1 + i;
+            }
+
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        private LineRenderer CreateLine(string name, bool loop, float width, Material material)
         {
             GameObject go = new GameObject(name);
             go.AddComponent<NoAutoCollider>();
@@ -138,13 +281,53 @@ namespace SojaExiles
             line.sharedMaterial = material;
             line.useWorldSpace = true;
             line.loop = loop;
-            line.widthMultiplier = loop ? 0.02f : 0.012f;
-            line.numCapVertices = 2;
+            line.widthMultiplier = width;
+            line.numCapVertices = 3;
+            line.numCornerVertices = 2;
             line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             line.receiveShadows = false;
             line.enabled = false;
             return line;
         }
+
+        private MeshRenderer CreateDisc(string name)
+        {
+            GameObject go = new GameObject(name);
+            go.AddComponent<NoAutoCollider>();
+            go.AddComponent<MeshFilter>().sharedMesh = discMesh;
+            MeshRenderer r = go.AddComponent<MeshRenderer>();
+            r.material = new Material(lineMaterial) { renderQueue = 3001 };
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            r.enabled = false;
+            return r;
+        }
+
+        private static TextMeshPro CreateHint(string name)
+        {
+            GameObject go = new GameObject(name);
+            go.AddComponent<NoAutoCollider>();
+            TextMeshPro tmp = go.AddComponent<TextMeshPro>();
+            if (PanelText.Font != null)
+            {
+                tmp.font = PanelText.Font;
+            }
+
+            tmp.fontSize = 0.2f;
+            tmp.alignment = TextAlignmentOptions.Bottom;
+            tmp.enableWordWrapping = false;
+            tmp.rectTransform.sizeDelta = new Vector2(0.3f, 0.05f);
+            tmp.rectTransform.pivot = new Vector2(0.5f, 0f);
+            tmp.outlineWidth = 0.25f;
+            tmp.outlineColor = new Color32(10, 20, 40, 255);
+            MeshRenderer r = tmp.GetComponent<MeshRenderer>();
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            go.SetActive(false);
+            return tmp;
+        }
+
+        // ---------------- ciclo ----------------
 
         private void Update()
         {
@@ -160,78 +343,231 @@ namespace SojaExiles
             {
                 UpdateHand(i == 0, hands[i]);
             }
+
+            UpdateGoal();
         }
 
         private void UpdateHand(bool isLeft, HandState state)
         {
-            bool pointing = false;
-            bool thumbDown = false;
-            bool thumbUp = false;
-            Vector3 origin = Vector3.zero;
-            Vector3 direction = Vector3.forward;
-            if (CanTeleport(isLeft))
+            int side = isLeft ? 0 : 1;
+            float now = Time.unscaledTime;
+            Transform head = VRPanelKit.Head();
+
+            bool pose = false;
+            float thumb = 1f;
+            Vector3 origin = Vector3.zero, direction = Vector3.forward, knuckle = Vector3.zero;
+            if (CanTeleport(isLeft) && head != null)
             {
-                pointing = ReadPose(isLeft, out origin, out direction, out thumbDown, out thumbUp);
+                pose = ReadPose(isLeft, head, out origin, out direction, out knuckle, out thumb);
             }
 
-            Transform head = VRPanelKit.Head();
-            if (pointing && head != null)
+            aiming[side] = pose && (state.active || thumb > thumbClosedRatio);
+            if (pose)
             {
-                Vector3 reach = origin - head.position;
-                reach.y = 0f;
-                // Pegada al cuerpo o por tocar un boton: no es apuntar lejos.
-                if (reach.magnitude < minReach || NearButton(origin))
+                state.lostSince = -1f;
+                if (!state.active)
                 {
-                    pointing = false;
+                    // La L tiene que empezar con el pulgar abierto: senalar
+                    // un boton con el pulgar recogido no saca el arco.
+                    if (thumb < thumbOpenRatio)
+                    {
+                        state.poseSince = -1f;
+                    }
+                    else if (state.poseSince < 0f)
+                    {
+                        state.poseSince = now;
+                    }
+
+                    if (state.poseSince >= 0f && now - state.poseSince >= holdSeconds)
+                    {
+                        state.active = true;
+                        state.armed = true;
+                        state.history.Clear();
+                    }
                 }
             }
-
-            float now = Time.unscaledTime;
-            if (!pointing)
+            else if (state.active)
             {
-                state.aimSince = -1f;
-                state.thumbArmed = false;
-                state.hasTarget = false;
+                // Un temblor o la mano tapada un instante no apagan el arco.
+                if (state.lostSince < 0f)
+                {
+                    state.lostSince = now;
+                }
+
+                if (now - state.lostSince > lostGrace)
+                {
+                    Deactivate(state);
+                }
+            }
+            else
+            {
+                state.poseSince = -1f;
+            }
+
+            if (pose || state.active)
+            {
+                busyUntil[side] = now + BusyAfterSeconds;
+            }
+
+            if (!state.active)
+            {
                 Show(state, false);
                 return;
             }
 
-            busyUntil[isLeft ? 0 : 1] = now + BusyAfterSeconds;
-            if (state.aimSince < 0f)
+            if (!pose)
             {
-                state.aimSince = now;
-                state.thumbArmed = false;
-            }
-
-            if (thumbUp)
-            {
-                state.thumbArmed = true;
-            }
-
-            if (now - state.aimSince < holdSeconds)
-            {
-                Show(state, false);
+                // Dentro del margen: se deja lo ultimo que se mostro.
                 return;
             }
 
             state.hasTarget = TraceArc(origin, direction, head, out state.target, out state.targetValid);
-            Draw(state);
-
-            if (thumbDown && state.thumbArmed && now >= nextTeleport)
+            state.history.Add(new Sample { time = now, valid = state.hasTarget && state.targetValid, point = state.target });
+            while (state.history.Count > 0 && now - state.history[0].time > 0.5f)
             {
-                state.thumbArmed = false;
-                if (state.hasTarget && state.targetValid)
+                state.history.RemoveAt(0);
+            }
+
+            if (thumb > thumbOpenRatio)
+            {
+                state.armed = true;
+            }
+
+            state.progress = state.armed
+                ? Mathf.Clamp01(Mathf.InverseLerp(thumbOpenRatio, thumbClosedRatio, thumb))
+                : 0f;
+            state.hintAnchor = knuckle;
+            Draw(state, head);
+
+            if (state.armed && thumb < thumbClosedRatio && now >= nextTeleport && !jumping)
+            {
+                state.armed = false;
+                if (LaggedTarget(state, now, out Vector3 point))
                 {
                     nextTeleport = now + cooldownSeconds;
-                    Count++;
-                    locomotion.TeleportTo(state.target);
-                    Debug.Log("[HandTeleport] Salto a " + state.target.ToString("F2"));
-                    // Tras el salto, el arco vuelve a salir recien al apuntar
-                    // de nuevo (si no, al seguir apuntando se encadenan).
-                    state.aimSince = now;
-                    Show(state, false);
+                    StartCoroutine(Jump(point));
+                    // Tras el salto el arco se apaga: para el siguiente hay
+                    // que volver a abrir la L.
+                    Deactivate(state);
                 }
             }
+        }
+
+        private static void Deactivate(HandState state)
+        {
+            state.active = false;
+            state.armed = false;
+            state.poseSince = -1f;
+            state.lostSince = -1f;
+            state.progress = 0f;
+            state.hasTarget = false;
+            state.history.Clear();
+            Show(state, false);
+        }
+
+        // Destino de hace 'targetLag' segundos (si era valido); si no, el de
+        // ahora.
+        private bool LaggedTarget(HandState state, float now, out Vector3 point)
+        {
+            point = Vector3.zero;
+            for (int i = state.history.Count - 1; i >= 0; i--)
+            {
+                Sample s = state.history[i];
+                if (now - s.time >= targetLag)
+                {
+                    if (s.valid)
+                    {
+                        point = s.point;
+                        return true;
+                    }
+
+                    break;
+                }
+            }
+
+            if (state.hasTarget && state.targetValid)
+            {
+                point = state.target;
+                return true;
+            }
+
+            return false;
+        }
+
+        private IEnumerator Jump(Vector3 point)
+        {
+            jumping = true;
+            // Parpadeo corto: saltar sin el mueve el mundo de golpe y marea.
+            yield return Fade(0f, 1f, 0.07f);
+            Count++;
+            locomotion.TeleportTo(point);
+            Debug.Log("[HandTeleport] Salto a " + point.ToString("F2") + " (" + Count + ")");
+            if (jumpClip != null)
+            {
+                AudioSource.PlayClipAtPoint(jumpClip, point + Vector3.up * 1.2f, 0.6f);
+            }
+
+            yield return null;
+            yield return Fade(1f, 0f, 0.15f);
+            jumping = false;
+        }
+
+        private IEnumerator Fade(float from, float to, float seconds)
+        {
+            Renderer r = BlinkRenderer();
+            if (r == null)
+            {
+                yield break;
+            }
+
+            r.enabled = true;
+            float t = 0f;
+            while (t < seconds)
+            {
+                t += Time.unscaledDeltaTime;
+                SetAlpha(r, Mathf.Lerp(from, to, Mathf.Clamp01(t / seconds)));
+                yield return null;
+            }
+
+            SetAlpha(r, to);
+            r.enabled = to > 0.001f;
+        }
+
+        private static void SetAlpha(Renderer r, float a)
+        {
+            r.material.color = new Color(0.02f, 0.03f, 0.05f, a);
+        }
+
+        // Esfera oscura alrededor de la cabeza para el parpadeo.
+        private Renderer BlinkRenderer()
+        {
+            if (blink != null)
+            {
+                return blink;
+            }
+
+            Transform head = VRPanelKit.Head();
+            if (head == null)
+            {
+                return null;
+            }
+
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            go.name = "ParpadeoTeleport";
+            Collider col = go.GetComponent<Collider>();
+            if (col != null)
+            {
+                Destroy(col);
+            }
+
+            go.transform.SetParent(head, false);
+            go.transform.localScale = Vector3.one * 0.4f;
+            blink = go.GetComponent<Renderer>();
+            blink.material = new Material(lineMaterial) { renderQueue = 4000 };
+            blink.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            blink.receiveShadows = false;
+            blink.enabled = false;
+            return blink;
         }
 
         // Solo con hand tracking (con controles se camina con el joystick),
@@ -254,7 +590,10 @@ namespace SojaExiles
                 return false;
             }
 
-            if (SimpleGrab.HeldBody(isLeft) != null || SimpleGrab.IsGripping(isLeft))
+            // Con algo en esa mano no. No se mira si la mano esta "cerrada"
+            // (SimpleGrab.IsGripping): la L tiene medio y anular doblados y
+            // contaba como puno.
+            if (SimpleGrab.HeldBody(isLeft) != null)
             {
                 return false;
             }
@@ -284,16 +623,16 @@ namespace SojaExiles
             return false;
         }
 
-        // Pose de senalar con la mano que se ve: indice estirado, medio y
-        // anular doblados. Devuelve la punta del indice, hacia donde apunta y
-        // si el pulgar esta abajo (sobre el medio) o arriba.
-        private bool ReadPose(bool isLeft, out Vector3 origin, out Vector3 direction, out bool thumbDown,
-            out bool thumbUp)
+        // La L con la mano que se ve. Devuelve el origen del arco (nudillo
+        // del indice), hacia donde apunta y que tan abierto esta el pulgar
+        // (distancia de su punta al indice, en largos de palma).
+        private bool ReadPose(bool isLeft, Transform head, out Vector3 origin, out Vector3 direction,
+            out Vector3 knuckle, out float thumb)
         {
             origin = Vector3.zero;
             direction = Vector3.forward;
-            thumbDown = false;
-            thumbUp = false;
+            knuckle = Vector3.zero;
+            thumb = 1f;
 #if UNITY_EDITOR
             int s = isLeft ? 0 : 1;
             if (SimpleGrab.SimActive[s])
@@ -303,11 +642,11 @@ namespace SojaExiles
                     return false;
                 }
 
-                origin = SimpleGrab.SimPosition[s];
+                knuckle = SimpleGrab.SimPosition[s];
+                origin = knuckle;
                 direction = SimpleGrab.SimRotation[s] * Vector3.forward;
-                thumbDown = SimThumbDown[s];
-                thumbUp = !SimThumbDown[s];
-                return true;
+                thumb = SimPinch[s] ? 0.1f : 0.9f;
+                return Reach(head, origin);
             }
 #endif
             IHand hand = VisibleHand(isLeft);
@@ -318,9 +657,10 @@ namespace SojaExiles
 
             if (!hand.GetJointPose(HandJointId.HandWristRoot, out Pose wrist)
                 || !hand.GetJointPose(HandJointId.HandMiddle1, out Pose middle1)
-                || !hand.GetJointPose(HandJointId.HandMiddle2, out Pose middle2)
                 || !hand.GetJointPose(HandJointId.HandIndex1, out Pose index1)
+                || !hand.GetJointPose(HandJointId.HandIndex3, out Pose index3)
                 || !hand.GetJointPose(HandJointId.HandIndexTip, out Pose indexTip)
+                || !hand.GetJointPose(HandJointId.HandPinky1, out Pose pinky1)
                 || !hand.GetJointPose(HandJointId.HandMiddleTip, out Pose middleTip)
                 || !hand.GetJointPose(HandJointId.HandRingTip, out Pose ringTip)
                 || !hand.GetJointPose(HandJointId.HandThumbTip, out Pose thumbTip))
@@ -344,15 +684,54 @@ namespace SojaExiles
                 return false;
             }
 
-            // El pulgar se apoya en el costado del dedo medio doblado.
-            float thumb = Mathf.Min(Vector3.Distance(thumbTip.position, middle2.position),
-                Vector3.Distance(thumbTip.position, middle1.position)) / palm;
-            thumbDown = thumb < thumbDownRatio;
-            thumbUp = thumb > thumbUpRatio;
+            // Normal de la palma, igual que SimpleGrab.TryGetPalm.
+            Vector3 a = index1.position - wrist.position;
+            Vector3 b = pinky1.position - wrist.position;
+            Vector3 normal = isLeft ? Vector3.Cross(b, a) : Vector3.Cross(a, b);
+            if (normal.sqrMagnitude < 1e-8f)
+            {
+                return false;
+            }
 
-            origin = indexTip.position;
-            direction = (indexTip.position - index1.position).normalized;
-            return direction.sqrMagnitude > 0.5f;
+            normal.Normalize();
+            Vector3 toEyes = (head.position - wrist.position).normalized;
+            if (Vector3.Dot(normal, Vector3.up) > maxPalmUp || Vector3.Dot(normal, toEyes) > maxPalmToEyes)
+            {
+                return false;
+            }
+
+            thumb = DistanceToSegment(thumbTip.position, index1.position, index3.position) / palm;
+
+            // Del hombro (estimado) a los nudillos, mezclado con el indice.
+            Vector3 flatForward = Vector3.ProjectOnPlane(head.forward, Vector3.up);
+            if (flatForward.sqrMagnitude < 1e-4f)
+            {
+                flatForward = Vector3.ProjectOnPlane(head.up, Vector3.up);
+            }
+
+            Vector3 right = Vector3.Cross(Vector3.up, flatForward.normalized);
+            Vector3 shoulder = head.position + Vector3.down * 0.15f + right * (isLeft ? -0.17f : 0.17f);
+            Vector3 arm = (index1.position - shoulder).normalized;
+            Vector3 finger = (indexTip.position - index1.position).normalized;
+            direction = Vector3.Slerp(arm, finger, fingerWeight).normalized;
+            knuckle = index1.position;
+            origin = index1.position;
+            return Reach(head, indexTip.position) && !NearButton(indexTip.position);
+        }
+
+        // Pegada al cuerpo no es apuntar lejos.
+        private bool Reach(Transform head, Vector3 point)
+        {
+            Vector3 reach = point - head.position;
+            reach.y = 0f;
+            return reach.magnitude >= minReach;
+        }
+
+        private static float DistanceToSegment(Vector3 p, Vector3 a, Vector3 b)
+        {
+            Vector3 ab = b - a;
+            float t = ab.sqrMagnitude > 1e-8f ? Mathf.Clamp01(Vector3.Dot(p - a, ab) / ab.sqrMagnitude) : 0f;
+            return Vector3.Distance(p, a + ab * t);
         }
 
         private IHand VisibleHand(bool isLeft)
@@ -375,8 +754,10 @@ namespace SojaExiles
             return null;
         }
 
-        // Arco de un tiro parabolico desde la punta del indice. Devuelve
-        // false si no toca nada; si toca, 'valid' dice si se puede llegar ahi.
+        // ---------------- arco y destino ----------------
+
+        // Arco de un tiro parabolico. Devuelve false si no toca nada; si
+        // toca, 'valid' dice si se puede llegar ahi.
         private bool TraceArc(Vector3 origin, Vector3 direction, Transform head, out Vector3 point, out bool valid)
         {
             arcPoints.Clear();
@@ -451,6 +832,19 @@ namespace SojaExiles
                 || SimpleGrab.IsHandBody(rb));
         }
 
+        // True si se puede saltar a ese punto del piso (lo usa el tutorial
+        // para poner la meta en un lugar alcanzable).
+        public bool CanLandAt(Vector3 floorPoint)
+        {
+            Vector3 from = floorPoint + Vector3.up * 1.5f;
+            if (!Cast(from, floorPoint + Vector3.down * 0.5f, out RaycastHit hit))
+            {
+                return false;
+            }
+
+            return ValidTarget(hit, VRPanelKit.Head());
+        }
+
         // Piso (casi horizontal, a la altura de donde esta parado el
         // jugador), dentro de lo caminable, a una distancia razonable y con
         // lugar para el cuerpo.
@@ -508,11 +902,10 @@ namespace SojaExiles
             return true;
         }
 
-        private void Draw(HandState state)
+        private void Draw(HandState state, Transform head)
         {
-            Color color = state.hasTarget && state.targetValid ? validColor : invalidColor;
-            Color faded = color;
-            faded.a *= 0.15f;
+            bool ok = state.hasTarget && state.targetValid;
+            Color color = ok ? validColor : invalidColor;
 
             LineRenderer arc = state.arc;
             arc.positionCount = arcPoints.Count;
@@ -521,36 +914,188 @@ namespace SojaExiles
                 arc.SetPosition(i, arcPoints[i]);
             }
 
-            arc.startColor = faded;
+            Color start = color;
+            start.a *= 0.35f;
+            arc.startColor = start;
             arc.endColor = color;
             arc.enabled = true;
+            // Los puntos avanzan hacia el destino.
+            dotMaterial.mainTextureOffset = new Vector2(-Time.unscaledTime * 2.5f, 0f);
 
-            LineRenderer ring = state.ring;
+            DrawHint(state, head, ok);
+
             if (!state.hasTarget)
             {
-                ring.enabled = false;
+                state.ring.enabled = false;
+                state.arrow.enabled = false;
+                state.cross.enabled = false;
+                state.fill.enabled = false;
                 return;
             }
 
-            const int segments = 32;
-            const float radius = 0.25f;
-            ring.positionCount = segments;
             Vector3 c = state.target + Vector3.up * 0.015f;
+            const int segments = 40;
+            LineRenderer ring = state.ring;
+            ring.positionCount = segments;
             for (int i = 0; i < segments; i++)
             {
                 float a = i * Mathf.PI * 2f / segments;
-                ring.SetPosition(i, c + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius);
+                ring.SetPosition(i, c + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * RingRadius);
             }
 
             ring.startColor = color;
             ring.endColor = color;
             ring.enabled = true;
+
+            if (ok)
+            {
+                state.cross.enabled = false;
+
+                // Relleno: tenue al apuntar, se llena al juntar el pulgar.
+                float k = state.progress;
+                Transform fill = state.fill.transform;
+                fill.position = c + Vector3.up * 0.002f;
+                fill.rotation = Quaternion.identity;
+                float radius = Mathf.Lerp(RingRadius * 0.35f, RingRadius, k);
+                fill.localScale = new Vector3(radius, 1f, radius);
+                Color fc = color;
+                fc.a = Mathf.Lerp(0.18f, 0.55f, k);
+                state.fill.material.color = fc;
+                state.fill.enabled = true;
+
+                // Flecha: hacia donde se quedara mirando (se llega mirando
+                // hacia donde se mira ahora).
+                Vector3 look = head != null ? Vector3.ProjectOnPlane(head.forward, Vector3.up) : Vector3.forward;
+                if (look.sqrMagnitude < 1e-4f)
+                {
+                    look = Vector3.forward;
+                }
+
+                look.Normalize();
+                Vector3 side = Vector3.Cross(Vector3.up, look);
+                Vector3 tip = c + look * (RingRadius + 0.13f);
+                Vector3 baseCenter = c + look * (RingRadius + 0.03f);
+                LineRenderer arrow = state.arrow;
+                arrow.positionCount = 3;
+                arrow.SetPosition(0, baseCenter - side * 0.09f);
+                arrow.SetPosition(1, tip);
+                arrow.SetPosition(2, baseCenter + side * 0.09f);
+                arrow.startColor = color;
+                arrow.endColor = color;
+                arrow.enabled = true;
+            }
+            else
+            {
+                state.fill.enabled = false;
+                state.arrow.enabled = false;
+                // X: ahi no se puede.
+                const float x = 0.12f;
+                LineRenderer cross = state.cross;
+                cross.positionCount = 5;
+                cross.SetPosition(0, c + new Vector3(-x, 0f, -x));
+                cross.SetPosition(1, c + new Vector3(x, 0f, x));
+                cross.SetPosition(2, c);
+                cross.SetPosition(3, c + new Vector3(-x, 0f, x));
+                cross.SetPosition(4, c + new Vector3(x, 0f, -x));
+                cross.startColor = color;
+                cross.endColor = color;
+                cross.enabled = true;
+            }
+        }
+
+        // Texto junto a la mano durante los primeros saltos (o en el
+        // tutorial): que hacer ahora.
+        private void DrawHint(HandState state, Transform head, bool ok)
+        {
+            TextMeshPro hint = state.hint;
+            bool show = head != null && (ForceHints || Count < hintTeleports);
+            if (!show)
+            {
+                hint.gameObject.SetActive(false);
+                return;
+            }
+
+            hint.text = ok
+                ? "Junta el pulgar al índice para ir"
+                : "Apunta a un lugar libre del piso";
+            hint.color = ok ? new Color(0.85f, 0.95f, 1f) : new Color(0.85f, 0.85f, 0.88f);
+            Vector3 p = state.hintAnchor + Vector3.up * 0.07f;
+            hint.transform.SetPositionAndRotation(p, Quaternion.LookRotation(p - head.position, Vector3.up));
+            hint.gameObject.SetActive(true);
         }
 
         private static void Show(HandState state, bool visible)
         {
             state.arc.enabled = visible;
             state.ring.enabled = visible;
+            state.arrow.enabled = visible;
+            state.cross.enabled = visible;
+            state.fill.enabled = visible;
+            if (state.hint.gameObject.activeSelf != visible)
+            {
+                state.hint.gameObject.SetActive(visible);
+            }
+        }
+
+        // ---------------- meta del tutorial ----------------
+
+        // Circulo en el piso con un haz de luz, visible desde lejos.
+        public void ShowGoal(Vector3 floorPoint)
+        {
+            if (goal == null)
+            {
+                GameObject go = new GameObject("MetaTeleport");
+                go.AddComponent<NoAutoCollider>();
+                goal = go.transform;
+                goalRing = CreateLine("AnilloMeta", true, 0.03f, lineMaterial);
+                goalRing.transform.SetParent(goal, false);
+                goalRing.useWorldSpace = false;
+                goalBeam = CreateLine("HazMeta", false, 0.12f, lineMaterial);
+                goalBeam.transform.SetParent(goal, false);
+                goalBeam.useWorldSpace = false;
+                goalBeam.positionCount = 2;
+                goalBeam.SetPosition(0, Vector3.zero);
+                goalBeam.SetPosition(1, Vector3.up * 1.6f);
+                goalBeam.widthCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0.4f));
+                goalRing.enabled = true;
+                goalBeam.enabled = true;
+            }
+
+            goal.position = floorPoint + Vector3.up * 0.01f;
+            goal.gameObject.SetActive(true);
+        }
+
+        public void HideGoal()
+        {
+            if (goal != null)
+            {
+                Destroy(goal.gameObject);
+                goal = null;
+            }
+        }
+
+        private void UpdateGoal()
+        {
+            if (goal == null)
+            {
+                return;
+            }
+
+            float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f);
+            const int segments = 40;
+            float radius = Mathf.Lerp(0.3f, 0.36f, pulse);
+            goalRing.positionCount = segments;
+            for (int i = 0; i < segments; i++)
+            {
+                float a = i * Mathf.PI * 2f / segments;
+                goalRing.SetPosition(i, new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius);
+            }
+
+            Color ring = new Color(0.35f, 0.9f, 0.6f, Mathf.Lerp(0.6f, 1f, pulse));
+            goalRing.startColor = ring;
+            goalRing.endColor = ring;
+            goalBeam.startColor = new Color(0.35f, 0.9f, 0.6f, Mathf.Lerp(0.18f, 0.32f, pulse));
+            goalBeam.endColor = new Color(0.35f, 0.9f, 0.6f, 0f);
         }
     }
 }

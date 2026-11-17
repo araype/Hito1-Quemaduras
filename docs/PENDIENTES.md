@@ -33,13 +33,22 @@ el Quest con las manos:
 - **Recoger la manta del piso** agachándose. Si el piso real sigue más
   alto que el del juego, reajustar el piso del límite en el Quest y, si no
   alcanza, usar `VRLocomotion.floorOffset`.
-- **Teletransporte con la mano** (`QUEMADURA_INMERSION.md`, sección 37):
-  señalar el piso con el índice muestra el arco; levantar y bajar el
-  pulgar salta. Que el arco salga al señalar y no al tocar botones, agarrar
-  o caminar con gestos; que el pulgar no salte sin querer; ir a la sala con
-  la manta en la otra mano y volver. Si la pose no se reconoce, ajustar
-  `HandTeleport.extendedRatio` (1,15), `curledRatio` (0,95),
-  `thumbDownRatio` (0,35) y `thumbUpRatio` (0,55).
+- **Teletransporte con la mano** (`QUEMADURA_INMERSION.md`, sección 38):
+  hacer la L (índice y pulgar estirados) muestra el arco; juntar el pulgar
+  al índice salta. Que el arco salga con la L con la palma hacia abajo y de
+  costado, y no al tocar botones, agarrar, mirar la palma (pausa) o caminar
+  con gestos; que al hacer la L cerca de un objeto no lo agarre; que el
+  salto caiga donde marcaba el anillo; ir a la sala con la manta en la otra
+  mano y volver; el paso 1 del tutorial. Si la pose no se reconoce, ajustar
+  `HandTeleport.extendedRatio` (1,1), `curledRatio` (1,0),
+  `thumbOpenRatio` (0,55), `thumbClosedRatio` (0,3) y `maxPalmUp` (0,5).
+- **Pausa de la muñeca:** que no se esconda al acercar el dedo
+  (`WristPauseButton.approachDistance` 18 cm, `approachHold` 2 s).
+- **Agarrar con la mano entera, como un objeto real** (pedido el
+  2026-11-17): sujetar con todos los dedos alrededor, sin cerrar del todo
+  la mano y sin que el objeto flote. Hoy se agarra con la pinza o con la
+  mano cerrada (puño). A decidir cómo detectarlo (dedos que tocan el
+  objeto) antes de implementarlo.
 - **Tiempo para la manta:** que la tía no se queje mientras se va por la
   manta y se vuelve (estimado 47 s, `PatientDialog.fetchSpeed` 0,9 m/s y
   `fetchHandlingSeconds` 15 s); si sigue a contrarreloj, bajar

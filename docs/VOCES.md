@@ -77,7 +77,7 @@ Mujer adulta (50 a 60 años), voz cálida; con dolor real, no actuado.
 | `voz_decision_casa` | Elige cuidarla en casa | Bueno, me cuido en casa entonces. | `[hesitant] Bueno, me cuido en casa entonces.` |
 | `voz_exito` | Final | Gracias. Ya me siento mucho mejor. | `[relieved] Gracias. Ya me siento mucho mejor.` |
 
-## Narrador (21)
+## Narrador (22)
 
 Voz **femenina** adulta, calmada y clara; ritmo pausado (da instrucciones
 en una emergencia).
@@ -86,8 +86,9 @@ en una emergencia).
 |---|---|---|
 | `guia_bienvenida` | Menú de inicio | Hola. Vas a practicar qué hacer si alguien se quema en la cocina. Elige un modo: guiado, si quieres que te indique cada paso, o evaluación, si prefieres hacerlo solo. Apunta al botón y aprieta el gatillo, o junta el pulgar y el índice. (Cambió el 2026-11-12: los botones ya no se aprietan dejando la mano.) |
 | `guia_intro` | Inicio del tutorial | Estás de visita en la casa de tu tía Rosa. Ella está preparando el almuerzo. |
-| `guia_agarrar` | Tutorial 1 | Para agarrar algo, acerca la mano y aprieta el botón lateral del control, o junta el pulgar y el índice. Agarra la taza del mesón. |
-| `guia_caminar` | Tutorial 2 | Para caminar, usa el joystick izquierdo. Llévale la taza a tu tía. |
+| `guia_agarrar` | Tutorial 2 | Para agarrar algo, acerca la mano y aprieta el botón lateral del control, o junta el pulgar y el índice. Agarra la taza del mesón. |
+| `guia_teleport` | Tutorial 1 (moverse) | Para ir lejos con las manos, haz una ele: el índice y el pulgar estirados, los otros dedos doblados. Apunta al círculo verde del piso y junta el pulgar al índice para saltar. Con controles, usa el joystick izquierdo. (Nueva, 2026-11-17, Sabina; falta ElevenLabs.) |
+| `guia_caminar` | Tutorial 3 | Para caminar, usa el joystick izquierdo. Llévale la taza a tu tía. |
 | `guia_bien` | Fin del tutorial | Muy bien. Ya sabes agarrar y caminar. Quédate cerca de ella. |
 | `guia_accidente` | Accidente (modo guiado) | Se le volcó la olla. Se quemó la mano con agua hirviendo. Mantén la calma: vamos paso a paso. |
 | `guia_evaluacion` | Accidente (modo evaluación) | Se quemó la mano con agua hirviendo. Atiéndela como aprendiste. |

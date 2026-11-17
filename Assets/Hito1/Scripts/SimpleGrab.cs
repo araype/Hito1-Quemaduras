@@ -1347,6 +1347,14 @@ namespace SojaExiles
 
             if (hand.trackedHand != null && hand.trackedHand.IsTracked)
             {
+                // Mano vacia en la L del teletransporte (HandTeleport): los
+                // dedos doblados no son un puno ni cerrar el pulgar una pinza.
+                if (hand.held == null && HandTeleport.Aiming(hand == left))
+                {
+                    hand.pinchPressed = false;
+                    return false;
+                }
+
                 // Con poca confianza (dedos tapados por la otra mano o por el
                 // objeto) se mantiene lo que habia: antes la pinza "se abria"
                 // sola y el objeto se caia.

@@ -64,6 +64,8 @@ namespace SojaExiles
         public float tutorialReminder = 25f;
         [Tooltip("Segundos que espera el paso de la pausa del tutorial antes de seguir sin el.")]
         public float pauseTutorialTimeout = 45f;
+        [Tooltip("Segundos que espera el paso de moverse hasta el circulo antes de seguir sin el.")]
+        public float moveTutorialTimeout = 90f;
 
         // El panel de inicio (modo guiado o evaluacion) esta abierto: todavia
         // no empezo nada, asi que no hay pausa.
@@ -142,7 +144,7 @@ namespace SojaExiles
             // La manta esta en el sofa de la sala: hay que ir a buscarla y ella
             // se queda con la mano bajo el agua.
             new StepInfo { id = StepId.Abrigar, title = "Abrígala con una manta",
-                hint = "El agua fría también le enfría el cuerpo. La manta está doblada en el sofá de la sala: sigue las flechas del piso y suéltala sobre sus hombros. Para ir lejos con las manos, señala el piso con el índice y baja el pulgar.",
+                hint = "El agua fría también le enfría el cuerpo. La manta está doblada en el sofá de la sala: sigue las flechas del piso y suéltala sobre sus hombros. Para ir lejos con las manos, haz la L con la mano libre, apunta al piso y junta el pulgar al índice.",
                 clip = "guia_abrigo" },
             // Mientras se enfria (antes ese minuto quedaba sin nada que hacer).
             // Sin celular en la escena se decide al final con el panel
@@ -665,10 +667,17 @@ namespace SojaExiles
 
             yield return new WaitForSeconds(2.2f);
 
-            // 1. Agarrar.
-            if (mug != null)
+            // 1. Moverse: con las manos, el teletransporte (HandTeleport);
+            // sin practicarlo, nadie lo descubre solo.
+            if (!Over)
             {
-                ShowCard("Tutorial 1 de 3", "Agarra la taza del mesón",
+                yield return MoveTutorial();
+            }
+
+            // 2. Agarrar.
+            if (mug != null && !Over)
+            {
+                ShowCard("Tutorial 2 de 4", "Agarra la taza del mesón",
                     "Acerca la mano y aprieta el botón lateral del control, o junta el pulgar y el índice.");
                 Say("guia_agarrar");
                 HighlightFollow(mug.transform, 0.07f);
@@ -688,9 +697,9 @@ namespace SojaExiles
 
                 ClearHighlights();
 
-                // 2. Caminar y entregar.
-                ShowCard("Tutorial 2 de 3", "Llévale la taza a tu tía",
-                    "Acércate caminando o con el joystick izquierdo. Sin controles, para ir lejos: señala el piso con el índice, levanta el pulgar y bájalo para saltar al círculo azul.");
+                // 3. Caminar y entregar.
+                ShowCard("Tutorial 3 de 4", "Llévale la taza a tu tía",
+                    "Acércate caminando o con el joystick izquierdo. Sin controles, para ir lejos: haz la L con la mano libre y junta el pulgar al índice.");
                 StopNarration();
                 Say("guia_caminar");
                 Transform herHand = patient != null && patient.IsReady ? patient.HandBone(false) : null;
@@ -744,7 +753,7 @@ namespace SojaExiles
                 yield return new WaitForSeconds(1.8f);
             }
 
-            // 3. Pausa: un jugador nuevo no sabe que existe ni como se abre.
+            // 4. Pausa: un jugador nuevo no sabe que existe ni como se abre.
             if (!Over)
             {
                 yield return PauseTutorial();
@@ -767,6 +776,135 @@ namespace SojaExiles
             }
         }
 
+        // Ensena a moverse lejos: un circulo verde en el piso a unos 2 m, en
+        // un lugar al que se puede saltar. Con las manos se llega con el
+        // teletransporte (la L); con controles, caminando o con el joystick.
+        // Cualquier salto cuenta (ya lo aprendio). Si no lo hace en
+        // 'moveTutorialTimeout' segundos sigue igual.
+        private IEnumerator MoveTutorial()
+        {
+            HandTeleport teleport = HandTeleport.Instance;
+            if (teleport == null || head == null || !FindMoveGoal(teleport, out Vector3 goal))
+            {
+                Debug.LogWarning("[BurnGuide] No hay lugar para la meta de moverse; se salta ese paso del tutorial.");
+                yield break;
+            }
+
+            Debug.Log("[BurnGuide] Meta de moverse en " + goal.ToString("F2"));
+            teleport.ShowGoal(goal);
+            HandTeleport.ForceHints = true;
+            int startCount = HandTeleport.Count;
+            StopNarration();
+            Say("guia_teleport");
+
+            string shownHint = null;
+            float t = 0f;
+            float remind = tutorialReminder + 15f;
+            bool reached = false;
+            while (!Over && t < moveTutorialTimeout)
+            {
+                t += Time.deltaTime;
+                string hint = MoveHint();
+                if (hint != shownHint)
+                {
+                    shownHint = hint;
+                    ShowCard("Tutorial 1 de 4", "Ve hasta el círculo verde", hint);
+                }
+
+                Vector3 flat = head.position - goal;
+                flat.y = 0f;
+                if (HandTeleport.Count > startCount || flat.magnitude < 0.5f)
+                {
+                    reached = true;
+                    break;
+                }
+
+                if (t >= remind && !Speaking)
+                {
+                    remind = t + tutorialReminder + 15f;
+                    Say("guia_teleport");
+                }
+
+                yield return null;
+            }
+
+            teleport.HideGoal();
+            HandTeleport.ForceHints = false;
+            if (reached && !Over)
+            {
+                ShowCard("Tutorial 1 de 4", "¡Así te mueves!",
+                    "Úsalo para ir lejos, por ejemplo a la sala. Lo cercano, camina.");
+                yield return new WaitForSeconds(2.5f);
+            }
+
+            HideCard();
+        }
+
+        private static string MoveHint()
+        {
+            bool hands = SimpleGrab.TryGetPalm(true, out Vector3 _, out Vector3 _, out Vector3 _)
+                || SimpleGrab.TryGetPalm(false, out Vector3 _, out Vector3 _, out Vector3 _);
+            return hands
+                ? "Haz una L con la mano: índice y pulgar estirados, los otros dedos doblados. Apunta al círculo y junta el pulgar al índice para saltar."
+                : "Camina o usa el joystick izquierdo hasta el círculo.";
+        }
+
+        // Punto del piso a 1,4-2,6 m al que se puede saltar, con piso libre
+        // alrededor (no pegado a un mueble).
+        private bool FindMoveGoal(HandTeleport teleport, out Vector3 goal)
+        {
+            goal = Vector3.zero;
+            Vector3 center = teleport.transform.position;
+            Vector3 eyes = head.position;
+            float best = float.MinValue;
+            const float step = 0.25f;
+            for (float x = -2.75f; x <= 2.75f; x += step)
+            {
+                for (float z = -2.75f; z <= 2.75f; z += step)
+                {
+                    Vector3 p = center + new Vector3(x, 0f, z);
+                    Vector3 flat = p - eyes;
+                    flat.y = 0f;
+                    float d = flat.magnitude;
+                    if (d < 1.4f || d > 2.6f || !teleport.CanLandAt(p))
+                    {
+                        continue;
+                    }
+
+                    int open = 0;
+                    for (int k = 0; k < 8; k++)
+                    {
+                        Vector3 n = p + Quaternion.Euler(0f, k * 45f, 0f) * Vector3.forward * 0.4f;
+                        if (teleport.CanLandAt(n))
+                        {
+                            open++;
+                        }
+                    }
+
+                    float score = open - Mathf.Abs(d - 2f);
+                    if (score > best)
+                    {
+                        best = score;
+                        goal = p;
+                    }
+                }
+            }
+
+            if (best == float.MinValue)
+            {
+                return false;
+            }
+
+            // A la altura del piso.
+            if (Physics.Raycast(goal + Vector3.up * 1.2f, Vector3.down, out RaycastHit hit, 2f, ~0,
+                    QueryTriggerInteraction.Ignore))
+            {
+                goal = hit.point;
+            }
+
+            return true;
+        }
+
         // Ensena a abrir y cerrar la pausa, segun como juega: con controles
         // el boton de menu del control izquierdo (o mantener B/Y); con las
         // manos, el boton de la muneca izquierda (WristPauseButton). Si no lo
@@ -784,7 +922,7 @@ namespace SojaExiles
                 if (hint != shownHint)
                 {
                     shownHint = hint;
-                    ShowCard("Tutorial 3 de 3", "Abre la pausa", hint);
+                    ShowCard("Tutorial 4 de 4", "Abre la pausa", hint);
                 }
 
                 WristPauseButton wrist = WristPauseButton.Instance;
@@ -806,7 +944,7 @@ namespace SojaExiles
             ClearHighlights();
             if (PauseMenu.Paused)
             {
-                ShowCard("Tutorial 3 de 3", "Así se pausa la práctica",
+                ShowCard("Tutorial 4 de 4", "Así se pausa la práctica",
                     "El reloj se detiene. Toca \"Continuar\" para seguir.");
                 while (PauseMenu.Paused && !Over)
                 {

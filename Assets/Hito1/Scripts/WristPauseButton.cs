@@ -29,6 +29,10 @@ namespace SojaExiles
         public float aboveWrist = 0.035f;
         [Tooltip("Corrimiento del boton desde la muneca hacia el antebrazo (m): lejos de los dedos de esa mano.")]
         public float towardElbow = 0.02f;
+        [Tooltip("Con el dedo de la otra mano a menos de esto del boton (m), el boton no se esconde aunque se pierda la palma.")]
+        public float approachDistance = 0.18f;
+        [Tooltip("Segundos maximos que el boton se queda quieto esperando el dedo, sin ver la palma.")]
+        public float approachHold = 2f;
 
         public static WristPauseButton Instance { get; private set; }
 
@@ -117,6 +121,17 @@ namespace SojaExiles
             facingTime = facing ? facingTime + dt : 0f;
             awayTime = facing ? 0f : awayTime + dt;
 
+            // La otra mano se acerca a tocarlo: al taparse la mano izquierda
+            // el visor la pierde o la gira, y antes el boton se escondia justo
+            // al ir a tocarlo (prueba en el Quest Pro, 2026-11-17). Se queda
+            // quieto donde estaba un rato.
+            bool approaching = Visible && can && SimpleGrab.TryGetFingertip(false, out Vector3 tip)
+                && Vector3.Distance(tip, root.position) < approachDistance;
+            if (approaching && !facing && awayTime < approachHold)
+            {
+                return;
+            }
+
             if (!Visible && facing && facingTime >= showDelay)
             {
                 root.gameObject.SetActive(true);
@@ -126,7 +141,11 @@ namespace SojaExiles
                 Hide();
             }
 
-            if (Visible && facing)
+            // Con el dedo ya encima no se mueve: el temblor de la mano tapada
+            // lo corria justo al tocarlo.
+            bool touching = approaching && SimpleGrab.TryGetFingertip(false, out Vector3 near)
+                && Vector3.Distance(near, root.position) < 0.07f;
+            if (Visible && facing && !touching)
             {
                 Vector3 p = wrist + palm * aboveWrist - fingers * towardElbow;
                 Vector3 forward = p - head.position;
