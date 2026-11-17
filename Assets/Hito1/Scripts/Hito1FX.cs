@@ -209,6 +209,92 @@ namespace SojaExiles
             return steam;
         }
 
+        // Fuego por fotogramas (hoja de 2x2 de Llama_Fotogramas, del kit BPS):
+        // lenguas que salen de un anillo de radio "radius". Con "gas" nacen
+        // azules y terminan en punta naranja (hornilla); sin "gas" son
+        // naranjas (llamarada). "burst" > 0: un solo golpe de esas
+        // particulas, sin bucle.
+        public static ParticleSystem CreateFire(string name, Transform parent, Vector3 worldPosition, float radius,
+            float rate, float height, bool gas, int burst = 0)
+        {
+            GameObject go = new GameObject(name);
+            go.AddComponent<NoAutoCollider>();
+            go.transform.SetParent(parent, true);
+            go.transform.position = worldPosition;
+            go.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
+
+            ParticleSystem fire = go.AddComponent<ParticleSystem>();
+            fire.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            float life = burst > 0 ? 0.55f : 0.32f;
+            ParticleSystem.MainModule main = fire.main;
+            main.playOnAwake = false;
+            main.loop = burst == 0;
+            main.duration = burst > 0 ? 0.3f : 1f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(life * 0.7f, life);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(height / life * 0.8f, height / life * 1.2f);
+            main.startSize = new ParticleSystem.MinMaxCurve(height * 0.7f, height * 1.1f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(-0.25f, 0.25f);
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = burst > 0 ? burst : Mathf.CeilToInt(rate * life) + 8;
+
+            ParticleSystem.EmissionModule emission = fire.emission;
+            emission.rateOverTime = burst > 0 ? 0f : rate;
+            if (burst > 0)
+            {
+                emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)burst) });
+            }
+
+            ParticleSystem.ShapeModule shape = fire.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = burst > 0 ? 12f : 6f;
+            shape.radius = Mathf.Max(0.005f, radius);
+            shape.radiusThickness = gas ? 0f : 1f;
+
+            ParticleSystem.SizeOverLifetimeModule size = fire.sizeOverLifetime;
+            size.enabled = true;
+            AnimationCurve shrink = new AnimationCurve(new Keyframe(0f, 0.6f), new Keyframe(0.3f, 1f), new Keyframe(1f, 0.2f));
+            size.size = new ParticleSystem.MinMaxCurve(1f, shrink);
+
+            ParticleSystem.ColorOverLifetimeModule color = fire.colorOverLifetime;
+            color.enabled = true;
+            Gradient g = new Gradient();
+            Color baseColor = gas ? new Color(0.25f, 0.45f, 1f) : new Color(1f, 0.9f, 0.6f);
+            Color tipColor = gas ? new Color(1f, 0.55f, 0.15f) : new Color(1f, 0.5f, 0.12f);
+            g.SetKeys(
+                new[] { new GradientColorKey(baseColor, 0f), new GradientColorKey(baseColor, 0.45f),
+                    new GradientColorKey(tipColor, 0.8f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.15f), new GradientAlphaKey(0f, 1f) });
+            color.color = g;
+
+            // Los fotogramas: 4 cuadros, empezando en uno al azar.
+            ParticleSystem.TextureSheetAnimationModule sheet = fire.textureSheetAnimation;
+            sheet.enabled = true;
+            sheet.numTilesX = 2;
+            sheet.numTilesY = 2;
+            sheet.cycleCount = 2;
+            sheet.startFrame = new ParticleSystem.MinMaxCurve(0f, 3f);
+
+            ParticleSystem.NoiseModule noise = fire.noise;
+            noise.enabled = true;
+            noise.strength = height * 0.6f;
+            noise.frequency = 2f;
+            noise.scrollSpeed = 1.5f;
+
+            ParticleSystemRenderer renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.sortingFudge = 5f;
+            Material material = Mat("Llama_Fotogramas");
+            if (material != null)
+            {
+                renderer.sharedMaterial = material;
+            }
+
+            fire.Play();
+            return fire;
+        }
+
         // Disco de borde irregular de radio 1 (charco de agua); se escala.
         public static Mesh PuddleMesh(int seed = 0)
         {

@@ -1319,3 +1319,21 @@ simulada no tiene dedos: `extendedRatio` 1,1, `curledRatio` 1,0,
 `thumbOpenRatio` 0,55, `thumbClosedRatio` 0,3, `maxPalmUp` 0,5 están
 estimados), que `SimpleGrab` no agarre con la L ni el botón de la muñeca
 con la oclusión real. Nada en el Quest.
+
+## 39. Fuego por fotogramas en la hornilla y llamarada (`fuego-fotogramas`, 2026-11-17)
+
+- **Llama de la hornilla:** sobre las 18 lenguas fijas de `PotFX.BuildFlame`
+  sale ahora un sistema de partículas con fotogramas de fuego
+  (`Hito1FX.CreateFire`): la hoja de 2x2 de `Fire_Texture_01` del kit BPS,
+  con el material `Resources/Hito1FX/Llama_Fotogramas` (copia de
+  `Fire_Add_01`, aditivo). Nacen azules y terminan en punta naranja, como
+  una hornilla de gas; unas 70 por segundo y como mucho ~30 a la vez. Se
+  prenden y apagan con la perilla (`PotFX.SetBurner`).
+- **Llamarada del accidente:** al volcarse la olla (`PotFX.Spill`), si la
+  hornilla está prendida sale un golpe de 24 llamas naranjas que suben por
+  el borde de la olla (`PotFX.Flare`) y se borra solo a los 1,5 s. Es solo
+  visual: no quema ni suma errores.
+
+**Probado en Play (editor):** se ve la llama azul animada bajo la olla y
+la llamarada al llamar `Flare()`. **No se probó** en el Quest (fps con las
+partículas aditivas) ni el accidente completo en una partida.

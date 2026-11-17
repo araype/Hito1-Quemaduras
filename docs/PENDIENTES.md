@@ -78,6 +78,14 @@ Roja Británica, guía LSEBN). Lo que no tenga respaldo se anota aquí como "a
 decidir" antes de implementarlo como error. La última revisión (templar el
 agua, charco, gasa) está en `docs/QUEMADURA_INMERSION.md`, sección 12.
 
+## Fuego por fotogramas (2026-11-17, `QUEMADURA_INMERSION.md`, sección 39)
+
+- Probar en el Quest que la llama de la hornilla y la llamarada se vean
+  bien y no bajen de 72 fps.
+- **A decidir (Regla):** la llamarada al volcarse la olla no sale de las
+  guías (la quemadura es por agua hirviendo, no por fuego). Es solo
+  ambientación; confirmar con el grupo si se queda.
+
 ## 0. Probar la consolidación (primero)
 
 `consolidada` **solo se compiló** (Roslyn fuera de Unity, sin errores). Las

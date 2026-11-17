@@ -57,6 +57,8 @@ namespace SojaExiles
         private ParticleSystem steamSystem;
         private Renderer flameRenderer;
         private MaterialPropertyBlock flameBlock;
+        private ParticleSystem flameSheet;
+        private float flameRing = 0.05f;
         private AudioSource boil;
         private AudioSource gas;
         private float heat = 1f;
@@ -133,6 +135,18 @@ namespace SojaExiles
                 flameRenderer.enabled = on;
             }
 
+            if (flameSheet != null)
+            {
+                if (on)
+                {
+                    flameSheet.Play();
+                }
+                else
+                {
+                    flameSheet.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                }
+            }
+
             Debug.Log("[PotFX] Quemador " + (on ? "encendido" : "apagado"));
         }
 
@@ -145,6 +159,22 @@ namespace SojaExiles
             {
                 waterRenderer.enabled = false;
             }
+
+            Flare();
+        }
+
+        // Llamarada corta en la hornilla cuando el agua cae sobre el fuego
+        // (por fotogramas, un solo golpe que se borra solo).
+        public void Flare()
+        {
+            if (!BurnerOn)
+            {
+                return;
+            }
+
+            ParticleSystem flare = Hito1FX.CreateFire("Llamarada", null, burnerPosition + Vector3.up * 0.01f,
+                flameRing * 1.3f, 0f, 0.16f, false, 24);
+            Destroy(flare.gameObject, 1.5f);
         }
 
         // Quemador del kit (Burner_0X) que queda debajo de la olla; si no hay,
@@ -505,6 +535,16 @@ namespace SojaExiles
             flameRenderer = renderer;
             flameRenderer.enabled = BurnerOn;
             flameBlock = new MaterialPropertyBlock();
+
+            // Encima de las lenguas fijas, llamas por fotogramas que se
+            // mueven: azules con punta naranja, como una hornilla de gas.
+            flameRing = ring;
+            flameSheet = Hito1FX.CreateFire("LlamaFotogramas", go.transform, burnerPosition + Vector3.up * 0.004f,
+                ring + 0.008f, 70f, 0.035f, true);
+            if (!BurnerOn)
+            {
+                flameSheet.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
         }
 
         // Cono casi vertical: el vapor sale de toda la superficie del agua.
