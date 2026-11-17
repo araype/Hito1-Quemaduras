@@ -707,7 +707,7 @@ namespace SojaExiles
                 return false;
             }
 
-            if (SimpleGrab.IsGripping(isLeft))
+            if (SimpleGrab.IsGripping(isLeft) || HandTeleport.Busy(isLeft))
             {
                 return false;
             }
@@ -838,5 +838,24 @@ namespace SojaExiles
         }
 
         private const float HeadFollowThreshold = 0.01f;
+
+        // Teletransporte (HandTeleport): la cabeza queda sobre 'floorPoint'
+        // y los pies en su piso, mirando hacia donde miraba. Lo que sostiene
+        // el jugador viaja con el.
+        public void TeleportTo(Vector3 floorPoint)
+        {
+            Transform head = GetHead();
+            Vector3 from = head != null ? head.position : transform.position;
+            Vector3 offset = floorPoint - from;
+            offset.y = floorPoint.y - transform.position.y;
+
+            controller.enabled = false;
+            transform.position += offset;
+            controller.enabled = true;
+            horizontalVelocity = Vector3.zero;
+            verticalVelocity = 0f;
+            Physics.SyncTransforms();
+            SimpleGrab.ShiftHeld(offset);
+        }
     }
 }

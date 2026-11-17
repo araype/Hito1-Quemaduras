@@ -33,6 +33,13 @@ namespace SojaExiles
 
             GameObject go = null;
 
+            // Teletransporte con las manos para ir lejos (la manta de la sala).
+            VRLocomotion locomotion = Object.FindObjectOfType<VRLocomotion>();
+            if (locomotion.GetComponent<HandTeleport>() == null)
+            {
+                locomotion.gameObject.AddComponent<HandTeleport>();
+            }
+
             if (Object.FindObjectOfType<HandsControllersUnifier>() == null)
             {
                 go = go != null ? go : new GameObject("Hito1Runtime");

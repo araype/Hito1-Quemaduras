@@ -1258,3 +1258,32 @@ cerrada (la mano simulada no tiene dedos), llevar la manta con la mano
 fuera de la vista, los gestos de caminar, `PlaySpaceFit` con el límite real,
 la llamada con tres respuestas (no se hizo la llamada) ni las tiras de film
 cruzadas. Ver `PENDIENTES.md`, sección V.
+
+## 37. Teletransporte, tiempo para la manta y resumen nuevo (`main`, 2026-11-17)
+
+En la prueba en el Quest Pro: caminar de verdad no llega a la sala (al
+salir del límite del Quest el visor oculta el juego), los gestos de caminar
+no se reconocían, la queja del frío caía mientras se traía la manta y el
+resumen estaba cargado, se montaban los textos y cortaba los errores.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Teletransporte con la mano | Sin controles: señalar con el índice (medio y anular doblados, la mano adelante) muestra un arco y un círculo en el piso: azul si se puede llegar, gris si no. Levantar el pulgar y bajarlo sobre el dedo medio salta ahí, mirando hacia donde se miraba. Si el pulgar ya estaba abajo al señalar, hay que levantarlo primero. Solo piso caminable (`PlayArea`), sin muebles, entre 0,7 y 5 m. No con la mano que sostiene algo ni llevando a la tía; con la otra sí, y lo que se sostiene (la manta) viaja con el jugador. No sale el arco con la mano pegada al cuerpo ni a menos de 15 cm de un botón. El límite del Quest viaja con el jugador: en la sala vuelve a tener todo su espacio real. | `HandTeleport` (nuevo, lo instala `Hito1RuntimeBootstrap`), `VRLocomotion.TeleportTo`, `SimpleGrab.ShiftHeld` |
+| Gestos de caminar | Siguen (medio = caminar, anular = girar), pero no cuentan mientras esa mano señala para saltar: el pulgar sobre el medio es también el gesto de caminar. | `VRLocomotion.IsGestureHandFree`, `HandTeleport.Busy` |
+| Tiempo para la manta | La tía estima cuánto toma ir por la manta: el camino del piso (el de las flechas) ida y vuelta a 0,9 m/s, más 15 s para tomarla y ponérsela, por 1,5. En la escena: 7,4 m de camino → 47 s (antes, 30 s fijos). Mientras el jugador está lejos o trae la manta, la queja del minuto 9 espera hasta ese tiempo; si vuelve antes, la queja sale con él al lado. Si se pasa, se queja igual y aguanta `awayGraceSeconds` (30 s), que corren a un tercio mientras trae la manta en la mano. | `PatientDialog.FetchBudget`, `fetchSpeed`, `fetchHandlingSeconds`, `fetchMargin` |
+| Sin interrumpir | El aviso "Vuelve con ella antes de que saque la mano" no sale si el jugador ya trae la manta. | `BurnGuide.BlanketHeld` |
+| Textos de la guía | Tutorial 2 y el paso de la manta explican el salto. | `BurnGuide` |
+| Resumen | Encabezado con una frase de cómo le fue (sin números), el caso y el puntaje. Izquierda: los pasos, hechos o no (enfriamiento en minutos si faltó; qué se decidió con el 106). Derecha: una tarjeta por error con título corto y qué hacer, los graves primero, "(2 veces)" si se repite. Los textos se ajustan a su ancho y se miden (TextMesh Pro), así no se montan; si no caben, "Anterior" / "Siguiente" en vez de cortarlos. Se quitaron el tiempo de la primera acción, el de enfriamiento (siempre 20/20 salvo que falte el paso), los contadores y la barra de actos. Ya llegaba solo al terminar: al cubrir, llamar y abrigar, a los 5 s. | `BurnSummaryPanel` |
+
+**Probado en Play** (editor, sin visor, mano simulada de `SimpleGrab`; el
+salto con `HandTeleport.SimAim` / `SimThumbDown`): compila sin errores y sin
+errores en la consola. El arco sale gris contra la tía, el mesón y la pared
+de la cocina, y azul en el piso junto a la puerta; al bajar el pulgar la
+cabeza quedó en el punto marcado. Con la manta tomada con la izquierda y
+saltando con la derecha, la manta llegó en la mano (antes de
+`SimpleGrab.Shift` se soltaba al llegar). Resumen con 7 errores forzados más
+los pasos faltantes: sin textos montados, 4 tarjetas por página, 4 páginas.
+**No se probó:** la pose de señalar y el pulgar con manos reales (la mano
+simulada no tiene dedos), el ajuste de `extendedRatio`, `curledRatio`,
+`thumbDownRatio` y `thumbUpRatio`, la espera de la queja del frío durante un
+enfriamiento real, ni nada en el Quest.

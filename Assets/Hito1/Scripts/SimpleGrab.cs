@@ -550,6 +550,85 @@ namespace SojaExiles
             return false;
         }
 
+        // Lo que sostiene esa mano del jugador (null si nada). Lo usa
+        // HandTeleport: no se salta con esa mano ni llevando a la paciente.
+        public static Rigidbody HeldBody(bool leftHand)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                Hand hand = leftHand ? Instances[i].left : Instances[i].right;
+                if (hand.held != null && hand.held.rb != null)
+                {
+                    return hand.held.rb;
+                }
+            }
+
+            return null;
+        }
+
+        // True si es la esfera fisica de una mano del jugador.
+        public static bool IsHandBody(Rigidbody rb)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                if (Instances[i].left.body == rb || Instances[i].right.body == rb)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // El jugador se teletransporto: lo que sostiene viaja con el. Si no,
+        // quedaba lejos de la mano y se soltaba como si se tirara fuerte
+        // (breakDistance).
+        public static void ShiftHeld(Vector3 offset)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                Instances[i].Shift(Instances[i].left, offset);
+                Instances[i].Shift(Instances[i].right, offset);
+            }
+
+#if UNITY_EDITOR
+            // Las manos simuladas estan en el mundo; las reales, en el rig:
+            // viajan con el jugador como las reales.
+            for (int s = 0; s < 2; s++)
+            {
+                if (SimActive[s])
+                {
+                    SimPosition[s] += offset;
+                }
+            }
+#endif
+            Physics.SyncTransforms();
+        }
+
+        private void Shift(Hand hand, Vector3 offset)
+        {
+            // La pose de la mano se lee en Update: hasta el proximo, el
+            // FixedUpdate usaria la de antes del salto y soltaria el objeto.
+            hand.position += offset;
+            hand.fingertip += offset;
+            hand.palmPoint += offset;
+            if (hand.body != null)
+            {
+                hand.body.position += offset;
+                hand.body.transform.position += offset;
+            }
+
+            if (hand.held == null || hand.held.rb == null)
+            {
+                return;
+            }
+
+            Rigidbody rb = hand.held.rb;
+            rb.position += offset;
+            rb.transform.position += offset;
+            rb.velocity = Vector3.zero;
+        }
+
         // True si es la esfera de una mano del jugador que no sostiene nada
         // (para sacar el anillo sin confundirse con la mano que sujeta la de
         // la paciente).

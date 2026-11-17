@@ -33,10 +33,21 @@ el Quest con las manos:
 - **Recoger la manta del piso** agachándose. Si el piso real sigue más
   alto que el del juego, reajustar el piso del límite en el Quest y, si no
   alcanza, usar `VRLocomotion.floorOffset`.
+- **Teletransporte con la mano** (`QUEMADURA_INMERSION.md`, sección 37):
+  señalar el piso con el índice muestra el arco; levantar y bajar el
+  pulgar salta. Que el arco salga al señalar y no al tocar botones, agarrar
+  o caminar con gestos; que el pulgar no salte sin querer; ir a la sala con
+  la manta en la otra mano y volver. Si la pose no se reconoce, ajustar
+  `HandTeleport.extendedRatio` (1,15), `curledRatio` (0,95),
+  `thumbDownRatio` (0,35) y `thumbUpRatio` (0,55).
+- **Tiempo para la manta:** que la tía no se queje mientras se va por la
+  manta y se vuelve (estimado 47 s, `PatientDialog.fetchSpeed` 0,9 m/s y
+  `fetchHandlingSeconds` 15 s); si sigue a contrarreloj, bajar
+  `fetchSpeed`. Ver en el registro "[PatientDialog] Ir por la manta".
+- **Resumen:** leerlo en el visor; que se lea a 0,62 m y que "Anterior" /
+  "Siguiente" se toquen con el dedo.
 - **Gestos de caminar:** medio = caminar hacia la mano, anular = girar; que
-  no se active al agarrar ni al cerrar la mano; caminar con la manta en la
-  otra mano. Si siguen siendo incómodos, probar el modo multimodal (control
-  izquierdo solo para el joystick, mano derecha libre).
+  no se activen al agarrar, al cerrar la mano ni al señalar para saltar.
 - **`PlaySpaceFit`:** que el límite quede frente al mesón y que el
   celular, la palanca del caño, el cajón y la tía se alcancen sin salir del
   límite. Revisar en el registro "[PlaySpaceFit] Area de juego acomodada";
@@ -50,8 +61,6 @@ el Quest con las manos:
 - **Botones con el dedo:** tocar y atravesar; que dejar la mano encima o
   pasar por delante no apriete; el botón "Llamar 106" del celular y el de
   pausa en la muñeca.
-- **A decidir tras la prueba:** subir `PatientDialog.awayGraceSeconds`
-  (30 s) si ir por la manta sigue sin alcanzar.
 
 ## Regla
 
@@ -112,7 +121,7 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 |---|---|---|---|
 | 0 | Probar la consolidación en el editor (sección 0) | Sin esto lo demás se construye sobre algo no probado. | Mediano |
 | 1 | Regenerar voces (sección 1) | Se puede hacer en paralelo. | Chico |
-| 4 | Línea de tiempo en el resumen; distractores; práctica de perilla en el tutorial (opcional) | Mejoras de la experiencia. | Variable |
+| 4 | Distractores; práctica de perilla en el tutorial (opcional) | Mejoras de la experiencia. | Variable |
 | 4b | Probar la tía de Avaturn en el Quest; poses de mano y háptica (F) | Lo que más suma a la inmersión según la revisión de herramientas. | Grande |
 | 5 | **Validación final en el Quest** con las manos y fps (G); pruebas con usuarios e informe | Al final, con todo estable. | Mediano |
 | — | Manos fantasma (RF-04) | Recortar y quitarlo del informe. | — |

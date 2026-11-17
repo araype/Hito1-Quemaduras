@@ -142,7 +142,7 @@ namespace SojaExiles
             // La manta esta en el sofa de la sala: hay que ir a buscarla y ella
             // se queda con la mano bajo el agua.
             new StepInfo { id = StepId.Abrigar, title = "Abrígala con una manta",
-                hint = "El agua fría también le enfría el cuerpo. Sal de la cocina hacia la sala: la manta está doblada en el sofá, detrás de la mesa de centro. Sigue las flechas del piso y suéltala sobre sus hombros.",
+                hint = "El agua fría también le enfría el cuerpo. La manta está doblada en el sofá de la sala: sigue las flechas del piso y suéltala sobre sus hombros. Para ir lejos con las manos, señala el piso con el índice y baja el pulgar.",
                 clip = "guia_abrigo" },
             // Mientras se enfria (antes ese minuto quedaba sin nada que hacer).
             // Sin celular en la escena se decide al final con el panel
@@ -690,7 +690,7 @@ namespace SojaExiles
 
                 // 2. Caminar y entregar.
                 ShowCard("Tutorial 2 de 3", "Llévale la taza a tu tía",
-                    "Camina con el joystick izquierdo. Sin controles: estira una mano hacia donde quieres ir y junta el pulgar con el dedo medio (con el anular giras).");
+                    "Acércate caminando o con el joystick izquierdo. Sin controles, para ir lejos: señala el piso con el índice, levanta el pulgar y bájalo para saltar al círculo azul.");
                 StopNarration();
                 Say("guia_caminar");
                 Transform herHand = patient != null && patient.IsReady ? patient.HandBone(false) : null;
@@ -1285,7 +1285,9 @@ namespace SojaExiles
             // La tia se quejo del frio y el jugador no esta con ella (por
             // ejemplo, fue por la manta): tiene un margen para volver antes
             // de que saque la mano.
-            if (PatientDialog.WaitingForPlayer && !warnedColdAway)
+            // Con la manta en la mano ya viene: no se lo interrumpe con la
+            // tarjeta (antes salia mientras traia la manta).
+            if (PatientDialog.WaitingForPlayer && !warnedColdAway && !BlanketHeld())
             {
                 warnedColdAway = true;
                 Correct("guia_frio_lejos", "Tu tía se queja de que el agua está muy fría. Vuelve con ella antes de que saque la mano.");
@@ -1349,6 +1351,17 @@ namespace SojaExiles
         }
 
         private int shownCover = -1;
+
+        private bool BlanketHeld()
+        {
+            if (blanketItem == null)
+            {
+                blanketItem = FindObjectOfType<BlanketItem>();
+            }
+
+            Grabbable grab = blanketItem != null ? blanketItem.GetComponent<Grabbable>() : null;
+            return grab != null && grab.IsHeld;
+        }
 
         // La manta esta en otro cuarto (el sofa de la sala) y costaba
         // encontrarla. Modo guiado: flechas en el piso hasta ella y, con la
