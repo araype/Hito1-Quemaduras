@@ -42,6 +42,11 @@ namespace SojaExiles
         [Range(0.05f, 1f)] public float frontOpenPush = 0.35f;
         [Tooltip("Pasos que se simulan antes de mostrarla (asi no se ve caer la tela desde la forma inicial).")]
         public int warmupSteps = 90;
+        [Header("Seguir al cuerpo")]
+        [Tooltip("Cuanto del movimiento del pecho (caminar, girar) se lleva toda la tela de una vez (0 = solo los puntos sujetos; la tela se quedaba atras y parecia salir hacia adelante).")]
+        [Range(0f, 1f)] public float followBody = 0.85f;
+        [Tooltip("Si el pecho salta mas que esto en un cuadro (m), la tela lo sigue entera (tirones del cuerpo al caminar).")]
+        public float snapDistance = 0.12f;
         [Tooltip("Desde cuanto por delante del centro del pecho cuenta como 'delante' (m).")]
         public float frontOpenDepth = 0.04f;
         [Tooltip("Hasta que altura sobre el centro del pecho (m): por encima, la tela pasa sobre los hombros.")]
@@ -398,6 +403,9 @@ namespace SojaExiles
                     }
 
                     UpdateMesh();
+                    // Dormida ya sigue al pecho entera; al despertar se
+                    // empieza a contar desde ahi.
+                    hasLastChest = false;
                     return;
                 }
 
@@ -406,6 +414,7 @@ namespace SojaExiles
                 accumulator = 0f;
             }
 
+            FollowChest();
             accumulator = Mathf.Min(accumulator + Time.deltaTime, Step * 3f);
             while (accumulator >= Step)
             {
@@ -420,6 +429,44 @@ namespace SojaExiles
             }
 
             UpdateMesh();
+        }
+
+        // Lleva la tela con el movimiento del pecho desde el cuadro anterior
+        // (como worldVelocityScale del Cloth de Unity): solo el resto queda
+        // como inercia. Sin esto, al caminar o girar la tela libre se quedaba
+        // atras en el mundo, se veia salir hacia adelante y volvia sola.
+        private Matrix4x4 lastChestMatrix;
+        private bool hasLastChest;
+
+        private void FollowChest()
+        {
+            Matrix4x4 now = chest.localToWorldMatrix;
+            if (!hasLastChest)
+            {
+                lastChestMatrix = now;
+                hasLastChest = true;
+                return;
+            }
+
+            Matrix4x4 delta = now * lastChestMatrix.inverse;
+            float moved = Vector3.Distance(now.GetColumn(3), lastChestMatrix.GetColumn(3));
+            lastChestMatrix = now;
+            float k = moved > snapDistance ? 1f : followBody;
+            if (k <= 0f)
+            {
+                return;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                if (invMass[i] == 0f)
+                {
+                    continue;
+                }
+
+                pos[i] = Vector3.LerpUnclamped(pos[i], delta.MultiplyPoint3x4(pos[i]), k);
+                prev[i] = Vector3.LerpUnclamped(prev[i], delta.MultiplyPoint3x4(prev[i]), k);
+            }
         }
 
         // La simulacion cuesta ~1,5 ms por cuadro (medido en el editor del

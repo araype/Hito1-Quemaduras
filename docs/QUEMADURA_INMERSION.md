@@ -1356,3 +1356,13 @@ chal sobre los hombros, abierta al centro. Temblor de 7,8 mm a 0,5–0,8 mm
 por paso. **Falta:** giros de la tía, llevarla del brazo con la manta y
 el Quest (fps y verla de cerca). En la espalda el borde forma un pliegue
 en un hombro.
+
+**Al moverla (2026-11-17):** al caminar, la manta salía hacia adelante y
+volvía. El pecho de la tía avanza a tirones (hasta 3,4–4,3 m/s en un cuadro
+en el editor) y la tela libre se quedaba atrás en el mundo. Ahora la tela
+se lleva el 85 % del movimiento del pecho de cada cuadro (`followBody`) y
+todo si salta más de 12 cm (`snapDistance`); solo el resto queda como
+inercia. Probado en Play con `PatientReach.WalkTo` a 1,2 m: la posición
+media de la tela respecto del pecho quedó entre −2 y +6 cm (antes llegaba
+a +30 cm y a +13 cm al detenerse). Los tirones del cuerpo siguen: vienen
+del movimiento de la tía, no de la manta.
