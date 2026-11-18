@@ -30,14 +30,18 @@ namespace SojaExiles
         public float skin = 0.018f;
         public float thickness = 0.01f;
         [Tooltip("Cuanto del borde pasa por encima del hombro hacia adelante antes de caer (m).")]
-        public float overShoulder = 0.08f;
+        public float overShoulder = 0.13f;
         [Tooltip("Filas sujetas a la espalda debajo del borde (para que no se voltee al girar).")]
         [Range(0, 5)] public int backPinRows = 2;
         [Header("Abierta por delante")]
         [Tooltip("No deja tela delante del pecho entre los hombros: asi no tapa sus manos.")]
         public bool openFront = true;
         [Tooltip("Mitad del ancho que queda libre delante del pecho (m, desde el centro).")]
-        public float frontOpenHalfWidth = 0.2f;
+        public float frontOpenHalfWidth = 0.09f;
+        [Tooltip("Que fraccion del camino hacia el costado se corrige por vuelta (1 = de golpe; menos evita que tiemble).")]
+        [Range(0.05f, 1f)] public float frontOpenPush = 0.35f;
+        [Tooltip("Pasos que se simulan antes de mostrarla (asi no se ve caer la tela desde la forma inicial).")]
+        public int warmupSteps = 90;
         [Tooltip("Desde cuanto por delante del centro del pecho cuenta como 'delante' (m).")]
         public float frontOpenDepth = 0.04f;
         [Tooltip("Hasta que altura sobre el centro del pecho (m): por encima, la tela pasa sobre los hombros.")]
@@ -81,7 +85,7 @@ namespace SojaExiles
 
         [Header("Reposo (rendimiento)")]
         [Tooltip("Si ninguna parte de la tela se mueve mas que esto por paso (m) durante 'sleepAfter' s, deja de simularse y sigue al pecho.")]
-        public float sleepSpeed = 0.0006f;
+        public float sleepSpeed = 0.001f;
         public float sleepAfter = 1f;
         [Tooltip("Vuelve a simularse si alguna parte del cuerpo se mueve mas que esto desde que se durmio (m).")]
         public float wakeDistance = 0.02f;
@@ -136,6 +140,14 @@ namespace SojaExiles
             }
 
             BuildParticles();
+
+            // La tela empieza colgando derecho; se deja asentar antes de
+            // dibujarla (antes se veia caer y sacudirse unos 20 cm al ponerla).
+            for (int i = 0; i < warmupSteps; i++)
+            {
+                Simulate(Step);
+            }
+
             BuildMesh();
             Hito1FX.PlayAt("tela_roce_1", chest.position, 0.8f);
         }
@@ -165,9 +177,12 @@ namespace SojaExiles
 
             // Borde de arriba: medio ovalo por detras, a la altura de la parte
             // alta de los hombros (el trapecio), un poco por fuera del cuerpo.
-            float halfWidth = shoulderHalf + 0.05f;
-            float depth = 0.13f;
-            Vector3 top = center + up * 0.07f;
+            // Pegado al cuerpo: con 5 cm de holgura al costado, 13 de fondo y
+            // 7 por encima, el borde quedaba en el aire detras de ella y la
+            // manta no se apoyaba en los hombros.
+            float halfWidth = shoulderHalf + 0.02f;
+            float depth = 0.09f;
+            Vector3 top = center + up * 0.045f;
             float arc = HalfEllipse(halfWidth, depth);
             float dx = width / (nx - 1);
             float dy = height / (ny - 1);
@@ -190,9 +205,14 @@ namespace SojaExiles
                 {
                     // Pasa por encima del hombro hacia adelante y cae.
                     float extra = Mathf.Abs(s) - arc * 0.5f;
-                    Vector3 shoulderTop = top + right * side * halfWidth - up * 0.04f;
+                    // Sigue la curva del hombro: sube un poco sobre el
+                    // deltoides y baja por delante (antes iba recto hacia
+                    // adelante a la altura de la articulacion y el choque lo
+                    // empujaba hacia atras: el hombro quedaba descubierto).
+                    Vector3 shoulderTop = top + right * side * halfWidth - up * 0.03f;
                     float over = Mathf.Min(extra, overShoulder + 0.02f);
-                    edge = shoulderTop + forward * over - up * Mathf.Max(0f, extra - over);
+                    float bulge = Mathf.Sin(Mathf.Clamp01(over / (overShoulder + 0.02f)) * Mathf.PI) * 0.025f;
+                    edge = shoulderTop + forward * over + up * bulge - up * Mathf.Max(0f, extra - over);
                 }
 
                 for (int j = 0; j < ny; j++)
@@ -596,8 +616,11 @@ namespace SojaExiles
             }
 
             // Hacia el costado en que esta; en el medio, segun su columna.
+            // Se corre de a poco: moverla de golpe en cada vuelta la hacia
+            // temblar (peleaba con el choque contra los brazos) y la tiraba
+            // hacia afuera como alas.
             float sign = Mathf.Abs(side) > 0.01f ? Mathf.Sign(side) : (k % nx < nx / 2 ? -1f : 1f);
-            return p + right * (sign * frontOpenHalfWidth - side);
+            return p + right * ((sign * frontOpenHalfWidth - side) * frontOpenPush);
         }
 
         private void Collide(bool applyFriction)

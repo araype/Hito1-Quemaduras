@@ -1337,3 +1337,22 @@ con la oclusión real. Nada en el Quest.
 **Probado en Play (editor):** se ve la llama azul animada bajo la olla y
 la llamarada al llamar `Flare()`. **No se probó** en el Quest (fps con las
 partículas aditivas) ni el accidente completo en una partida.
+
+## 40. Manta como chal sobre los hombros (`objetos-efectos`, 2026-11-17)
+
+Puesta sobre la tía, la manta quedaba detrás de ella como alas: los
+hombros descubiertos, los costados a ~20 cm de los brazos y una punta que
+temblaba ~8 mm por paso sin parar (nunca se dormía).
+
+| Problema | Causa | Arreglo (`BlanketDrape`) |
+|---|---|---|
+| Alas y temblor | El hueco por delante medía 40 cm (`frontOpenHalfWidth` 0,2), más que su torso, y movía la tela de golpe en cada vuelta contra el choque con los brazos. | Hueco de 18 cm (0,09) y la tela se corre de a poco (`frontOpenPush` 0,35). |
+| Hombros descubiertos | El borde de arriba iba 5 cm por fuera, 13 cm por detrás y 7 cm por encima; la parte sobre el hombro iba recta hacia adelante y el choque la echaba atrás. | Borde pegado al cuerpo (2, 9 y 4,5 cm), sigue la curva del deltoides y pasa 13 cm por delante (`overShoulder`). |
+| Se veía caer al ponerla | Empezaba colgando derecho y caía ~20 cm el primer medio segundo. | Se simulan 90 pasos antes de dibujarla (`warmupSteps`). |
+| No se dormía | Con su respiración y gestos la tela se mueve ~0,8 mm por paso. | `sleepSpeed` 1 mm. |
+
+**Probado en Play (editor), con capturas** de frente y de espalda: cae como
+chal sobre los hombros, abierta al centro. Temblor de 7,8 mm a 0,5–0,8 mm
+por paso. **Falta:** giros de la tía, llevarla del brazo con la manta y
+el Quest (fps y verla de cerca). En la espalda el borde forma un pliegue
+en un hombro.
