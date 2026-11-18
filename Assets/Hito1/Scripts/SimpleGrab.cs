@@ -448,6 +448,19 @@ namespace SojaExiles
                     continue;
                 }
 
+                // Con las manos conducidas por el control (HandsControllersUnifier)
+                // OVRHand figura como rastreada aunque se tenga el control: en
+                // el Quest el rayo no salia y el gatillo no apretaba botones
+                // (el menu de inicio no respondia). Con el control, manda el
+                // control.
+                if (OVRInput.IsControllerConnected(hand.controller))
+                {
+                    ray = new Ray(hand.anchor.position, hand.anchor.forward);
+                    pressed = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, hand.controller)
+                        || OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, hand.controller);
+                    return true;
+                }
+
                 if (hand.trackedHand != null && hand.trackedHand.IsTracked)
                 {
                     if (!hand.trackedHand.IsPointerPoseValid || hand.trackedHand.PointerPose == null)
@@ -1379,7 +1392,9 @@ namespace SojaExiles
             // Con la mano cerrada (sin pinza) se agarra delante de la palma.
             bool byPalm = tracked && hand.palmClosed && !hand.pinchPressed && hand.palmValid;
             Vector3 point = byPalm ? hand.palmPoint : hand.position;
-            float radius = tracked ? Mathf.Max(grabRadius, handGrabRadius) : grabRadius;
+            // Con controles tambien el radio de las manos: con 8 cm costaba
+            // tomar a la tia del antebrazo para llevarla al lavadero.
+            float radius = Mathf.Max(grabRadius, handGrabRadius);
 
             Collider[] hits = Physics.OverlapSphere(point, radius, ~0, QueryTriggerInteraction.Ignore);
             if (!Closest(hits, point, out Rigidbody closest, out Collider closestCollider) && LowNearFloor(point))
