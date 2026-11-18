@@ -76,6 +76,13 @@ el Quest con las manos:
   pida cubrir si ya está cubierta y el error `SinEnfriar`.
 - **Film:** tiras cruzadas que se acomodan a lo largo sin "No la envuelvas";
   dar la vuelta completa a su mano con la tira sí debe dar el error.
+- **Pausa, perilla y cómo cubrir** (`QUEMADURA_INMERSION.md`, sección 40,
+  solo probado en Play con estados forzados): que "Continuar" se elija
+  primero y "Reiniciar" / "Terminar" se lean; que la perilla se vea
+  hundirse y girar, la raya roja se note y "Fuego apagado" no tape la
+  olla; que la tarjeta de la bolsa y el film se lea a la distancia de
+  trabajo, no tape su mano y las flechas amarillas se entiendan. Si la
+  tarjeta estorba, subir `CoverHowTo.cardHeight` (0,22 m).
 - **Botones con el dedo:** tocar y atravesar; que dejar la mano encima o
   pasar por delante no apriete; el botón "Llamar 106" del celular y el de
   pausa en la muñeca.

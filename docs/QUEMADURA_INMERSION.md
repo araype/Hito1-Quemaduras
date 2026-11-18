@@ -1349,3 +1349,31 @@ agarró con el gatillo. La L con la mano sigue saltando. El celular quedó en
 **No se probó:** los gestos de caminar (la mano simulada no tiene dedos y
 `OVRInput` no informa manos sin visor), el joystick real ni que no gire al
 apuntar, ni nada en el Quest.
+
+## 40. Pausa más simple, perilla que se nota y cómo cubrir (`main`, 2026-11-17)
+
+Tras otra prueba en el visor: el menú de pausa estaba cargado y destacaba
+"Terminar y ver resumen" (botón ancho) más que "Continuar", con textos de
+ayuda chicos que nadie lee; la perilla de la cocina no parecía moverse al
+apretarla y en modo evaluación (sin el punto amarillo) no había forma de
+saber si se había apagado; y la bolsa y el film piden un movimiento de manos
+preciso que no se adivinaba.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Menú de pausa | "Pausa" y "El tiempo está detenido" arriba; "Continuar" grande (36 × 11 cm) y azul como acción principal; abajo, chicos y apagados (gris azulado, sin brillo ni borde de color), "Reiniciar" (antes "Volver al inicio": vuelve a elegir modo con el mismo caso) y "Terminar" (antes "Terminar y ver resumen"). Sin las dos líneas de ayuda chicas. | `PauseMenu.BuildPanel`, `PauseMenu.Mute` |
+| Perilla | Al apretarla se hunde 6 mm, gira despacio (180°/s, antes 360°/s: el giro duraba un cuarto de segundo) y vuelve a salir. Una raya roja en el frente de la manija gira con ella: de costado con fuego, hacia arriba apagada. La llama baja de a poco (0,7 s) en vez de desaparecer y el siseo del gas se corta más rápido. Al apagarla, "Fuego apagado" junto a la perilla 3 s. Todo esto en los dos modos: confirma lo que hizo el jugador, no le dice qué hacer. | `StoveKnob.pushDepth`, `turnSpeed`, `CreatePointer`, `ShowConfirm`; `PotFX.UpdateFlameLevel` |
+| Cómo cubrir | Al agarrar la bolsa, el rollo de film o una tira cortada aparece una tarjeta con los pasos del movimiento: el actual grande y resaltado (con el % al deslizar la bolsa o tirar del film), los hechos en verde y los que faltan en gris. Bolsa: acercarse a su mano, poner la boca en la punta de sus dedos, deslizar hasta la muñeca sin soltar. Film: sostener el rollo, tomar la solapa con la otra mano, alejar esa mano hasta que se corte, apoyar la tira a lo largo y soltar. El texto cambia con controles ("botón lateral", "suelta el botón") o manos ("pellizca", "abre los dedos"). Flechas amarillas animadas muestran el movimiento: de sus dedos a la muñeca (bolsa), hacia afuera del rollo (film) y de la muñeca a los dedos con la tira cerca de su mano. La tarjeta va sobre su mano si el jugador está a menos de 1,3 m de ella; si no, sobre el objeto. Se ve en los dos modos (explica la interfaz); "Primero termina de enfriar" y "No le des la vuelta" (errores que se califican) solo en modo guiado. El círculo junto a sus dedos sigue, sin su etiqueta (la tarjeta la reemplaza). | `CoverHowTo` (nuevo, con `GuideArrow`); `CoverItem.IsHeld`, `NearHand`, `SlideProgress`, `TryGetHandLine`; `FilmRoll.TryGetPull`, `Pulling`; `HoldHint.Show` sin palabras |
+
+**Probado en Play** (editor sin visor, estados forzados por código y mano
+simulada de `SimpleGrab`): compila sin errores. Pausa abierta en modo
+evaluación: se ve "Continuar" como principal y los dos secundarios abajo.
+Perilla: raya roja de costado con fuego; al apagarla gira hacia arriba y
+sale "Fuego apagado" dentro de su tarjeta. Bolsa en la mano derecha
+(control simulado): pasos 1 y 2 con el texto de control, círculo en sus
+dedos y flechas de los dedos a la muñeca. Film: rollo en la mano izquierda
+y la otra mano como mano real; la tarjeta pasó por los pasos 2 (pellizcar
+la solapa), 3 (con "23 %" al tirar) y 4 (tira cortada en la mano).
+**No se probó:** la flecha del paso 4 del film (la tira cortada se soltaba
+de la mano simulada), el deslizado completo de la bolsa con la tarjeta, la
+llama apagándose vista con la olla encima, ni nada en el Quest.

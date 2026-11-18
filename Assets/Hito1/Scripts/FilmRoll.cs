@@ -50,6 +50,45 @@ namespace SojaExiles
             return waiting;
         }
 
+        // Para la tarjeta de como sacar tiras (CoverHowTo).
+        public bool IsHeld
+        {
+            get { return grabbable != null && grabbable.IsHeld; }
+        }
+
+        public Rigidbody Body
+        {
+            get { return body; }
+        }
+
+        // La otra mano ya tomo el borde y esta tirando.
+        public bool Pulling
+        {
+            get { return IsHeld && strip != null && !strip.Torn && strip.IsHeld; }
+        }
+
+        // Borde del rollo, hacia donde se tira (hacia afuera del rollo) y
+        // cuanto falta para cortar (0 a 1). False sin borde esperando ni tira.
+        public bool TryGetPull(out Vector3 edge, out Vector3 outward, out float fraction)
+        {
+            edge = outward = Vector3.zero;
+            fraction = 0f;
+            if (!IsHeld || strip == null || strip.Torn)
+            {
+                return false;
+            }
+
+            Vector3 end = strip.transform.position;
+            edge = EdgePoint(end);
+            Vector3 center = transform.TransformPoint(axisCenter);
+            Vector3 radial = Vector3.ProjectOnPlane(edge - center, Axis);
+            outward = strip.IsHeld && (end - edge).sqrMagnitude > 1e-4f
+                ? (end - edge).normalized
+                : radial.sqrMagnitude > 1e-6f ? radial.normalized : Vector3.up;
+            fraction = strip.IsHeld ? Mathf.Clamp01(Vector3.Distance(edge, end) / cutLength) : 0f;
+            return true;
+        }
+
         private void Start()
         {
             body = GetComponent<Rigidbody>();

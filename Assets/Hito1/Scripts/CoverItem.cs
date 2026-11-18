@@ -63,6 +63,52 @@ namespace SojaExiles
         private float[] triangleAt;
         private int shownTriangles = -1;
 
+        // Para la tarjeta de como ponerla (CoverHowTo).
+        public bool IsHeld
+        {
+            get { return !used && grabbable != null && grabbable.IsHeld; }
+        }
+
+        public bool Sliding
+        {
+            get { return sliding; }
+        }
+
+        // Avance del deslizado (0 = dedos, 1 = queda puesta).
+        public float SlideProgress
+        {
+            get { return sliding ? Mathf.Clamp01(progress / completeAt) : 0f; }
+        }
+
+        public Rigidbody Body
+        {
+            get { return body; }
+        }
+
+        // La boca de la bolsa ya esta cerca de sus dedos (se puede empezar).
+        public bool NearHand
+        {
+            get
+            {
+                return Patient(out Transform hand)
+                    && Vector3.Distance(Mouth(), Fingertip(hand)) < offerDistance;
+            }
+        }
+
+        // Punta de sus dedos y muneca de la mano quemada.
+        public bool TryGetHandLine(out Vector3 tip, out Vector3 wrist)
+        {
+            tip = wrist = Vector3.zero;
+            if (!Patient(out Transform hand))
+            {
+                return false;
+            }
+
+            tip = Fingertip(hand);
+            wrist = hand.position;
+            return true;
+        }
+
         private void Start()
         {
             grabbable = GetComponent<Grabbable>();
@@ -159,7 +205,8 @@ namespace SojaExiles
                 arm.ShowHand(1.5f);
             }
 
-            hint.Show(tip, "Pasa la bolsa\npor sus dedos", 0f);
+            // Solo el circulo: los pasos los explica la tarjeta de CoverHowTo.
+            hint.Show(tip, "", 0f);
             if (Time.time >= nextEngage && Vector3.Distance(mouth, tip) < mouthReach)
             {
                 StartSlide(hand, tip);
@@ -246,7 +293,7 @@ namespace SojaExiles
                     Mathf.Clamp(0.08f + 0.15f * speed, 0.08f, 0.3f), 0.05f, 0f, 0.4f);
             }
 
-            hint.Show(wrist, "Deslízala hasta\nla muñeca", progress / completeAt);
+            hint.Show(wrist, "", progress / completeAt);
             if (progress >= completeAt)
             {
                 SimpleGrab.ForceRelease(body);

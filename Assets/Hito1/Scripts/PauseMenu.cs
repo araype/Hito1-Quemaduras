@@ -13,9 +13,9 @@ namespace SojaExiles
     // ventana del simulador de Meta.
     // Pausado: el tiempo se detiene (Time.timeScale = 0: el reloj, el
     // enfriamiento y la quemadura no avanzan) y se pausa el sonido. El panel
-    // tiene siempre las mismas tres opciones: "Continuar", "Volver al
-    // inicio" (al panel de modo guiado o evaluacion, con el mismo caso) y
-    // "Terminar y ver resumen" (si el jugador se quedo atrapado, ve igual
+    // tiene siempre las mismas tres opciones: "Continuar" (la principal),
+    // "Reiniciar" (al panel de modo guiado o evaluacion, con el mismo caso) y
+    // "Terminar" (pasa al resumen: si el jugador se quedo atrapado, ve igual
     // que le falto; vale tambien antes del accidente). No hay pausa en el
     // panel de inicio ni en el resumen. Los botones funcionan sin fisica
     // (TouchButton mira la posicion de la mano si el tiempo esta detenido).
@@ -194,34 +194,36 @@ namespace SojaExiles
             }
         }
 
-        // Siempre las mismas tres opciones: continuar, volver al inicio
-        // (elegir modo guiado o evaluacion, con el mismo caso) y pasar al
-        // final.
+        // Siempre las mismas tres opciones. "Continuar" es la principal:
+        // grande, arriba y del color de accion. "Reiniciar" (volver a elegir
+        // modo guiado o evaluacion, con el mismo caso) y "Terminar" (pasar al
+        // resumen) quedan abajo, chicas y apagadas, para no invitar a saltarse
+        // la practica. Sin textos chicos de ayuda: en el visor nadie los lee
+        // (pedido tras la prueba en el visor, 2026-11-17).
         private void BuildPanel()
         {
-            Vector2 size = new Vector2(0.5f, 0.4f);
-            const float top = 0.05f;
+            Vector2 size = new Vector2(0.44f, 0.34f);
             panel = VRPanelKit.CreateRoot("PanelPausa", 0.6f, 0.1f);
             RoundedPanel bg = RoundedPanel.Create(panel, "FondoPausa", Vector2.zero, size, 0.002f, 0.04f, 0.0025f,
                 0.02f);
             bg.top = new Color(0.1f, 0.14f, 0.24f, 0.97f);
             bg.bottom = new Color(0.05f, 0.07f, 0.14f, 0.97f);
             bg.Push();
-            VRPanelKit.Text(panel, "<b>Práctica en pausa</b>", new Vector2(0f, top + 0.115f), 0.032f, Color.white,
+            VRPanelKit.Text(panel, "<b>Pausa</b>", new Vector2(0f, 0.145f), 0.042f, Color.white,
                 TextAnchor.UpperCenter, TextAlignment.Center);
-            VRPanelKit.Text(panel, "El reloj y la quemadura están detenidos.", new Vector2(0f, top + 0.06f), 0.018f,
-                new Color(0.8f, 0.85f, 0.93f), TextAnchor.UpperCenter, TextAlignment.Center);
-            VRPanelKit.RoundedButton(panel, "Continuar", new Vector2(-0.115f, top - 0.03f), new Vector2(0.21f, 0.08f),
-                new Color(0.22f, 0.48f, 0.95f), Resume);
-            VRPanelKit.RoundedButton(panel, "Volver al inicio", new Vector2(0.115f, top - 0.03f),
-                new Vector2(0.21f, 0.08f), new Color(0.45f, 0.3f, 0.62f), Restart);
-            // Lo que falte cuenta como paso no hecho en el resumen.
-            VRPanelKit.RoundedButton(panel, "Terminar y ver resumen", new Vector2(0f, top - 0.13f),
-                new Vector2(0.44f, 0.08f), new Color(0.2f, 0.55f, 0.45f), FinishNow);
+            VRPanelKit.Text(panel, "El tiempo está detenido", new Vector2(0f, 0.09f), 0.022f,
+                VRPanelKit.CardHintColor, TextAnchor.UpperCenter, TextAlignment.Center);
 
-            VRPanelKit.Text(panel, "Volver al inicio: elegir modo guiado o evaluación otra vez.\nApunta y aprieta el gatillo o haz la pinza. Mantener B/Y: continuar.",
-                new Vector2(0f, -size.y * 0.5f + 0.055f), 0.014f, new Color(0.6f, 0.66f, 0.76f), TextAnchor.UpperCenter,
-                TextAlignment.Center);
+            VRPanelKit.RoundedButton(panel, "Continuar", new Vector2(0f, -0.005f), new Vector2(0.36f, 0.11f),
+                new Color(0.22f, 0.5f, 0.98f), Resume);
+
+            // Secundarias: relleno gris azulado, sin brillo ni borde de color.
+            Color muted = new Color(0.2f, 0.24f, 0.32f);
+            Mute(VRPanelKit.RoundedButton(panel, "Reiniciar", new Vector2(-0.095f, -0.115f),
+                new Vector2(0.18f, 0.068f), muted, Restart));
+            // Lo que falte cuenta como paso no hecho en el resumen.
+            Mute(VRPanelKit.RoundedButton(panel, "Terminar", new Vector2(0.095f, -0.115f),
+                new Vector2(0.18f, 0.068f), muted, FinishNow));
             PanelFollow.Add(panel, 0.6f, 0.1f, size);
 
             // Recien abierto, la mano puede estar justo donde aparece: igual
@@ -230,6 +232,23 @@ namespace SojaExiles
             {
                 button.armDelay = 0.4f;
             }
+        }
+
+        // Boton secundario: sin el brillo ni el borde celeste a morado de los
+        // botones principales.
+        private static void Mute(TouchButton button)
+        {
+            RoundedPanel rounded = button != null ? button.GetComponentInChildren<RoundedPanel>() : null;
+            if (rounded == null)
+            {
+                return;
+            }
+
+            Color edge = new Color(0.45f, 0.5f, 0.6f, 0.6f);
+            rounded.borderLeft = edge;
+            rounded.borderRight = edge;
+            rounded.glowStrength = 0.08f;
+            rounded.Push();
         }
     }
 }

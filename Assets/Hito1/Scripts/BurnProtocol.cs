@@ -65,7 +65,7 @@ namespace SojaExiles
         [Tooltip("Ya se llamo, se cubrio y falta abrigarla: segundos que espera la manta (modo guiado y evaluacion).")]
         public float blanketGraceSecondsGuided = 60f;
         public float blanketGraceSeconds = 20f;
-        [Tooltip("Modo evaluacion: segundos reales desde el accidente hasta que la practica termina sola (0 sin limite). En modo guiado no hay limite: para no quedarse atrapado esta 'Terminar y ver resumen' en el menu de pausa.")]
+        [Tooltip("Modo evaluacion: segundos reales desde el accidente hasta que la practica termina sola (0 sin limite). En modo guiado no hay limite: para no quedarse atrapado esta 'Terminar' en el menu de pausa.")]
         public float evaluationTimeLimit = 600f;
 
         // Por que termino antes de completar todo: "Menu", "Tiempo" o null.

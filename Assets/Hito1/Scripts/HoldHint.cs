@@ -60,9 +60,11 @@ namespace SojaExiles
             }
 
             Vector3 toHead = head != null ? (head.position - at).normalized : Vector3.up;
-            if (!label.gameObject.activeSelf)
+            // Sin palabras, solo el circulo (la tarjeta de CoverHowTo explica).
+            bool withLabel = !string.IsNullOrEmpty(words);
+            if (label.gameObject.activeSelf != withLabel)
             {
-                label.gameObject.SetActive(true);
+                label.gameObject.SetActive(withLabel);
             }
 
             if (text.text != words)

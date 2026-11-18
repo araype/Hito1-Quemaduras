@@ -128,11 +128,13 @@ namespace SojaExiles
         public void SetBurner(bool on)
         {
             BurnerOn = on;
-            if (flameRenderer != null)
+            if (flameRenderer != null && on)
             {
-                flameRenderer.enabled = on;
+                flameRenderer.enabled = true;
             }
 
+            // Al apagar, la llama baja de a poco en Update (antes desaparecia
+            // de golpe y, tapada por la olla, no se notaba).
             Debug.Log("[PotFX] Quemador " + (on ? "encendido" : "apagado"));
         }
 
@@ -191,7 +193,8 @@ namespace SojaExiles
                 boil.volume = Mathf.MoveTowards(boil.volume, Spilled ? 0f : boilVolume * heat, Time.deltaTime);
             }
 
-            Hito1FX.FadeLoop(gas, BurnerOn ? gasVolume : 0f, 2f);
+            Hito1FX.FadeLoop(gas, BurnerOn ? gasVolume : 0f, BurnerOn ? 2f : 4f);
+            UpdateFlameLevel();
 
             if (steamSystem != null)
             {
@@ -207,6 +210,29 @@ namespace SojaExiles
                 flameRenderer.SetPropertyBlock(flameBlock);
             }
         }
+
+        // Las lenguas de la llama se achican hacia el quemador al apagar
+        // (la perilla tarda medio segundo en girar) y crecen al prender.
+        private void UpdateFlameLevel()
+        {
+            if (flameRenderer == null)
+            {
+                return;
+            }
+
+            float target = BurnerOn ? 1f : 0f;
+            float speed = BurnerOn ? 3f : 1.4f;
+            flameLevel = Mathf.MoveTowards(flameLevel, target, speed * Time.deltaTime);
+            float xz = Mathf.Lerp(0.8f, 1f, flameLevel);
+            flameRenderer.transform.localScale = new Vector3(xz, Mathf.Max(0.001f, flameLevel), xz);
+            bool visible = flameLevel > 0.01f;
+            if (flameRenderer.enabled != visible)
+            {
+                flameRenderer.enabled = visible;
+            }
+        }
+
+        private float flameLevel = 1f;
 
         private bool LocalColliderBounds(out Bounds bounds)
         {
@@ -504,6 +530,7 @@ namespace SojaExiles
 
             flameRenderer = renderer;
             flameRenderer.enabled = BurnerOn;
+            flameLevel = BurnerOn ? 1f : 0f;
             flameBlock = new MaterialPropertyBlock();
         }
 

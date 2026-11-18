@@ -124,6 +124,12 @@ namespace SojaExiles
                 burn.gameObject.AddComponent<EmergencyCall>().burnSequence = burn;
             }
 
+            // Como mover las manos con la bolsa y el film.
+            if (Object.FindObjectOfType<CoverHowTo>() == null)
+            {
+                burn.gameObject.AddComponent<CoverHowTo>();
+            }
+
             // Pausa y reinicio en cualquier momento.
             if (Object.FindObjectOfType<PauseMenu>() == null)
             {
