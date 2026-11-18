@@ -188,6 +188,9 @@ namespace SojaExiles
         public static readonly Vector3[] SimPosition = new Vector3[2];
         public static readonly Quaternion[] SimRotation = { Quaternion.identity, Quaternion.identity };
         public static readonly bool[] SimPressed = new bool[2];
+        // La mano simulada hace de control (UsesController; el joystick
+        // simulado esta en HandTeleport.SimStick).
+        public static readonly bool[] SimController = new bool[2];
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ClearSimulatedHands()
@@ -196,6 +199,7 @@ namespace SojaExiles
             {
                 SimActive[i] = false;
                 SimPressed[i] = false;
+                SimController[i] = false;
             }
         }
 
@@ -249,6 +253,35 @@ namespace SojaExiles
         // Punta del indice de la mano visible (con manos o con controles, que
         // tambien dibujan una mano). Con eso se aprietan los botones de los
         // paneles, como se tocaria una pantalla.
+        // Esa mano es un control (no hand tracking). Con control los botones
+        // se aprietan acercando el control y con el gatillo, sin "tocar con
+        // el dedo" (el indice esta sobre el gatillo).
+        public static bool UsesController(bool leftHand)
+        {
+            for (int i = 0; i < Instances.Count; i++)
+            {
+                SimpleGrab grab = Instances[i];
+                Hand hand = leftHand ? grab.left : grab.right;
+#if UNITY_EDITOR
+                if (grab.Simulated(hand))
+                {
+                    return SimController[leftHand ? 0 : 1];
+                }
+#endif
+                if (hand.trackedHand != null && hand.trackedHand.IsTracked)
+                {
+                    return false;
+                }
+
+                if (OVRInput.IsControllerConnected(hand.controller))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static bool TryGetFingertip(bool leftHand, out Vector3 position)
         {
             for (int i = 0; i < Instances.Count; i++)

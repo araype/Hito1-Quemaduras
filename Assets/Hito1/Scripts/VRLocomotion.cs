@@ -13,7 +13,11 @@ namespace SojaExiles
     //  - Solo manos (sin controles), con cualquier mano libre: pulgar con el
     //    dedo medio = caminar hacia donde esta esa mano; pulgar con el anular
     //    = girar a saltos hacia ese lado (ver ReadInput). El indice queda
-    //    libre para agarrar. Los gestos de una mano se ignoran mientras esa
+    //    libre para agarrar. Desde 2026-11-17 se leen con las articulaciones
+    //    de la mano que se ve (HandTeleport.TryFingerGaps), van a
+    //    'gestureWalkSpeed' (mas lento, para acomodarse cerca de los muebles),
+    //    no cuentan con la punta del indice cerca de un boton y muestran una
+    //    flecha en el piso hacia donde se camina. Los gestos de una mano se ignoran mientras esa
     //    mano sostiene algo, esta cerrada o pellizca con el indice, para no
     //    caminar sin querer al agarrar.
     //
@@ -40,6 +44,12 @@ namespace SojaExiles
         public float snapTurnThreshold = 0.7f;
         public bool enableHandPinchLocomotion = true;
         public float pinchStrengthThreshold = 0.8f;
+        [Tooltip("Velocidad al caminar con el gesto de la mano (m/s): lenta, para acomodarse; lejos se salta.")]
+        public float gestureWalkSpeed = 0.6f;
+        [Tooltip("Pulgar tocando el dedo: distancia entre las puntas, en largos de palma.")]
+        public float gestureTouchGap = 0.3f;
+        [Tooltip("El indice tiene que estar a mas de esto del pulgar (en largos de palma): si no, es la pinza de agarrar o de los botones.")]
+        public float gestureIndexFree = 0.45f;
 
         [Header("Capsula")]
         public float capsuleRadius = 0.2f;
@@ -135,7 +145,10 @@ namespace SojaExiles
             // Rampa corta: sin ella la velocidad cambia de golpe al arrancar y
             // al frenar. Larga marea; por eso son solo unas decimas.
             float acceleration = walkSpeed / Mathf.Max(0.001f, moveRampSeconds);
-            horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, move * walkSpeed, acceleration * Time.deltaTime);
+            bool byGesture = moveInput.sqrMagnitude <= 0f && gestureDirection.sqrMagnitude > 0f;
+            horizontalVelocity = Vector3.MoveTowards(horizontalVelocity,
+                move * (byGesture ? gestureWalkSpeed : walkSpeed), acceleration * Time.deltaTime);
+            UpdateWalkArrow(byGesture ? gestureDirection : Vector3.zero);
 
             Vector3 velocity = horizontalVelocity;
             velocity.y = verticalVelocity;
@@ -578,7 +591,10 @@ namespace SojaExiles
             Vector2 rightStick = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.RTouch);
 
             moveInput = ApplyDeadZone(leftStick);
-            turnInput = Mathf.Abs(rightStick.x) > deadZone ? rightStick.x : 0f;
+            // Joystick derecho hacia adelante es el teletransporte
+            // (HandTeleport): no gira mientras se apunta.
+            turnInput = Mathf.Abs(rightStick.x) > deadZone && rightStick.y < 0.5f && !HandTeleport.Busy(false)
+                ? rightStick.x : 0f;
 
             gestureDirection = Vector3.zero;
             bool handsActive = (OVRInput.GetActiveController() & OVRInput.Controller.Hands) != 0;
@@ -605,7 +621,7 @@ namespace SojaExiles
             {
                 bool isLeft = h == 0;
                 OVRHand hand = isLeft ? leftHand : rightHand;
-                Gesture g = IsGestureHandFree(hand, isLeft) ? ReadGesture(hand) : Gesture.None;
+                Gesture g = IsGestureHandFree(hand, isLeft) ? ReadGesture(hand, isLeft) : Gesture.None;
                 bool walk = Held(walkGestureSince, h, g == Gesture.Walk, now);
                 bool turn = Held(turnGestureSince, h, g == Gesture.Turn, now);
 
@@ -622,6 +638,53 @@ namespace SojaExiles
         }
 
         private enum Gesture { None, Walk, Turn }
+
+        // Flecha en el piso, delante de los pies, mientras se camina con el
+        // gesto: confirma que se reconocio y hacia donde va.
+        private LineRenderer walkArrow;
+
+        private void UpdateWalkArrow(Vector3 direction)
+        {
+            if (direction.sqrMagnitude < 1e-4f)
+            {
+                if (walkArrow != null)
+                {
+                    walkArrow.enabled = false;
+                }
+
+                return;
+            }
+
+            if (walkArrow == null)
+            {
+                GameObject go = new GameObject("FlechaCaminar");
+                go.AddComponent<NoAutoCollider>();
+                walkArrow = go.AddComponent<LineRenderer>();
+                walkArrow.sharedMaterial = new Material(Shader.Find("Sprites/Default")) { renderQueue = 3002 };
+                walkArrow.useWorldSpace = true;
+                walkArrow.widthMultiplier = 0.03f;
+                walkArrow.numCapVertices = 3;
+                walkArrow.numCornerVertices = 2;
+                walkArrow.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                walkArrow.receiveShadows = false;
+                Color c = new Color(0.35f, 0.9f, 0.6f, 0.85f);
+                walkArrow.startColor = c;
+                walkArrow.endColor = c;
+                walkArrow.positionCount = 3;
+            }
+
+            Transform head = GetHead();
+            Vector3 feet = head != null ? new Vector3(head.position.x, transform.position.y, head.position.z)
+                : transform.position;
+            Vector3 dir = direction.normalized;
+            Vector3 side = Vector3.Cross(Vector3.up, dir);
+            Vector3 tip = feet + dir * 0.6f + Vector3.up * 0.02f;
+            Vector3 back = tip - dir * 0.14f;
+            walkArrow.SetPosition(0, back - side * 0.12f);
+            walkArrow.SetPosition(1, tip);
+            walkArrow.SetPosition(2, back + side * 0.12f);
+            walkArrow.enabled = true;
+        }
 
         [Tooltip("Segundos que hay que mantener un gesto de caminar o girar antes de que cuente.")]
         public float gestureHoldSeconds = 0.2f;
@@ -647,11 +710,38 @@ namespace SojaExiles
             return now - since[h] >= gestureHoldSeconds;
         }
 
-        // Un solo dedo junto al pulgar, con los demas abiertos.
-        private Gesture ReadGesture(OVRHand hand)
+        // Un solo dedo junto al pulgar, con el indice libre. Primero con las
+        // articulaciones de la mano que se ve; si no estan, con la fuerza de
+        // pinza de OVRHand (lo de antes).
+        private Gesture ReadGesture(OVRHand hand, bool isLeft)
         {
             if (!hand.IsDataHighConfidence)
             {
+                return Gesture.None;
+            }
+
+            if (HandTeleport.TryFingerGaps(isLeft, out float indexGap, out float middleGap, out float ringGap,
+                out Vector3 indexTip))
+            {
+                // Con el dedo por apretar un boton, nada: es la pinza de los
+                // botones, no caminar.
+                if (indexGap < gestureIndexFree || HandTeleport.NearAnyButton(indexTip))
+                {
+                    return Gesture.None;
+                }
+
+                // El anular queda cerca del medio: cuenta el que esta
+                // claramente mas cerca del pulgar.
+                if (middleGap < gestureTouchGap && middleGap < ringGap * 0.7f)
+                {
+                    return Gesture.Walk;
+                }
+
+                if (ringGap < gestureTouchGap && ringGap < middleGap * 0.7f)
+                {
+                    return Gesture.Turn;
+                }
+
                 return Gesture.None;
             }
 

@@ -41,13 +41,24 @@ namespace SojaExiles
     // mano por cerrada (puno) y el arco no salia casi nunca en el visor.
     // VRLocomotion ignora los gestos de caminar de una mano mientras apunta
     // (Busy) y SimpleGrab no agarra con ella (Aiming).
+    //
+    // Con controles (2026-11-17), el estandar de Meta: empujar el joystick
+    // derecho hacia adelante saca el arco desde el control; soltarlo salta;
+    // tirarlo hacia atras cancela. El joystick izquierdo sigue caminando y
+    // el derecho a los costados gira. Con control se puede saltar aunque esa
+    // mano sostenga algo (no hay conflicto de gestos).
+    //
+    // Si el arco cae sobre un mueble (el meson, una mesa) o en el piso
+    // pegado a el, se aterriza en el piso libre mas cercano al pie del
+    // mueble, del lado del jugador: apuntar al celular lleva frente al meson.
+    // Asi tambien sirve para acomodarse cerca (desde 'minDistance', 0,4 m).
     [RequireComponent(typeof(VRLocomotion))]
     public class HandTeleport : MonoBehaviour
     {
         [Tooltip("Distancia maxima del salto (m, en horizontal).")]
         public float maxDistance = 5f;
         [Tooltip("Distancia minima del salto (m): mas cerca se camina.")]
-        public float minDistance = 0.7f;
+        public float minDistance = 0.4f;
         [Tooltip("Segundos que hay que mantener la L antes de que salga el arco.")]
         public float holdSeconds = 0.15f;
         [Tooltip("Velocidad inicial del arco (m/s): mas alta, llega mas lejos.")]
@@ -77,6 +88,12 @@ namespace SojaExiles
         [Tooltip("Muestra el texto de ayuda junto a la mano durante los primeros saltos.")]
         public int hintTeleports = 3;
         public float cooldownSeconds = 0.6f;
+        [Tooltip("Hasta que distancia (m) se busca piso libre al pie de un mueble o junto a un obstaculo.")]
+        public float nudgeRadius = 0.6f;
+        [Tooltip("Joystick hacia adelante a partir de esto (0-1) saca el arco con control.")]
+        public float stickAim = 0.6f;
+        [Tooltip("Joystick por debajo de esto (0-1): suelto, salta.")]
+        public float stickRelease = 0.25f;
 
         public Color validColor = new Color(0.25f, 0.7f, 1f, 0.95f);
         public Color invalidColor = new Color(0.62f, 0.64f, 0.7f, 0.6f);
@@ -119,6 +136,9 @@ namespace SojaExiles
         // visor.
         public static readonly bool[] SimAim = new bool[2];
         public static readonly bool[] SimPinch = new bool[2];
+        // Joystick de la mano simulada cuando hace de control
+        // (SimpleGrab.SimController).
+        public static readonly Vector2[] SimStick = new Vector2[2];
 #endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -129,6 +149,7 @@ namespace SojaExiles
 #if UNITY_EDITOR
                 SimAim[i] = false;
                 SimPinch[i] = false;
+                SimStick[i] = Vector2.zero;
 #endif
                 busyUntil[i] = -1f;
                 aiming[i] = false;
@@ -152,6 +173,7 @@ namespace SojaExiles
             public float lostSince = -1f;
             public bool active;
             public bool armed;
+            public bool controller;
             public float progress;
             public bool hasTarget;
             public bool targetValid;
@@ -179,6 +201,7 @@ namespace SojaExiles
         private Oculus.Interaction.HandVisual[] visuals = new Oculus.Interaction.HandVisual[0];
         private TouchButton[] buttons = new TouchButton[0];
         private Renderer blink;
+        private OVRCameraRig rig;
         private AudioClip jumpClip;
 
         // Meta del tutorial (circulo en el piso con un haz de luz).
@@ -337,6 +360,10 @@ namespace SojaExiles
                 nextLookup = Time.unscaledTime + 2f;
                 visuals = FindObjectsOfType<Oculus.Interaction.HandVisual>();
                 buttons = FindObjectsOfType<TouchButton>();
+                if (rig == null)
+                {
+                    rig = FindObjectOfType<OVRCameraRig>();
+                }
             }
 
             for (int i = 0; i < 2; i++)
@@ -352,6 +379,20 @@ namespace SojaExiles
             int side = isLeft ? 0 : 1;
             float now = Time.unscaledTime;
             Transform head = VRPanelKit.Head();
+
+            bool controller = SimpleGrab.UsesController(isLeft);
+            if (controller != state.controller)
+            {
+                Deactivate(state);
+                state.controller = controller;
+            }
+
+            if (controller)
+            {
+                aiming[side] = false;
+                UpdateController(isLeft, state, head, now);
+                return;
+            }
 
             bool pose = false;
             float thumb = 1f;
@@ -575,7 +616,7 @@ namespace SojaExiles
         // paciente.
         private bool CanTeleport(bool isLeft)
         {
-            if (PauseMenu.Paused || locomotion == null || !locomotion.enabled)
+            if (!CanTeleportAtAll())
             {
                 return false;
             }
@@ -599,6 +640,116 @@ namespace SojaExiles
             }
 
             return !HoldingPatient(true) && !HoldingPatient(false);
+        }
+
+        private bool CanTeleportAtAll()
+        {
+            return !PauseMenu.Paused && locomotion != null && locomotion.enabled && !HoldingPatient(true)
+                && !HoldingPatient(false);
+        }
+
+        // ---------------- control ----------------
+
+        // Joystick derecho: adelante saca el arco desde el control, soltarlo
+        // salta, atras cancela. El izquierdo es para caminar.
+        private void UpdateController(bool isLeft, HandState state, Transform head, float now)
+        {
+            int side = isLeft ? 0 : 1;
+            Vector2 stick = Vector2.zero;
+            Vector3 origin = Vector3.zero, direction = Vector3.forward;
+            bool tracked = false;
+            if (!isLeft && head != null && CanTeleportAtAll())
+            {
+                tracked = ReadController(out stick, out origin, out direction);
+            }
+
+            if (!tracked)
+            {
+                if (state.active)
+                {
+                    Deactivate(state);
+                }
+
+                return;
+            }
+
+            if (!state.active)
+            {
+                bool pushed = stick.y >= stickAim && Mathf.Abs(stick.x) < stick.y;
+                if (!pushed)
+                {
+                    state.poseSince = -1f;
+                    Show(state, false);
+                    return;
+                }
+
+                if (state.poseSince < 0f)
+                {
+                    state.poseSince = now;
+                }
+
+                if (now - state.poseSince < 0.05f)
+                {
+                    return;
+                }
+
+                state.active = true;
+                state.armed = true;
+                state.history.Clear();
+            }
+
+            busyUntil[side] = now + BusyAfterSeconds;
+            if (stick.y < -0.5f)
+            {
+                // Hacia atras: cancelar.
+                Deactivate(state);
+                return;
+            }
+
+            if (stick.magnitude < stickRelease)
+            {
+                bool ok = state.hasTarget && state.targetValid;
+                Vector3 point = state.target;
+                Deactivate(state);
+                if (ok && now >= nextTeleport && !jumping)
+                {
+                    nextTeleport = now + cooldownSeconds;
+                    StartCoroutine(Jump(point));
+                }
+
+                return;
+            }
+
+            state.hasTarget = TraceArc(origin, direction, head, out state.target, out state.targetValid);
+            state.progress = 0f;
+            state.hintAnchor = origin;
+            Draw(state, head);
+        }
+
+        private bool ReadController(out Vector2 stick, out Vector3 origin, out Vector3 direction)
+        {
+            stick = Vector2.zero;
+            origin = Vector3.zero;
+            direction = Vector3.forward;
+#if UNITY_EDITOR
+            if (SimpleGrab.SimActive[1])
+            {
+                stick = SimStick[1];
+                origin = SimpleGrab.SimPosition[1];
+                direction = SimpleGrab.SimRotation[1] * Vector3.forward;
+                return true;
+            }
+#endif
+            if (rig == null || rig.rightHandAnchor == null
+                || !OVRInput.IsControllerConnected(OVRInput.Controller.RTouch))
+            {
+                return false;
+            }
+
+            stick = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.RTouch);
+            origin = rig.rightHandAnchor.position;
+            direction = rig.rightHandAnchor.forward;
+            return true;
         }
 
         private static bool HoldingPatient(bool leftHand)
@@ -734,6 +885,46 @@ namespace SojaExiles
             return Vector3.Distance(p, a + ab * t);
         }
 
+        // Distancia de la punta del pulgar a la del indice, el medio y el
+        // anular, en largos de palma, con la mano que se ve. La usa
+        // VRLocomotion para los gestos de caminar (mas fiable que la "fuerza
+        // de pinza" de OVRHand, que en el Quest Pro no los reconocia).
+        public static bool TryFingerGaps(bool isLeft, out float index, out float middle, out float ring,
+            out Vector3 indexTip)
+        {
+            index = middle = ring = 10f;
+            indexTip = Vector3.zero;
+            IHand hand = Instance != null ? Instance.VisibleHand(isLeft) : null;
+            if (hand == null
+                || !hand.GetJointPose(HandJointId.HandWristRoot, out Pose wrist)
+                || !hand.GetJointPose(HandJointId.HandMiddle1, out Pose middle1)
+                || !hand.GetJointPose(HandJointId.HandThumbTip, out Pose thumbTip)
+                || !hand.GetJointPose(HandJointId.HandIndexTip, out Pose iTip)
+                || !hand.GetJointPose(HandJointId.HandMiddleTip, out Pose mTip)
+                || !hand.GetJointPose(HandJointId.HandRingTip, out Pose rTip))
+            {
+                return false;
+            }
+
+            float palm = Vector3.Distance(wrist.position, middle1.position);
+            if (palm < 0.03f)
+            {
+                return false;
+            }
+
+            index = Vector3.Distance(thumbTip.position, iTip.position) / palm;
+            middle = Vector3.Distance(thumbTip.position, mTip.position) / palm;
+            ring = Vector3.Distance(thumbTip.position, rTip.position) / palm;
+            indexTip = iTip.position;
+            return true;
+        }
+
+        // Hay un boton a menos de 'buttonClearance' de ese punto.
+        public static bool NearAnyButton(Vector3 point)
+        {
+            return Instance != null && Instance.NearButton(point);
+        }
+
         private IHand VisibleHand(bool isLeft)
         {
             Handedness side = isLeft ? Handedness.Left : Handedness.Right;
@@ -776,6 +967,14 @@ namespace SojaExiles
                     arcPoints.Add(hit.point);
                     point = hit.point;
                     valid = ValidTarget(hit, head);
+                    if (!valid && Nudge(hit, head, out Vector3 floor))
+                    {
+                        // El arco baja hasta el piso elegido.
+                        arcPoints.Add(floor);
+                        point = floor;
+                        valid = true;
+                    }
+
                     return true;
                 }
 
@@ -830,6 +1029,86 @@ namespace SojaExiles
             Rigidbody rb = col.attachedRigidbody;
             return rb != null && (rb.transform.IsChildOf(transform) || SimpleGrab.IsHeldObject(rb)
                 || SimpleGrab.IsHandBody(rb));
+        }
+
+        // Piso libre cerca de donde cayo el arco, empezando por el lado del
+        // jugador: al pie del meson si se apunto a su cubierta, o un poco
+        // separado de un mueble si se apunto al piso pegado a el. No si el
+        // arco pego en algo lejos del piso (un estante alto, el techo) ni en
+        // la paciente.
+        private bool Nudge(RaycastHit hit, Transform head, out Vector3 floor)
+        {
+            floor = Vector3.zero;
+            if (head == null || hit.point.y > transform.position.y + 1.3f
+                || hit.collider.GetComponentInParent<PatientBody>() != null
+                || (PatientPhysics.Current != null && hit.collider.transform.IsChildOf(PatientPhysics.Current.transform)))
+            {
+                return false;
+            }
+
+            Vector3 basePoint = new Vector3(hit.point.x, transform.position.y, hit.point.z);
+            Vector3 toPlayer = head.position - basePoint;
+            toPlayer.y = 0f;
+            if (toPlayer.sqrMagnitude < 1e-4f)
+            {
+                return false;
+            }
+
+            toPlayer.Normalize();
+            for (float r = 0.1f; r <= nudgeRadius + 1e-3f; r += 0.15f)
+            {
+                foreach (float a in NudgeAngles)
+                {
+                    Vector3 candidate = basePoint + Quaternion.Euler(0f, a, 0f) * toPlayer * r;
+                    if (LandingAt(candidate, head, out Vector3 landing) && LineOfSight(hit.point, landing))
+                    {
+                        floor = landing;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static readonly float[] NudgeAngles = { 0f, 25f, -25f, 50f, -50f, 80f, -80f };
+
+        // Sin una pared entre donde cayo el arco y el piso elegido (para no
+        // aparecer del otro lado de un tabique).
+        private bool LineOfSight(Vector3 from, Vector3 floor)
+        {
+            Vector3 a = from + Vector3.up * 0.05f;
+            Vector3 b = floor + Vector3.up * 0.3f;
+            Vector3 delta = b - a;
+            float length = delta.magnitude;
+            if (length < 1e-3f)
+            {
+                return true;
+            }
+
+            foreach (RaycastHit h in Physics.RaycastAll(a, delta / length, length, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (!IsPlayer(h.collider) && Mathf.Abs(h.normal.y) < 0.5f
+                    && (h.rigidbody == null || h.rigidbody.isKinematic))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool LandingAt(Vector3 floorPoint, Transform head, out Vector3 landing)
+        {
+            landing = Vector3.zero;
+            Vector3 from = floorPoint + Vector3.up * 1.5f;
+            if (!Cast(from, floorPoint + Vector3.down * 0.5f, out RaycastHit hit) || !ValidTarget(hit, head))
+            {
+                return false;
+            }
+
+            landing = hit.point;
+            return true;
         }
 
         // True si se puede saltar a ese punto del piso (lo usa el tutorial
@@ -1015,9 +1294,9 @@ namespace SojaExiles
                 return;
             }
 
-            hint.text = ok
-                ? "Junta el pulgar al índice para ir"
-                : "Apunta a un lugar libre del piso";
+            hint.text = !ok ? "Apunta a un lugar libre del piso"
+                : state.controller ? "Suelta el joystick para ir"
+                : "Junta el pulgar al índice para ir";
             hint.color = ok ? new Color(0.85f, 0.95f, 1f) : new Color(0.85f, 0.85f, 0.88f);
             Vector3 p = state.hintAnchor + Vector3.up * 0.07f;
             hint.transform.SetPositionAndRotation(p, Quaternion.LookRotation(p - head.position, Vector3.up));

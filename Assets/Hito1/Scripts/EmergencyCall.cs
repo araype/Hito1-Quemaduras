@@ -757,9 +757,18 @@ namespace SojaExiles
             // Primero al borde del meson, frente al jugador: antes se buscaba
             // alrededor del grifo y solia quedar al fondo, y en el visor solo
             // se alcanzaba saliendo del limite del cuarto real.
+            // Desde 2026-11-17, primero sobre el meson encima del cajon del
+            // film y la bolsa: frente al cajon hay piso libre para pararse.
+            // Antes solia quedar en una esquina a la que no se llegaba ni
+            // saltando (prueba en el Quest Pro).
             Vector3 spot = Vector3.zero;
-            bool found = FrontOfPlayer(counter, out Vector3 near)
-                && PropKit.FindSurfaceSpot(near, counter, 0f, 0.1f, 0.09f, taken, stove, stoveRadius, out spot);
+            bool found = AboveSuppliesDrawer(counter, taken, stove, stoveRadius, out spot);
+            if (!found)
+            {
+                found = FrontOfPlayer(counter, out Vector3 near)
+                    && PropKit.FindSurfaceSpot(near, counter, 0f, 0.1f, 0.09f, taken, stove, stoveRadius, out spot);
+            }
+
             if (!found && !PropKit.FindSurfaceSpot(tap.transform.position, counter, 0.35f, 1.1f, 0.09f, taken, stove,
                 stoveRadius, out spot))
             {
@@ -804,6 +813,62 @@ namespace SojaExiles
         // cercano al jugador (fuera de la cocina y del lavadero).
         [Tooltip("Distancia del celular al borde del meson (m).")]
         public float phoneEdgeInset = 0.12f;
+
+        // En el meson, sobre el cajon donde estan el film y la bolsa, a unos
+        // centimetros del borde de adelante.
+        private bool AboveSuppliesDrawer(float counter, List<Vector3> taken, Vector3 stove, float stoveRadius,
+            out Vector3 spot)
+        {
+            spot = Vector3.zero;
+            foreach (StorageFront front in StorageFront.All)
+            {
+                if (front == null || front.kind != StorageFront.Kind.Drawer)
+                {
+                    continue;
+                }
+
+                bool supplies = false;
+                foreach (Rigidbody rb in FindObjectsOfType<Rigidbody>())
+                {
+                    if ((rb.GetComponent<FilmRoll>() != null || rb.name.StartsWith("BolsaPlastica")) && front.Holds(rb))
+                    {
+                        supplies = true;
+                        break;
+                    }
+                }
+
+                if (!supplies)
+                {
+                    continue;
+                }
+
+                Vector3 outward = PropKit.Flat(front.Outward).normalized;
+                Vector3 handle = front.HandlePosition;
+                // Del tirador hacia adentro del meson hasta encontrar su
+                // borde, y unos centimetros mas.
+                Vector3 probe = new Vector3(handle.x, counter + 0.05f, handle.z) + outward * 0.15f;
+                float edge = -1f;
+                foreach (RaycastHit hit in Physics.RaycastAll(probe + Vector3.down * 0.07f, -outward, 0.8f, ~0,
+                    QueryTriggerInteraction.Ignore))
+                {
+                    if (hit.rigidbody == null && (edge < 0f || hit.distance < edge))
+                    {
+                        edge = hit.distance;
+                    }
+                }
+
+                Vector3 center = edge >= 0f
+                    ? probe - outward * (edge + phoneEdgeInset + 0.04f)
+                    : new Vector3(handle.x, counter, handle.z) - outward * 0.2f;
+                center.y = counter;
+                if (PropKit.FindSurfaceSpot(center, counter, 0f, 0.25f, 0.09f, taken, stove, stoveRadius, out spot))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         private bool FrontOfPlayer(float counter, out Vector3 point)
         {

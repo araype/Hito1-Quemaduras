@@ -42,6 +42,17 @@ el Quest con las manos:
   mano y volver; el paso 1 del tutorial. Si la pose no se reconoce, ajustar
   `HandTeleport.extendedRatio` (1,1), `curledRatio` (1,0),
   `thumbOpenRatio` (0,55), `thumbClosedRatio` (0,3) y `maxPalmUp` (0,5).
+- **Controles** (`QUEMADURA_INMERSION.md`, sección 39): salto con el
+  joystick derecho (adelante, apuntar, soltar; atrás cancela) sin girar
+  sin querer; botones acercando el control y apretando el gatillo; paso 1
+  del tutorial con control.
+- **Ajustes finos con las manos:** apuntar al mesón deja al pie del mueble;
+  caminar con pulgar y medio (flecha verde, 0,6 m/s) y girar con pulgar y
+  anular, sin que se active al apretar botones ni al agarrar. Si no se
+  reconocen, ajustar `VRLocomotion.gestureTouchGap` (0,3) y
+  `gestureIndexFree` (0,45).
+- **Celular** encima del cajón del film: que se alcance parado frente al
+  mueble.
 - **Pausa de la muñeca:** que no se esconda al acercar el dedo
   (`WristPauseButton.approachDistance` 18 cm, `approachHold` 2 s).
 - **Agarrar con la mano entera, como un objeto real** (pedido el
@@ -55,8 +66,6 @@ el Quest con las manos:
   `fetchSpeed`. Ver en el registro "[PatientDialog] Ir por la manta".
 - **Resumen:** leerlo en el visor; que se lea a 0,62 m y que "Anterior" /
   "Siguiente" se toquen con el dedo.
-- **Gestos de caminar:** medio = caminar hacia la mano, anular = girar; que
-  no se activen al agarrar, al cerrar la mano ni al señalar para saltar.
 - **`PlaySpaceFit`:** que el límite quede frente al mesón y que el
   celular, la palanca del caño, el cajón y la tía se alcancen sin salir del
   límite. Revisar en el registro "[PlaySpaceFit] Area de juego acomodada";

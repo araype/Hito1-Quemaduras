@@ -1319,3 +1319,33 @@ simulada no tiene dedos: `extendedRatio` 1,1, `curledRatio` 1,0,
 `thumbOpenRatio` 0,55, `thumbClosedRatio` 0,3, `maxPalmUp` 0,5 están
 estimados), que `SimpleGrab` no agarre con la L ni el botón de la muñeca
 con la oclusión real. Nada en el Quest.
+
+## 39. Controles, ajustes finos y celular alcanzable (`main`, 2026-11-17)
+
+Tras la sección 38: con controles el paso 1 del tutorial no se podía pasar
+(el salto era solo con las manos), con las manos no se llegaba a rincones
+entre muebles (el salto pedía piso libre a 0,7 m o más), el celular quedaba
+en una esquina a la que no se llegaba y apretar botones con el control
+costaba.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Salto con controles | El estándar de Meta: joystick derecho hacia adelante saca el arco desde el control ("Suelta el joystick para ir"); soltarlo salta; hacia atrás cancela. El izquierdo sigue caminando y el derecho a los costados gira (no gira mientras se apunta). Con control se puede saltar aunque esa mano sostenga algo. | `HandTeleport.UpdateController`, `stickAim`, `stickRelease`; `VRLocomotion.ReadInput` |
+| Al pie de los muebles | Si el arco cae sobre un mueble (el mesón, una mesa) o en el piso pegado a él, se aterriza en el piso libre más cercano del lado del jugador (hasta 0,6 m), sin atravesar paredes; el arco baja hasta ese anillo. Apuntar al celular deja frente al mesón, a ~0,5 m de él. Saltos desde 0,4 m (antes 0,7) para acomodarse. | `HandTeleport.Nudge`, `nudgeRadius`, `minDistance` |
+| Caminar con gestos | Se mantienen (pulgar con el medio = caminar hacia la mano; con el anular = girar), pero ahora se leen con las articulaciones de la mano que se ve, no con la "fuerza de pinza" de `OVRHand`. No cuentan si el índice está cerca del pulgar (es la pinza de botones y de agarrar) ni con la punta del índice a menos de 15 cm de un botón. Van a 0,6 m/s (para ajustes finos; lejos se salta) y muestran una flecha verde en el piso. | `VRLocomotion.ReadGesture`, `gestureWalkSpeed`, `gestureTouchGap`, `gestureIndexFree`, `UpdateWalkArrow`; `HandTeleport.TryFingerGaps` |
+| Celular | Sobre el mesón, encima del cajón del film y la bolsa, a unos 16 cm del borde (frente a ese cajón hay piso libre). Si no hay cajón, lo de antes. | `EmergencyCall.AboveSuppliesDrawer` |
+| Botones con control | Acercar el control al botón y apretar el gatillo o el botón lateral. Antes, cerca del panel el rayo se apagaba pero el toque solo contaba en una franja muy fina: no se iluminaba nada y el gatillo no hacía nada. Ahora con control el toque es generoso (2 cm alrededor, de 6 cm delante a 5 cm detrás) y el rayo solo se apaga si de verdad está tocando. Con control no se "atraviesa" el botón (el índice está en el gatillo). Con las manos no cambia. | `TouchButton.TipTouching`, `ButtonPointer.FingerOnPanel`, `SimpleGrab.UsesController` |
+| Tutorial | Paso 1 con control: "Empuja el joystick derecho hacia adelante, apunta al círculo con el control y suéltalo". Voz `guia_teleport` regrabada con las dos formas. Meta alcanzada a 0,6 m (antes 0,5). | `BurnGuide.MoveHint` |
+
+**Probado en Play** (editor sin visor; mano simulada como control con
+`SimpleGrab.SimController` y `HandTeleport.SimStick`): compila sin errores.
+"Modo guiado" se eligió con el control a 4,5 cm delante del botón y el
+gatillo (con la regla anterior no contaba). Paso 1 del tutorial: joystick
+adelante hacia la meta, arco válido con "Suelta el joystick para ir", al
+soltar saltó y pasó a "Tutorial 2 de 4". Apuntando al celular sobre el
+mesón: aterrizaje en el piso frente al mueble, a 0,49 m del celular, y se
+agarró con el gatillo. La L con la mano sigue saltando. El celular quedó en
+(-1,11; 1,02; 7,43), sobre el cajón del film (tirador en z 7,30).
+**No se probó:** los gestos de caminar (la mano simulada no tiene dedos y
+`OVRInput` no informa manos sin visor), el joystick real ni que no gire al
+apuntar, ni nada en el Quest.

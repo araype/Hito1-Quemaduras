@@ -699,7 +699,7 @@ namespace SojaExiles
 
                 // 3. Caminar y entregar.
                 ShowCard("Tutorial 3 de 4", "Llévale la taza a tu tía",
-                    "Acércate caminando o con el joystick izquierdo. Sin controles, para ir lejos: haz la L con la mano libre y junta el pulgar al índice.");
+                    "Acércate caminando o con el joystick izquierdo; para ir lejos, joystick derecho adelante y suéltalo. Sin controles: haz la L con la mano libre y junta el pulgar al índice.");
                 StopNarration();
                 Say("guia_caminar");
                 Transform herHand = patient != null && patient.IsReady ? patient.HandBone(false) : null;
@@ -778,7 +778,8 @@ namespace SojaExiles
 
         // Ensena a moverse lejos: un circulo verde en el piso a unos 2 m, en
         // un lugar al que se puede saltar. Con las manos se llega con el
-        // teletransporte (la L); con controles, caminando o con el joystick.
+        // teletransporte (la L); con controles, con el joystick derecho
+        // (adelante y soltar) o caminando con el izquierdo.
         // Cualquier salto cuenta (ya lo aprendio). Si no lo hace en
         // 'moveTutorialTimeout' segundos sigue igual.
         private IEnumerator MoveTutorial()
@@ -813,7 +814,7 @@ namespace SojaExiles
 
                 Vector3 flat = head.position - goal;
                 flat.y = 0f;
-                if (HandTeleport.Count > startCount || flat.magnitude < 0.5f)
+                if (HandTeleport.Count > startCount || flat.magnitude < 0.6f)
                 {
                     reached = true;
                     break;
@@ -833,7 +834,7 @@ namespace SojaExiles
             if (reached && !Over)
             {
                 ShowCard("Tutorial 1 de 4", "¡Así te mueves!",
-                    "Úsalo para ir lejos, por ejemplo a la sala. Lo cercano, camina.");
+                    "Úsalo para ir lejos o para acomodarte junto a un mueble: apunta a él y llegas a su lado.");
                 yield return new WaitForSeconds(2.5f);
             }
 
@@ -842,11 +843,12 @@ namespace SojaExiles
 
         private static string MoveHint()
         {
-            bool hands = SimpleGrab.TryGetPalm(true, out Vector3 _, out Vector3 _, out Vector3 _)
-                || SimpleGrab.TryGetPalm(false, out Vector3 _, out Vector3 _, out Vector3 _);
+            bool controllers = SimpleGrab.UsesController(true) || SimpleGrab.UsesController(false);
+            bool hands = !controllers && (SimpleGrab.TryGetPalm(true, out Vector3 _, out Vector3 _, out Vector3 _)
+                || SimpleGrab.TryGetPalm(false, out Vector3 _, out Vector3 _, out Vector3 _));
             return hands
                 ? "Haz una L con la mano: índice y pulgar estirados, los otros dedos doblados. Apunta al círculo y junta el pulgar al índice para saltar."
-                : "Camina o usa el joystick izquierdo hasta el círculo.";
+                : "Empuja el joystick derecho hacia adelante, apunta al círculo con el control y suéltalo para saltar. También puedes caminar con el joystick izquierdo.";
         }
 
         // Punto del piso a 1,4-2,6 m al que se puede saltar, con piso libre

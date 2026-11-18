@@ -156,6 +156,9 @@ namespace SojaExiles
         }
 
         // La punta del indice de esa mano esta sobre algun boton.
+        // Con control, solo si de verdad esta tocando un boton (TipTouching):
+        // antes, cerca del panel el rayo se apagaba sin que el toque contara
+        // y el gatillo no apretaba nada.
         private static bool FingerOnPanel(bool left)
         {
             if (!SimpleGrab.TryGetFingertip(left, out Vector3 tip))
@@ -163,9 +166,10 @@ namespace SojaExiles
                 return false;
             }
 
+            bool controller = SimpleGrab.UsesController(left);
             foreach (TouchButton button in TouchButton.Active)
             {
-                if (button != null && button.Near(tip))
+                if (button != null && (controller ? button.TipTouching(tip, true) : button.Near(tip)))
                 {
                     return true;
                 }

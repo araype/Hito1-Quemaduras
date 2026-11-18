@@ -195,7 +195,9 @@ namespace SojaExiles
             int result = -1;
             for (int h = 0; h < 2; h++)
             {
-                if (!SimpleGrab.TryGetFingertip(h == 0, out Vector3 tip)
+                // Con control el indice esta en el gatillo: no se "atraviesa"
+                // el boton, se acerca el control y se aprieta.
+                if (SimpleGrab.UsesController(h == 0) || !SimpleGrab.TryGetFingertip(h == 0, out Vector3 tip)
                     || (SimpleGrab.TryGetHand(h == 0, out Vector3 _, out bool holding) && holding)
                     || !PointInside(tip, 0.008f, false))
                 {
@@ -317,22 +319,31 @@ namespace SojaExiles
         {
             for (int h = 0; h < 2; h++)
             {
-                if (!SimpleGrab.TryGetFingertip(h == 0, out Vector3 p) || !PointInside(p, 0.008f))
-                {
-                    continue;
-                }
-
-                // Mas fino que la caja (que es honda para la esfera de la
-                // mano): el dedo cuenta desde 3,5 cm delante del boton hasta
-                // 3 cm detras (si lo atraviesa).
-                float depth = Vector3.Dot(p - transform.position, transform.forward);
-                if (depth >= -0.035f && depth <= 0.03f)
+                if (SimpleGrab.TryGetFingertip(h == 0, out Vector3 p) && TipTouching(p, SimpleGrab.UsesController(h == 0)))
                 {
                     return h;
                 }
             }
 
             return -1;
+        }
+
+        // La punta del dedo (o del control) cuenta como tocando el boton.
+        // Mas fino que la caja (que es honda para la esfera de la mano): el
+        // dedo cuenta desde 3,5 cm delante del boton hasta 3 cm detras. Con
+        // control, mas generoso (2 cm alrededor, de 6 cm delante a 5 cm
+        // detras): con el control en la mano no se ve bien donde queda la
+        // punta del dedo, y antes al acercarlo el rayo se apagaba sin que el
+        // toque contara, y el gatillo no hacia nada (2026-11-17).
+        public bool TipTouching(Vector3 tip, bool controller)
+        {
+            if (box == null || !isActiveAndEnabled || !PointInside(tip, controller ? 0.02f : 0.008f, false))
+            {
+                return false;
+            }
+
+            float depth = Vector3.Dot(tip - transform.position, transform.forward);
+            return controller ? depth >= -0.06f && depth <= 0.05f : depth >= -0.035f && depth <= 0.03f;
         }
 
         // Sin fisica: el punto de agarre de cada mano dentro de la caja del
