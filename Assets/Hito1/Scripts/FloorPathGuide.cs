@@ -3,9 +3,9 @@ using UnityEngine;
 
 namespace SojaExiles
 {
-    // Flechas tenues en el piso que marcan el camino desde el jugador hasta
-    // un objetivo (en el modo guiado: hasta la manta del sofa de la sala y,
-    // con la manta en la mano, de vuelta a la paciente). El camino es el
+    // Flechas azules en el piso que marcan el camino desde el jugador hasta
+    // un objetivo (en el tutorial: hasta el circulo de moverse, la taza y
+    // la tia; antes tambien hasta la manta, que se quito). El camino es el
     // mismo por el que PlayArea deja caminar al jugador, asi lo que se ve
     // coincide con por donde se puede ir. Una onda de brillo recorre las
     // flechas hacia el objetivo para que se lea la direccion de un vistazo.
@@ -40,6 +40,7 @@ namespace SojaExiles
         private bool hasTarget;
         private Vector3 target;
         private float reach;
+        private float minPath = -1f;
         private float nextRecompute;
         private Vector3 lastFrom;
         private Vector3 lastTarget;
@@ -58,9 +59,12 @@ namespace SojaExiles
         }
 
         // Muestra el camino hasta 'point'; 'stopAt' es a cuanto del objetivo
-        // termina (la manta esta sobre el sofa, no se puede llegar encima).
-        public void SetTarget(Vector3 point, float stopAt)
+        // termina (un mueble o una persona: no se puede llegar encima).
+        // 'showFrom': largo minimo del camino para mostrar flechas (negativo:
+        // 'hideWithin'); el tutorial lo baja para metas cercanas.
+        public void SetTarget(Vector3 point, float stopAt, float showFrom = -1f)
         {
+            minPath = showFrom >= 0f ? showFrom : hideWithin;
             if (!hasTarget || (point - target).sqrMagnitude > 0.09f)
             {
                 nextRecompute = 0f;
@@ -167,7 +171,7 @@ namespace SojaExiles
                 total += Vector3.Distance(corners[i - 1], corners[i]);
             }
 
-            if (total < hideWithin)
+            if (total < (minPath >= 0f ? minPath : hideWithin))
             {
                 SetVisible(0);
                 return;

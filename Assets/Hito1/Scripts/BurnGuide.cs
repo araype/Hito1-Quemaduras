@@ -109,7 +109,7 @@ namespace SojaExiles
             AbrirAgua,
             LlevarAlAgua,
             Anillo,
-            Abrigar,
+            Abrigar,    // ya no se usa (se quito la manta, 2026-11-19)
             Llamar,
             Esperar,
             Cubrir,
@@ -141,11 +141,6 @@ namespace SojaExiles
             new StepInfo { id = StepId.LlevarAlAgua, title = "Lleva su mano al chorro",
                 hint = "Tómala del antebrazo, no de la mano quemada, y llévala al chorro: ella la pondrá bajo el agua.",
                 clip = "guia_llevar" },
-            // La manta esta en el sofa de la sala: hay que ir a buscarla y ella
-            // se queda con la mano bajo el agua.
-            new StepInfo { id = StepId.Abrigar, title = "Abrígala con una manta",
-                hint = "El agua fría también le enfría el cuerpo. La manta está doblada en el sofá de la sala: sigue las flechas del piso y suéltala sobre sus hombros. Para ir lejos con las manos, haz la L con la mano libre, apunta al piso y junta el pulgar al índice.",
-                clip = "guia_abrigo" },
             // Mientras se enfria (antes ese minuto quedaba sin nada que hacer).
             // Sin celular en la escena se decide al final con el panel
             // (ver ShowStep).
@@ -237,15 +232,8 @@ namespace SojaExiles
         private bool coolingStarted;
         private float coolingStartTime;
 
-        // Busqueda de la manta (ver UpdateBlanketGuidance).
-        [Tooltip("Modo evaluacion: segundos desde que empieza a enfriar hasta que la tia comenta que tiene frio, si el jugador no fue a la sala.")]
-        public float blanketHintDelay = 20f;
-        [Tooltip("Modo evaluacion: segundos entre la primera y la segunda vez que lo comenta.")]
-        public float blanketHintRepeat = 45f;
+        // Flechas azules del piso (tutorial: ver PointPath).
         private FloorPathGuide pathGuide;
-        private BlanketItem blanketItem;
-        private int blanketHintsSaid;
-        private float nextBlanketHint;
 
         // Donde estaba la taza del tutorial (respaldo para dejarla).
         private Vector3 mugSpot;
@@ -643,6 +631,57 @@ namespace SojaExiles
         }
 
         // ---------------- tutorial ----------------
+        //
+        // Cinco pasos, siempre en el mismo orden y con la misma forma de
+        // tarjeta ("Tutorial N de 5", la accion y como hacerla):
+        //   1. Tus controles: que hace cada control (o cada gesto) antes de
+        //      pedir nada.
+        //   2. Moverse: flechas azules en el piso hasta un circulo azul.
+        //   3. Agarrar la taza del meson (flechas azules si esta lejos).
+        //   4. Llevarsela a la tia (flechas azules hasta ella).
+        //   5. Abrir y cerrar la pausa.
+        // Con controles, cada indicacion dice que control usar (izquierdo o
+        // derecho); con las manos, que gesto. Si el jugador cambia de
+        // controles a manos (o al reves) la tarjeta se actualiza sola.
+        // Cuando se le pide ir a algun lado se usan las mismas flechas azules
+        // del piso (FloorPathGuide) que el resto de la practica.
+
+        private const int TutorialSteps = 5;
+
+        [Tooltip("Segundos que se muestra la tarjeta de los controles al empezar el tutorial.")]
+        public float controlsCardSeconds = 12f;
+
+        private static string TutorialTitle(int step)
+        {
+            return "Tutorial " + step + " de " + TutorialSteps;
+        }
+
+        // True si juega con las manos (sin controles).
+        private static bool UsingHands()
+        {
+            bool controllers = SimpleGrab.UsesController(true) || SimpleGrab.UsesController(false);
+            return !controllers && (SimpleGrab.TryGetPalm(true, out Vector3 _, out Vector3 _, out Vector3 _)
+                || SimpleGrab.TryGetPalm(false, out Vector3 _, out Vector3 _, out Vector3 _));
+        }
+
+        // Flechas azules del piso hasta 'point' (se esconden solas cerca).
+        private void PointPath(Vector3 point, float stopAt, float showFrom = 0.8f)
+        {
+            if (pathGuide == null)
+            {
+                pathGuide = FloorPathGuide.Ensure();
+            }
+
+            pathGuide.SetTarget(point, stopAt, showFrom);
+        }
+
+        private void HidePath()
+        {
+            if (pathGuide != null)
+            {
+                pathGuide.Hide();
+            }
+        }
 
         private IEnumerator Tutorial()
         {
@@ -667,18 +706,24 @@ namespace SojaExiles
 
             yield return new WaitForSeconds(2.2f);
 
-            // 1. Moverse: con las manos, el teletransporte (HandTeleport);
+            // 1. Que hace cada control (o cada gesto).
+            if (!Over)
+            {
+                yield return ControlsTutorial();
+            }
+
+            // 2. Moverse: con las manos, el teletransporte (HandTeleport);
             // sin practicarlo, nadie lo descubre solo.
             if (!Over)
             {
                 yield return MoveTutorial();
             }
 
-            // 2. Agarrar.
+            // 3. Agarrar.
             if (mug != null && !Over)
             {
-                ShowCard("Tutorial 2 de 4", "Agarra la taza del mesón",
-                    "Acerca la mano y aprieta el botón lateral del control, o junta el pulgar y el índice.");
+                string shownHint = null;
+                StopNarration();
                 Say("guia_agarrar");
                 HighlightFollow(mug.transform, 0.07f);
                 float t = 0f;
@@ -686,6 +731,14 @@ namespace SojaExiles
                 while ((grabTimeout <= 0f || t < grabTimeout) && !SimpleGrab.IsHeldObject(mug) && !Over)
                 {
                     t += Time.deltaTime;
+                    string hint = GrabHint();
+                    if (hint != shownHint)
+                    {
+                        shownHint = hint;
+                        ShowCard(TutorialTitle(3), "Agarra la taza del mesón", hint);
+                    }
+
+                    PointPath(mug.worldCenterOfMass, 0.6f);
                     if (t >= remind && !Speaking)
                     {
                         remind = t + tutorialReminder;
@@ -696,10 +749,10 @@ namespace SojaExiles
                 }
 
                 ClearHighlights();
+                HidePath();
 
-                // 3. Caminar y entregar.
-                ShowCard("Tutorial 3 de 4", "Llévale la taza a tu tía",
-                    "Acércate caminando o con el joystick izquierdo; para ir lejos, joystick derecho adelante y suéltalo. Sin controles: haz la L con la mano libre y junta el pulgar al índice.");
+                // 4. Caminar y entregar.
+                shownHint = null;
                 StopNarration();
                 Say("guia_caminar");
                 Transform herHand = patient != null && patient.IsReady ? patient.HandBone(false) : null;
@@ -714,6 +767,13 @@ namespace SojaExiles
                 while ((bringTimeout <= 0f || t < bringTimeout) && mug != null && !Over)
                 {
                     t += Time.deltaTime;
+                    string hint = DeliverHint();
+                    if (hint != shownHint)
+                    {
+                        shownHint = hint;
+                        ShowCard(TutorialTitle(4), "Llévale la taza a tu tía", hint);
+                    }
+
                     if (t >= remind && !Speaking)
                     {
                         remind = t + tutorialReminder;
@@ -724,6 +784,17 @@ namespace SojaExiles
                     {
                         delivered = true;
                         break;
+                    }
+
+                    // Flechas hasta ella mientras lleva la taza; si la
+                    // solto, las flechas vuelven a la taza.
+                    if (patient != null && SimpleGrab.IsHeldObject(mug))
+                    {
+                        PointPath(patient.transform.position, 0.9f);
+                    }
+                    else
+                    {
+                        PointPath(mug.worldCenterOfMass, 0.6f);
                     }
 
                     // Al acercarse con la taza en la mano, ella deja de
@@ -738,6 +809,7 @@ namespace SojaExiles
                 }
 
                 ClearHighlights();
+                HidePath();
                 HideCard();
                 if (delivered && arm != null)
                 {
@@ -753,13 +825,14 @@ namespace SojaExiles
                 yield return new WaitForSeconds(1.8f);
             }
 
-            // 4. Pausa: un jugador nuevo no sabe que existe ni como se abre.
+            // 5. Pausa: un jugador nuevo no sabe que existe ni como se abre.
             if (!Over)
             {
                 yield return PauseTutorial();
             }
 
             StopNarration();
+            HidePath();
             if (Over)
             {
                 // Termino desde el menu de pausa antes del accidente.
@@ -776,10 +849,56 @@ namespace SojaExiles
             }
         }
 
-        // Ensena a moverse lejos: un circulo verde en el piso a unos 2 m, en
-        // un lugar al que se puede saltar. Con las manos se llega con el
-        // teletransporte (la L); con controles, con el joystick derecho
-        // (adelante y soltar) o caminando con el izquierdo.
+        // Tarjeta con lo que hace cada control (o cada gesto), antes de
+        // pedirle nada. Se queda abierta 'controlsCardSeconds' (sin achicarse)
+        // para que alcance a leerla.
+        private IEnumerator ControlsTutorial()
+        {
+            StopNarration();
+            Say("guia_controles");
+            string shownHint = null;
+            float t = 0f;
+            while (!Over && (t < controlsCardSeconds || Speaking))
+            {
+                t += Time.deltaTime;
+                bool hands = UsingHands();
+                string hint = ControlsHint(hands);
+                if (hint != shownHint)
+                {
+                    shownHint = hint;
+                    ShowCard(TutorialTitle(1), hands ? "Así se juega con las manos" : "Así se usan los controles", hint);
+                }
+
+                ExpandCard(1f);
+                yield return null;
+            }
+
+            HideCard();
+        }
+
+        private static string ControlsHint(bool hands)
+        {
+            return hands
+                ? "<b>Agarrar:</b> junta el pulgar y el índice (o cierra la mano).\n"
+                    + "<b>Ir lejos:</b> haz una L con la mano, apunta al piso y junta el pulgar al índice.\n"
+                    + "<b>Caminar:</b> camina en tu cuarto, o junta el pulgar con el dedo medio.\n"
+                    + "<b>Girar:</b> junta el pulgar con el anular.\n"
+                    + "<b>Pausa:</b> mira la palma de tu mano izquierda."
+                : "<b>CONTROL IZQUIERDO</b>\n"
+                    + "· Joystick: caminar.\n"
+                    + "· Botón lateral o gatillo: agarrar.\n"
+                    + "· Botón de menú (tres rayas): pausa.\n"
+                    + "<b>CONTROL DERECHO</b>\n"
+                    + "· Joystick adelante, apunta y suelta: saltar lejos.\n"
+                    + "· Joystick a los lados: girar.\n"
+                    + "· Botón lateral o gatillo: agarrar.\n"
+                    + "· Gatillo: apuntar y tocar botones.";
+        }
+
+        // Ensena a moverse lejos: flechas azules en el piso hasta un circulo
+        // azul a unos 2 m, en un lugar al que se puede saltar. Con las manos
+        // se llega con el teletransporte (la L); con controles, con el
+        // joystick derecho (adelante y soltar) o caminando con el izquierdo.
         // Cualquier salto cuenta (ya lo aprendio). Si no lo hace en
         // 'moveTutorialTimeout' segundos sigue igual.
         private IEnumerator MoveTutorial()
@@ -796,7 +915,9 @@ namespace SojaExiles
             HandTeleport.ForceHints = true;
             int startCount = HandTeleport.Count;
             StopNarration();
-            Say("guia_teleport");
+            // La voz vieja (guia_teleport) dice "circulo verde": hasta
+            // grabar guia_moverse, la tarjeta va sin voz.
+            Say("guia_moverse");
 
             string shownHint = null;
             float t = 0f;
@@ -809,9 +930,10 @@ namespace SojaExiles
                 if (hint != shownHint)
                 {
                     shownHint = hint;
-                    ShowCard("Tutorial 1 de 4", "Ve hasta el círculo verde", hint);
+                    ShowCard(TutorialTitle(2), "Sigue las flechas azules hasta el círculo", hint);
                 }
 
+                PointPath(goal, 0f, 0.6f);
                 Vector3 flat = head.position - goal;
                 flat.y = 0f;
                 if (HandTeleport.Count > startCount || flat.magnitude < 0.6f)
@@ -823,18 +945,19 @@ namespace SojaExiles
                 if (t >= remind && !Speaking)
                 {
                     remind = t + tutorialReminder + 15f;
-                    Say("guia_teleport");
+                    Say("guia_moverse");
                 }
 
                 yield return null;
             }
 
             teleport.HideGoal();
+            HidePath();
             HandTeleport.ForceHints = false;
             if (reached && !Over)
             {
-                ShowCard("Tutorial 1 de 4", "¡Así te mueves!",
-                    "Úsalo para ir lejos o para acomodarte junto a un mueble: apunta a él y llegas a su lado.");
+                ShowCard(TutorialTitle(2), "¡Así te mueves!",
+                    "Cuando debas ir a algún lugar, sigue las flechas azules del piso. Si apuntas a un mueble, llegas a su lado.");
                 yield return new WaitForSeconds(2.5f);
             }
 
@@ -843,12 +966,26 @@ namespace SojaExiles
 
         private static string MoveHint()
         {
-            bool controllers = SimpleGrab.UsesController(true) || SimpleGrab.UsesController(false);
-            bool hands = !controllers && (SimpleGrab.TryGetPalm(true, out Vector3 _, out Vector3 _, out Vector3 _)
-                || SimpleGrab.TryGetPalm(false, out Vector3 _, out Vector3 _, out Vector3 _));
-            return hands
+            return UsingHands()
                 ? "Haz una L con la mano: índice y pulgar estirados, los otros dedos doblados. Apunta al círculo y junta el pulgar al índice para saltar."
-                : "Empuja el joystick derecho hacia adelante, apunta al círculo con el control y suéltalo para saltar. También puedes caminar con el joystick izquierdo.";
+                : "<b>Control derecho:</b> empuja el joystick hacia adelante, apunta al círculo con el control y suéltalo para saltar.\n"
+                    + "<b>Control izquierdo:</b> si prefieres, camina con su joystick.";
+        }
+
+        private static string GrabHint()
+        {
+            return UsingHands()
+                ? "Acerca la mano a la taza y junta el pulgar y el índice (o cierra la mano). Mantén el gesto: si abres la mano, la sueltas."
+                : "<b>Cualquier control:</b> acerca la mano a la taza y mantén apretado el botón lateral (o el gatillo). Si lo sueltas, la taza se cae.";
+        }
+
+        private static string DeliverHint()
+        {
+            return UsingHands()
+                ? "Sin abrir la mano, sigue las flechas azules hasta ella: camina en tu cuarto o, con la mano libre, haz la L, apunta cerca de ella y junta el pulgar al índice."
+                : "Sigue las flechas azules hasta ella sin soltar el botón.\n"
+                    + "<b>Control izquierdo:</b> camina con el joystick.\n"
+                    + "<b>Control derecho:</b> joystick adelante, apunta y suelta para saltar; a los lados para girar.";
         }
 
         // Punto del piso a 1,4-2,6 m al que se puede saltar, con piso libre
@@ -924,7 +1061,7 @@ namespace SojaExiles
                 if (hint != shownHint)
                 {
                     shownHint = hint;
-                    ShowCard("Tutorial 4 de 4", "Abre la pausa", hint);
+                    ShowCard(TutorialTitle(5), "Abre la pausa", hint);
                 }
 
                 WristPauseButton wrist = WristPauseButton.Instance;
@@ -946,7 +1083,7 @@ namespace SojaExiles
             ClearHighlights();
             if (PauseMenu.Paused)
             {
-                ShowCard("Tutorial 4 de 4", "Así se pausa la práctica",
+                ShowCard(TutorialTitle(5), "Así se pausa la práctica",
                     "El reloj se detiene. Toca \"Continuar\" para seguir.");
                 while (PauseMenu.Paused && !Over)
                 {
@@ -963,7 +1100,8 @@ namespace SojaExiles
             bool hands = SimpleGrab.TryGetPalm(true, out Vector3 _, out Vector3 _, out Vector3 _);
             return hands
                 ? "Mira la palma de tu mano izquierda: aparece \"Pausa\" en la muñeca. Tócalo con la otra mano y haz la pinza."
-                : "Aprieta el botón de menú del control izquierdo (el de tres rayas), o mantén B o Y un segundo.";
+                : "<b>Control izquierdo:</b> aprieta el botón de menú (el de tres rayas).\n"
+                    + "<b>Cualquier control:</b> también puedes mantener B o Y un segundo.";
         }
 
         private bool NearPatient(Vector3 point)
@@ -1069,8 +1207,6 @@ namespace SojaExiles
                 case StepId.Anillo:
                     return ring == null || ring.Removed || ring.Stuck
                         || (protocol != null && protocol.IsDone(BurnProtocol.Step.Anillo));
-                case StepId.Abrigar:
-                    return protocol == null || protocol.IsDone(BurnProtocol.Step.Abrigar);
                 case StepId.Esperar:
                     return cooled;
                 case StepId.Cubrir:
@@ -1168,11 +1304,11 @@ namespace SojaExiles
         // con lo que toca:
         //   - Anillo: antes del chorro, por 'ringFocusSeconds'. Despues se
         //     puede sacar bajo el agua (hasta que la mano se hinche).
-        //   - Abrigar, llamar y buscar con que cubrir: durante el
-        //     enfriamiento, en cualquier orden. Abrigar y llamar siguen
-        //     valiendo mientras se cubre y despues.
+        //   - Llamar y buscar con que cubrir: durante el enfriamiento, en
+        //     cualquier orden. Llamar sigue valiendo mientras se cubre y
+        //     despues.
         //   - Cubrir: al terminar de enfriar pasa primero, aunque falte
-        //     llamar o abrigar.
+        //     llamar.
 
         [Tooltip("Segundos que quitar el anillo es el paso principal antes de pasar al chorro (se puede sacar despues, bajo el agua).")]
         public float ringFocusSeconds = 25f;
@@ -1180,14 +1316,14 @@ namespace SojaExiles
 
         private static readonly StepId[] OrderCooling =
         {
-            StepId.ApagarFuego, StepId.AbrirAgua, StepId.Anillo, StepId.LlevarAlAgua, StepId.Abrigar, StepId.Llamar,
+            StepId.ApagarFuego, StepId.AbrirAgua, StepId.Anillo, StepId.LlevarAlAgua, StepId.Llamar,
             StepId.Preparar, StepId.Esperar, StepId.Cubrir
         };
 
         // Ya enfriada: cubrir antes que lo que quedo pendiente.
         private static readonly StepId[] OrderCooled =
         {
-            StepId.ApagarFuego, StepId.AbrirAgua, StepId.LlevarAlAgua, StepId.Cubrir, StepId.Abrigar, StepId.Llamar,
+            StepId.ApagarFuego, StepId.AbrirAgua, StepId.LlevarAlAgua, StepId.Cubrir, StepId.Llamar,
             StepId.Anillo
         };
 
@@ -1212,7 +1348,7 @@ namespace SojaExiles
         // Pasos que se pueden hacer en paralelo con el principal.
         private static bool CanWait(StepId id)
         {
-            return id == StepId.Anillo || id == StepId.Abrigar || id == StepId.Llamar || id == StepId.Preparar;
+            return id == StepId.Anillo || id == StepId.Llamar || id == StepId.Preparar;
         }
 
         private static int IndexOf(StepId id)
@@ -1270,8 +1406,6 @@ namespace SojaExiles
             {
                 case StepId.Anillo:
                     return "quitarle el anillo (también bajo el agua)";
-                case StepId.Abrigar:
-                    return "abrigarla con la manta del sofá";
                 case StepId.Llamar:
                     return EmergencyCall.Instance != null ? "llamar al 106 con el celular" : null;
                 case StepId.Preparar:
@@ -1328,7 +1462,6 @@ namespace SojaExiles
             BurnSequenceManager.BurnState s = burnSequence.CurrentState;
             switch (id)
             {
-                case StepId.Abrigar:
                 case StepId.Esperar:
                     return coolingStarted;
                 case StepId.Cubrir:
@@ -1375,7 +1508,6 @@ namespace SojaExiles
             UpdateNarration();
             UpdateCard();
             UpdateHighlights();
-            UpdateBlanketGuidance();
 
             if (!stepsActive)
             {
@@ -1422,12 +1554,9 @@ namespace SojaExiles
                 currentStep = -2;
             }
 
-            // La tia se quejo del frio y el jugador no esta con ella (por
-            // ejemplo, fue por la manta): tiene un margen para volver antes
-            // de que saque la mano.
-            // Con la manta en la mano ya viene: no se lo interrumpe con la
-            // tarjeta (antes salia mientras traia la manta).
-            if (PatientDialog.WaitingForPlayer && !warnedColdAway && !BlanketHeld())
+            // La tia se quejo del frio y el jugador no esta con ella: tiene
+            // un margen para volver antes de que saque la mano.
+            if (PatientDialog.WaitingForPlayer && !warnedColdAway)
             {
                 warnedColdAway = true;
                 Correct("guia_frio_lejos", "Tu tía se queja de que el agua está muy fría. Vuelve con ella antes de que saque la mano.");
@@ -1491,116 +1620,6 @@ namespace SojaExiles
         }
 
         private int shownCover = -1;
-
-        private bool BlanketHeld()
-        {
-            if (blanketItem == null)
-            {
-                blanketItem = FindObjectOfType<BlanketItem>();
-            }
-
-            Grabbable grab = blanketItem != null ? blanketItem.GetComponent<Grabbable>() : null;
-            return grab != null && grab.IsHeld;
-        }
-
-        // La manta esta en otro cuarto (el sofa de la sala) y costaba
-        // encontrarla. Modo guiado: flechas en el piso hasta ella y, con la
-        // manta en la mano, de vuelta a la paciente. Modo evaluacion: sin
-        // flechas; si el jugador no va a la sala, la tia comenta que tiene
-        // frio y que hay una manta en el sofa (algo que diria cualquiera con
-        // la mano en agua fria; no le dice que hacer).
-        private void UpdateBlanketGuidance()
-        {
-            bool pending = coolingStarted && protocol != null && !protocol.Finished
-                && !protocol.IsDone(BurnProtocol.Step.Abrigar)
-                && burnSequence.CurrentState != BurnSequenceManager.BurnState.Success
-                && !EmergencyCall.InCall && !MedicalDecisionPanel.IsOpen && !PauseMenu.Paused;
-            if (pending && blanketItem == null)
-            {
-                blanketItem = FindObjectOfType<BlanketItem>();
-            }
-
-            if (!pending || blanketItem == null)
-            {
-                if (pathGuide != null)
-                {
-                    pathGuide.Hide();
-                }
-
-                return;
-            }
-
-            Grabbable grab = blanketItem.GetComponent<Grabbable>();
-            bool held = grab != null && grab.IsHeld;
-            Vector3 blanketPosition = blanketItem.transform.position;
-
-            if (guided)
-            {
-                // Paso principal, o pendiente al lado y ya con la manta en la
-                // mano (flechas de vuelta hacia ella).
-                bool onStep = stepsActive && currentStep >= 0 && currentStep < Steps.Length
-                    && ((Steps[currentStep].id == StepId.Abrigar && !currentIsReturn)
-                        || (held && sideSteps.Contains(IndexOf(StepId.Abrigar))));
-                if (!onStep)
-                {
-                    if (pathGuide != null)
-                    {
-                        pathGuide.Hide();
-                    }
-
-                    return;
-                }
-
-                if (pathGuide == null)
-                {
-                    pathGuide = FloorPathGuide.Ensure();
-                }
-
-                if (held && patient != null)
-                {
-                    pathGuide.SetTarget(patient.transform.position, 0.9f);
-                }
-                else
-                {
-                    pathGuide.SetTarget(blanketPosition, 0.9f);
-                }
-
-                return;
-            }
-
-            // Modo evaluacion.
-            if (held || reactions == null || blanketHintsSaid >= 2)
-            {
-                return;
-            }
-
-            float due = blanketHintsSaid == 0 ? coolingStartTime + blanketHintDelay : nextBlanketHint;
-            if (Time.time < due)
-            {
-                return;
-            }
-
-            // Ya esta en la sala o yendo: no hace falta.
-            Transform eye = head != null ? head : VRPanelKit.Head();
-            if (eye != null)
-            {
-                Vector3 d = eye.position - blanketPosition;
-                d.y = 0f;
-                if (d.magnitude < 2.5f)
-                {
-                    return;
-                }
-            }
-
-            if (reactions.IsSpeaking || Speaking)
-            {
-                return;
-            }
-
-            reactions.Say("voz_pide_manta", false);
-            blanketHintsSaid++;
-            nextBlanketHint = Time.time + blanketHintRepeat;
-        }
 
         // Porcentaje de la quemadura cubierto con film (-1 si aun no hay tiras).
         private static int CoverPercent()
@@ -1713,27 +1732,6 @@ namespace SojaExiles
                 case StepId.Anillo:
                     // Sin brillo propio: el anillo ya tiene su punto dorado, y la
                     // esfera de la guia tapaba el anillo y su indicacion.
-                    break;
-                case StepId.Abrigar:
-                    BlanketItem blanket = FindObjectOfType<BlanketItem>();
-                    if (blanket != null)
-                    {
-                        Grabbable held = blanket.GetComponent<Grabbable>();
-                        PatientBody body = held != null && held.IsHeld ? FindObjectOfType<PatientBody>() : null;
-                        if (body != null && body.IsReady && body.Chest != null)
-                        {
-                            // Ya la lleva: donde soltarla (la espalda, bajo la nuca).
-                            points.Add(body.Chest.position - body.TorsoForward * 0.16f + body.TorsoUp * 0.08f);
-                        }
-                        else
-                        {
-                            Renderer rr = blanket.GetComponentInChildren<Renderer>();
-                            points.Add(rr != null ? rr.bounds.center : blanket.transform.position);
-                        }
-
-                        radius = 0.14f;
-                    }
-
                     break;
                 case StepId.Llamar:
                     Transform phone = EmergencyCall.Instance != null ? EmergencyCall.Instance.Phone : null;

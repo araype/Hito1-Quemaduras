@@ -86,9 +86,11 @@ en una emergencia).
 |---|---|---|
 | `guia_bienvenida` | Menú de inicio | Hola. Vas a practicar qué hacer si alguien se quema en la cocina. Elige un modo: guiado, si quieres que te indique cada paso, o evaluación, si prefieres hacerlo solo. Apunta al botón y aprieta el gatillo, o junta el pulgar y el índice. (Cambió el 2026-11-12: los botones ya no se aprietan dejando la mano.) |
 | `guia_intro` | Inicio del tutorial | Estás de visita en la casa de tu tía Rosa. Ella está preparando el almuerzo. |
-| `guia_agarrar` | Tutorial 2 | Para agarrar algo, acerca la mano y aprieta el botón lateral del control, o junta el pulgar y el índice. Agarra la taza del mesón. |
-| `guia_teleport` | Tutorial 1 (moverse) | Ahora ve hasta el círculo verde. Con controles, empuja el joystick derecho hacia adelante, apunta al círculo y suéltalo. Con las manos, haz una ele con el índice y el pulgar, apunta y junta el pulgar al índice. (Nueva, 2026-11-17, Sabina; falta ElevenLabs.) |
-| `guia_caminar` | Tutorial 3 | Para caminar, usa el joystick izquierdo. Llévale la taza a tu tía. |
+| `guia_agarrar` | Tutorial 3 | Para agarrar algo, acerca la mano y aprieta el botón lateral del control, o junta el pulgar y el índice. Agarra la taza del mesón. |
+| `guia_teleport` | Ya no se usa (2026-11-19: dice "círculo verde"; la reemplaza `guia_moverse`) | Ahora ve hasta el círculo verde. Con controles, empuja el joystick derecho hacia adelante, apunta al círculo y suéltalo. Con las manos, haz una ele con el índice y el pulgar, apunta y junta el pulgar al índice. (Nueva, 2026-11-17, Sabina; falta ElevenLabs.) |
+| `guia_controles` | Tutorial 1 (tus controles) | **Falta grabar.** Antes de empezar, mira cómo se usan los controles. Con el control izquierdo caminas, y con el botón de menú pausas. Con el control derecho saltas lejos: empuja el joystick hacia adelante, apunta y suéltalo. Con cualquiera de los dos, agarras con el botón lateral. |
+| `guia_moverse` | Tutorial 2 (moverse) | **Falta grabar.** Ahora sigue las flechas azules hasta el círculo. Con el control derecho, empuja el joystick hacia adelante, apunta al círculo y suéltalo. Con las manos, haz una ele con el índice y el pulgar, apunta y junta el pulgar al índice. |
+| `guia_caminar` | Tutorial 4 | Para caminar, usa el joystick izquierdo. Llévale la taza a tu tía. |
 | `guia_bien` | Fin del tutorial | Muy bien. Ya sabes agarrar y caminar. Quédate cerca de ella. |
 | `guia_accidente` | Accidente (modo guiado) | Se le volcó la olla. Se quemó la mano con agua hirviendo. Mantén la calma: vamos paso a paso. |
 | `guia_evaluacion` | Accidente (modo evaluación) | Se quemó la mano con agua hirviendo. Atiéndela como aprendiste. |
@@ -97,7 +99,7 @@ en una emergencia).
 | `guia_agua` | Paso 2 | Ahora abre el agua fría: toma la palanca del caño y gírala un poco hacia ti. |
 | `guia_llevar` | Paso 3 | Tómala del antebrazo, no de la mano quemada, y llévala hasta el chorro. Suelta su mano cerca del agua y ella la pondrá debajo. |
 | `guia_anillo` | Paso 4 | Quítale el anillo antes de que la mano se hinche. Pellizca el punto dorado con tu mano libre, con el botón lateral o juntando el pulgar y el índice, y deslízalo hacia la punta de su dedo. (**Regrabar**, 2026-11-09: el audio actual todavía dice "mantén apretado".) |
-| `guia_abrigo` | Paso 5 | El agua fría también le enfría el cuerpo. Sal de la cocina hacia la sala: la manta está doblada en el sofá, detrás de la mesa de centro. Sigue las flechas del piso y suéltala sobre sus hombros. (Regrabada el 2026-11-12 con Sabina: ahora dice dónde está la sala.) |
+| `guia_abrigo` | Ya no se usa (2026-11-19: se quitó la manta) | El agua fría también le enfría el cuerpo. Sal de la cocina hacia la sala: la manta está doblada en el sofá, detrás de la mesa de centro. Sigue las flechas del piso y suéltala sobre sus hombros. (Regrabada el 2026-11-12 con Sabina: ahora dice dónde está la sala.) |
 | `guia_preparar` | Paso 7 (durante el enfriamiento) | Mientras se enfría, abre el cajón bajo el mesón junto al lavadero y saca el film o la bolsa plástica. (**Nueva**, 2026-11-12: todavía no existe; mientras tanto solo se muestra el texto.) |
 | `guia_esperar` | Paso 6 | Bien hecho. Ahora espera a que el reloj complete los 20 minutos, sin sacar su mano del agua. |
 | `guia_cubrir` | Paso 9 | Ya está enfriada. Cúbrela sin apretar: desliza la bolsa por su mano hasta la muñeca, o apoya tiras de film a lo largo. (**Regrabar**, 2026-11-12: el audio actual dice "gasa"; mientras tanto solo el texto.) |

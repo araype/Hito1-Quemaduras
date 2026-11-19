@@ -97,6 +97,8 @@ namespace SojaExiles
 
         public Color validColor = new Color(0.25f, 0.7f, 1f, 0.95f);
         public Color invalidColor = new Color(0.62f, 0.64f, 0.7f, 0.6f);
+        [Tooltip("Color de la meta del tutorial (el mismo azul de las flechas del piso).")]
+        public Color goalColor = new Color(0.1f, 0.55f, 1f, 1f);
 
         private const float ArcStep = 0.03f;
         private const int ArcMaxSteps = 60;
@@ -1318,7 +1320,7 @@ namespace SojaExiles
 
         // ---------------- meta del tutorial ----------------
 
-        // Circulo en el piso con un haz de luz, visible desde lejos.
+        // Circulo azul en el piso con un haz de luz, visible desde lejos.
         public void ShowGoal(Vector3 floorPoint)
         {
             if (goal == null)
@@ -1370,11 +1372,14 @@ namespace SojaExiles
                 goalRing.SetPosition(i, new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius);
             }
 
-            Color ring = new Color(0.35f, 0.9f, 0.6f, Mathf.Lerp(0.6f, 1f, pulse));
+            // Azul, como las flechas del piso (FloorPathGuide) que llevan
+            // hasta aqui (antes verde).
+            Color blue = goalColor;
+            Color ring = new Color(blue.r, blue.g, blue.b, Mathf.Lerp(0.6f, 1f, pulse));
             goalRing.startColor = ring;
             goalRing.endColor = ring;
-            goalBeam.startColor = new Color(0.35f, 0.9f, 0.6f, Mathf.Lerp(0.18f, 0.32f, pulse));
-            goalBeam.endColor = new Color(0.35f, 0.9f, 0.6f, 0f);
+            goalBeam.startColor = new Color(blue.r, blue.g, blue.b, Mathf.Lerp(0.18f, 0.32f, pulse));
+            goalBeam.endColor = new Color(blue.r, blue.g, blue.b, 0f);
         }
     }
 }

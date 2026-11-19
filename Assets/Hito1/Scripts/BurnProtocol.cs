@@ -7,7 +7,7 @@ namespace SojaExiles
 {
     // Lleva la cuenta del protocolo de primeros auxilios ante la quemadura a
     // partir de lo que avisa BurnSequenceManager:
-    //   pasos (apagar el fuego, agua fria, enfriar 20 min, anillo, abrigar,
+    //   pasos (apagar el fuego, agua fria, enfriar 20 min, anillo,
     //   cubrir, decision medica, pedir ayuda), errores con su explicacion, tiempo de
     //   primera accion, tiempo de enfriamiento y puntaje.
     // El enfriamiento de 20 minutos se representa en 'coolingSeconds' reales
@@ -15,11 +15,11 @@ namespace SojaExiles
     // pausa y cuenta como error.
     // La decision de ir al centro de salud se toma en la llamada al 106
     // (EmergencyCall), en cualquier momento despues del accidente. La
-    // practica termina cuando la quemadura esta cubierta, ya se llamo y esta
-    // abrigada: revisa los pasos que faltaron, termina (Success), muestra el
+    // practica termina cuando la quemadura esta cubierta y ya se llamo:
+    // revisa los pasos que faltaron, termina (Success), muestra el
     // resumen (BurnSummaryPanel) y guarda la sesion en un JSON. Si se cubre
-    // sin haber llamado o sin abrigarla, espera un rato ('callGraceSeconds',
-    // 'blanketGraceSeconds') y, si no llega, termina con ese paso faltante. Sin celular en la escena, al cubrir
+    // sin haber llamado, espera un rato ('callGraceSeconds') y, si no llega,
+    // termina con ese paso faltante. Sin celular en la escena, al cubrir
     // pregunta con el panel de antes (MedicalDecisionPanel).
     // Va en el objeto de BurnSequenceManager.
     public class BurnProtocol : MonoBehaviour
@@ -30,6 +30,9 @@ namespace SojaExiles
             AguaFria,
             Enfriar,
             Anillo,
+            // Abrigar con la manta: se quito del protocolo (2026-11-19). El
+            // valor queda para no correr los numeros de los siguientes; no
+            // cuenta en ningun lado (ver Counts).
             Abrigar,
             Cubrir,
             DecisionMedica
@@ -62,9 +65,6 @@ namespace SojaExiles
         [Tooltip("Si se cubre sin haber llamado al 106: segundos que espera la llamada (modo guiado y evaluacion).")]
         public float callGraceSecondsGuided = 90f;
         public float callGraceSeconds = 40f;
-        [Tooltip("Ya se llamo, se cubrio y falta abrigarla: segundos que espera la manta (modo guiado y evaluacion).")]
-        public float blanketGraceSecondsGuided = 60f;
-        public float blanketGraceSeconds = 20f;
         [Tooltip("Modo evaluacion: segundos reales desde el accidente hasta que la practica termina sola (0 sin limite). En modo guiado no hay limite: para no quedarse atrapado esta 'Terminar' en el menu de pausa.")]
         public float evaluationTimeLimit = 600f;
 
@@ -109,6 +109,12 @@ namespace SojaExiles
         private bool decisionCorrect;
         private bool finishing;
 
+        // Pasos que se evaluan (Abrigar ya no es parte del protocolo).
+        public static bool Counts(Step step)
+        {
+            return step != Step.Abrigar;
+        }
+
         public bool IsDone(Step step)
         {
             return done[(int)step];
@@ -128,7 +134,7 @@ namespace SojaExiles
             critical = 0;
             foreach (Step step in System.Enum.GetValues(typeof(Step)))
             {
-                if (IsDone(step) && doneAct[(int)step] == act)
+                if (Counts(step) && IsDone(step) && doneAct[(int)step] == act)
                 {
                     hits++;
                 }
@@ -162,7 +168,6 @@ namespace SojaExiles
                     return Act.Desarrollo;
                 case Step.Enfriar:
                 case Step.Anillo:
-                case Step.Abrigar:
                     return Act.Climax;
             }
 
@@ -387,13 +392,6 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnEvent.RingStuck:
                     ringStuck = true;
                     break;
-                case BurnSequenceManager.BurnEvent.SweaterOn:
-                    if (burned)
-                    {
-                        Mark(Step.Abrigar);
-                    }
-
-                    break;
                 case BurnSequenceManager.BurnEvent.PotSpilled:
                     break;
                 default:
@@ -448,26 +446,21 @@ namespace SojaExiles
             Finish(decision);
         }
 
-        // Ya cubierta. Llamar al 106 y abrigarla se pueden hacer en cualquier
-        // momento, tambien despues de cubrir: si falta alguno se espera un
-        // rato (mas si falta la llamada, que es mas larga) y se termina con
-        // lo que haya. Si ya esta todo, termina enseguida.
+        // Ya cubierta. Llamar al 106 se puede hacer en cualquier momento,
+        // tambien despues de cubrir: si falta se espera un rato y se termina
+        // con lo que haya. Si ya se llamo, termina enseguida.
         private IEnumerator WaitForRest()
         {
             bool guided = BurnGuide.Instance == null || BurnGuide.Instance.Guided;
             float start = Time.time;
             while (!finishing)
             {
-                bool called = pendingDecision != null;
-                bool warm = IsDone(Step.Abrigar);
-                if (called && warm)
+                if (pendingDecision != null)
                 {
                     break;
                 }
 
-                float grace = !called
-                    ? (guided ? callGraceSecondsGuided : callGraceSeconds)
-                    : (guided ? blanketGraceSecondsGuided : blanketGraceSeconds);
+                float grace = guided ? callGraceSecondsGuided : callGraceSeconds;
                 if (Time.time - start >= grace && !EmergencyCall.InCall)
                 {
                     break;
@@ -631,11 +624,6 @@ namespace SojaExiles
                 Missed(Step.Anillo);
             }
 
-            if (!IsDone(Step.Abrigar))
-            {
-                Missed(Step.Abrigar);
-            }
-
             Score = Mathf.Max(0, 100 - burnSequence.Errors * errorPenalty - burnSequence.CriticalErrors * criticalPenalty);
             Debug.Log($"[BurnProtocol] Fin: puntaje {Score}, errores {burnSequence.Errors}, criticos {burnSequence.CriticalErrors}");
 
@@ -698,8 +686,6 @@ namespace SojaExiles
                             return "Apaga el fuego primero para que nadie más se queme.";
                         case "Anillo":
                             return "Retira anillos y pulseras antes de que la mano se hinche.";
-                        case "Abrigar":
-                            return "Abriga a la persona para que no se enfríe mientras enfrías la quemadura.";
                         case "DecisionMedica":
                             return "Pide ayuda: llama al 106 mientras enfrías la quemadura.";
                         case "AguaFria":
@@ -796,6 +782,11 @@ namespace SojaExiles
 
             foreach (Step step in System.Enum.GetValues(typeof(Step)))
             {
+                if (!Counts(step))
+                {
+                    continue;
+                }
+
                 (IsDone(step) ? log.pasosCompletados : log.pasosFaltantes).Add(step.ToString());
             }
 

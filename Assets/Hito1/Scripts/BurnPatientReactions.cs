@@ -180,10 +180,6 @@ namespace SojaExiles
                     Hurt(0.4f);
                     break;
 
-                case BurnSequenceManager.BurnEvent.SweaterOn:
-                    SayLater("voz_abrigo", 0.6f);
-                    break;
-
                 case BurnSequenceManager.BurnEvent.FilmWrapped:
                     Say("voz_aprieta", true);
                     Hurt(0.3f);

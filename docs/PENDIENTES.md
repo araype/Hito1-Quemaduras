@@ -16,7 +16,25 @@ si se probó en el Quest, en el editor o si solo se compiló.
 - Los valores nuevos de `BurnEvent` y demás enums van **al final**: las
   escenas guardan el número.
 
-## V. Prueba en el visor con las manos (2026-11-14) — PRIMERO
+## W. Tutorial nuevo y sin manta (2026-11-19) — PRIMERO
+
+Se quitó el paso de abrigar con la manta y se reordenó el tutorial
+(`QUEMADURA_INMERSION.md`, sección 41). **Solo se compiló** (sin Unity).
+Falta, en el editor y en el Quest, con controles y con manos:
+
+- Recorrer los 5 pasos del tutorial: que la tarjeta "Tus controles" se lea
+  completa en 12 s (`BurnGuide.controlsCardSeconds`) y no tape la cocina;
+  que el texto cambie solo al pasar de controles a manos.
+- Que las flechas azules del piso lleguen al círculo azul, a la taza y a la
+  tía (si no salen, revisar que `PlayArea.FindPath` encuentre camino en la
+  cocina).
+- Que la práctica termine bien sin la manta: cubrir y llamar al 106 ya
+  cierran la práctica, y el resumen muestra 6 pasos (sin "Abrigarla").
+- Grabar las voces nuevas `guia_controles` y `guia_moverse`
+  (`VOCES.md`); mientras no estén, esos dos pasos van solo con tarjeta.
+  `guia_teleport` ya no se usa (dice "círculo verde").
+
+## V. Prueba en el visor con las manos (2026-11-14)
 
 El usuario probó en el Quest Pro con las manos y el simulador no mostró los
 problemas. Los arreglos están hechos y **solo se probaron en el editor con
@@ -24,27 +42,21 @@ la mano simulada** (`QUEMADURA_INMERSION.md`, sección 36). Falta probar en
 el Quest con las manos:
 
 - **Agarrar:** con la pinza y cerrando la mano entera (taza, celular,
-  manta, bolsa, rollo de film); que agarre aunque la mano se cierre un poco
+  bolsa, rollo de film); que agarre aunque la mano se cierre un poco
   antes de llegar; que no agarre sin querer al pasar con la mano cerrada.
   Ajustar `SimpleGrab.palmCloseRatio` (0,8) / `palmOpenRatio` (1,0) si la
   mano cerrada no se detecta o se detecta de más, y `handGrabRadius` (10 cm).
-- **Llevar la manta** de la sala a la cocina con la mano al costado (fuera
-  de la vista): que no se caiga (`trackingLossHoldSeconds`, 8 s).
-- **Recoger la manta del piso** agachándose. Si el piso real sigue más
-  alto que el del juego, reajustar el piso del límite en el Quest y, si no
-  alcanza, usar `VRLocomotion.floorOffset`.
 - **Teletransporte con la mano** (`QUEMADURA_INMERSION.md`, sección 38):
   hacer la L (índice y pulgar estirados) muestra el arco; juntar el pulgar
   al índice salta. Que el arco salga con la L con la palma hacia abajo y de
   costado, y no al tocar botones, agarrar, mirar la palma (pausa) o caminar
   con gestos; que al hacer la L cerca de un objeto no lo agarre; que el
-  salto caiga donde marcaba el anillo; ir a la sala con la manta en la otra
-  mano y volver; el paso 1 del tutorial. Si la pose no se reconoce, ajustar
+  salto caiga donde marcaba el anillo; el paso 2 del tutorial. Si la pose no se reconoce, ajustar
   `HandTeleport.extendedRatio` (1,1), `curledRatio` (1,0),
   `thumbOpenRatio` (0,55), `thumbClosedRatio` (0,3) y `maxPalmUp` (0,5).
 - **Controles** (`QUEMADURA_INMERSION.md`, sección 39): salto con el
   joystick derecho (adelante, apuntar, soltar; atrás cancela) sin girar
-  sin querer; botones acercando el control y apretando el gatillo; paso 1
+  sin querer; botones acercando el control y apretando el gatillo; paso 2
   del tutorial con control.
 - **Ajustes finos con las manos:** apuntar al mesón deja al pie del mueble;
   caminar con pulgar y medio (flecha verde, 0,6 m/s) y girar con pulgar y
@@ -60,10 +72,6 @@ el Quest con las manos:
   la mano y sin que el objeto flote. Hoy se agarra con la pinza o con la
   mano cerrada (puño). A decidir cómo detectarlo (dedos que tocan el
   objeto) antes de implementarlo.
-- **Tiempo para la manta:** que la tía no se queje mientras se va por la
-  manta y se vuelve (estimado 47 s, `PatientDialog.fetchSpeed` 0,9 m/s y
-  `fetchHandlingSeconds` 15 s); si sigue a contrarreloj, bajar
-  `fetchSpeed`. Ver en el registro "[PatientDialog] Ir por la manta".
 - **Resumen:** leerlo en el visor; que se lea a 0,62 m y que "Anterior" /
   "Siguiente" se toquen con el dedo.
 - **`PlaySpaceFit`:** que el límite quede frente al mesón y que el
@@ -153,25 +161,17 @@ faltantes y recorrer la partida completa en el editor. Con más atención:
 
 **Riesgos**
 
-- Rendimiento: el film en tiras y la manta con tela simulada son lo único
-  que puede bajar de 72 fps (la manta se duerme cuando está quieta). Medir
-  en la validación final.
+- Rendimiento: el film en tiras es lo único que puede bajar de 72 fps.
+  Medir en la validación final.
 
 ## D. Objetos sobre la paciente
 
-- **Manta (hecha, `QUEMADURA_INMERSION.md`, sección 24), lo que falta:**
-  probarla en el Quest (`PRUEBAS_QUEST.md`, sección 3). Un giro instantáneo
-  de la tía (forzado por código) dejó un brazo por fuera; si pasa con los
-  giros reales, volver a armar la tela cuando el pecho gire de golpe.
-  Buscarla (sección 28): seguir las flechas del piso hasta la sala, rodear
-  la mesa de centro sin rebotar y, en modo evaluación, oír la pista de la
-  tía; regrabar `voz_pide_manta` y `guia_abrigo` con ElevenLabs.
 - **Muebles y cajón (hecho, `QUEMADURA_INMERSION.md`, secciones 25 y 26),
   lo que falta:** probar en el Quest abrir la puerta del mueble alto y el
   cajón con las manos y con controles (el tirador está en el borde libre de
   la puerta y al frente del cajón; si cuesta encontrarlo, subir
   `StorageFront.handleReach`) y que el tiempo del enfriamiento alcance para
-  abrigar, llamar y sacar el film o la bolsa del cajón.
+  llamar y sacar el film o la bolsa del cajón.
 - **Cubrir (hecho, sección 26), lo que falta:** probar en el Quest deslizar
   la bolsa por su mano y apoyar las tiras de film (`PRUEBAS_QUEST.md`,
   sección 11). Con la quemadura de Laura, una sola tira bien puesta ya
@@ -291,25 +291,20 @@ texturas de 1024 por objeto de mano.
   apretar y no al pasar la mano y que el alcance (8 cm, `pressReach`) no
   sea muy corto. Las llaves del grifo ya no se aprietan: ver la palanca del
   caño arriba.
-- **Manta abierta por delante** (sección 30, solo compilado): con las
-  capturas del usuario se vio que la manta se cerraba por delante y tapaba
-  sus brazos. Revisar en Play que ahora quede abierta como un chal, que no
-  atraviese los brazos y que no tiemble; ajustar `frontOpenHalfWidth` si
-  hace falta.
 - **Una sola mano en el simulador** (sección 30, solo compilado): A/X con
   el celular en la mano llama; A/X con el rollo corta una tira y la deja en
   esa mano. Menú Hito1 > Práctica (F9 pausa, F10 terminar).
 - **Pausa con las manos** (`QUEMADURA_INMERSION.md`, sección 33): en el
   Quest, que el botón "Pausa" aparezca al mirar la palma izquierda y no al
   usar la mano para otra cosa, que se apriete cómodo con la otra mano, y
-  el paso 3 del tutorial con manos y con controles. Grabar una voz del
+  el paso 5 del tutorial con manos y con controles. Grabar una voz del
   narrador para ese paso (hoy solo tarjeta).
 - **Caja de film y bolsa importadas** (`QUEMADURA_INMERSION.md`, sección
   31): en el Quest, que la bolsa transparente se vea en el cajón, que la
   solapa del film sobre la tapa de la caja se encuentre con la mano y que
   tirar, cortar y apoyar las tiras y deslizar la bolsa sigan funcionando
   con los modelos nuevos.
-- **Queja del frío lejos de ella** (sección 29): ir por la manta justo al
+- **Queja del frío lejos de ella** (sección 29): alejarse de ella justo al
   empezar a enfriar y medir si 30 s (`PatientDialog.awayGraceSeconds`)
   alcanzan para volver caminando con el joystick; ver que al no volver se
   sume el error del enfriamiento interrumpido.

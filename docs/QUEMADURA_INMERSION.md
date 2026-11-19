@@ -1377,3 +1377,23 @@ la solapa), 3 (con "23 %" al tirar) y 4 (tira cortada en la mano).
 **No se probó:** la flecha del paso 4 del film (la tira cortada se soltaba
 de la mano simulada), el deslizado completo de la bolsa con la tarjeta, la
 llama apagándose vista con la olla encima, ni nada en el Quest.
+
+## 41. Sin manta y tutorial más ordenado (2026-11-19)
+
+Pedido del usuario: el paso de abrigar con la manta no sirve; el tutorial
+era confuso (mezclaba controles y manos en la misma frase y no decía qué
+hace cada control); y cuando se pide ir a algún lugar hay que usar las
+flechas azules del piso.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Sin manta | Ya no hay manta en el sofá ni paso "Abrígala con una manta". La práctica termina con la quemadura cubierta y la llamada al 106 (o al pasar el plazo de la llamada). El resumen y el JSON de la sesión ya no listan "Abrigar" ni lo cuentan como paso faltante. La tía ya no espera a que el jugador vaya por la manta para quejarse del frío. Los valores `BurnProtocol.Step.Abrigar`, `BurnGuide.StepId.Abrigar` y `BurnEvent.SweaterOn` quedan en los enums (no se corren los números) pero no se usan. Se borraron `BlanketItem` y `BlanketDrape` (no estaban en ninguna escena). | `BurnProtocol.Counts`, `WaitForRest`; `BurnGuide` (pasos y orden); `BurnSceneProps`; `PatientDialog`; `BurnSummaryPanel` |
+| Tutorial en 5 pasos | Siempre "Tutorial N de 5", la acción en grande y debajo cómo hacerla: **1. Tus controles** (tarjeta fija 12 s, `controlsCardSeconds`), **2. Moverse** hasta el círculo, **3. Agarrar** la taza, **4. Llevársela** a la tía, **5. Pausa**. | `BurnGuide.Tutorial`, `ControlsTutorial`, `MoveTutorial`, `PauseTutorial` |
+| Qué hace cada control | Con controles, la tarjeta 1 separa **CONTROL IZQUIERDO** (joystick: caminar; botón lateral o gatillo: agarrar; botón de menú: pausa) y **CONTROL DERECHO** (joystick adelante, apuntar y soltar: saltar lejos; a los lados: girar; botón lateral o gatillo: agarrar; gatillo: apuntar y tocar botones). Cada paso después dice con qué control se hace ("Control derecho: …", "Control izquierdo: …"). Con las manos, la tarjeta 1 lista los gestos (pinza, L, pulgar con medio, pulgar con anular, palma izquierda). El texto cambia solo si el jugador pasa de controles a manos. | `BurnGuide.ControlsHint`, `MoveHint`, `GrabHint`, `DeliverHint`, `PauseHint` |
+| Flechas azules | Cuando el tutorial pide ir a algún lado usa las flechas azules del piso (las mismas que antes llevaban a la manta): hasta el círculo del paso 2, hasta la taza en el 3 (si está lejos) y hasta la tía en el 4 (vuelven a la taza si se suelta). El círculo meta ahora es azul, del mismo color (antes verde). Las flechas se muestran desde 0,6–0,8 m de camino (antes 1,3 m) para metas cercanas. | `BurnGuide.PointPath`; `FloorPathGuide.SetTarget(…, showFrom)`; `HandTeleport.goalColor` |
+| Voces | `guia_teleport` ya no suena (dice "círculo verde"). Los pasos 1 y 2 piden `guia_controles` y `guia_moverse`, que faltan grabar (`VOCES.md`): mientras tanto van solo con tarjeta. | `VOCES.md` |
+
+**Solo compilado:** no hay Unity en la máquina donde se hizo. Se revisó la
+sintaxis con Roslyn y se compilaron los scripts del proyecto antes y
+después del cambio (sin las DLL de Unity): no aparece ningún error nuevo.
+Falta probarlo en el editor y en el Quest (`PENDIENTES.md`, sección W).

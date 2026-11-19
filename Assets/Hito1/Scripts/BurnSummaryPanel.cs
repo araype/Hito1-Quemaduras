@@ -75,7 +75,7 @@ namespace SojaExiles
             int missing = 0;
             foreach (BurnProtocol.Step step in System.Enum.GetValues(typeof(BurnProtocol.Step)))
             {
-                if (!p.IsDone(step))
+                if (BurnProtocol.Counts(step) && !p.IsDone(step))
                 {
                     missing++;
                 }
@@ -172,6 +172,11 @@ namespace SojaExiles
             y -= 0.042f;
             foreach (BurnProtocol.Step step in System.Enum.GetValues(typeof(BurnProtocol.Step)))
             {
+                if (!BurnProtocol.Counts(step))
+                {
+                    continue;
+                }
+
                 StepStatus(p, step, out string status, out Color c, out string detail);
                 RoundedPanel dot = RoundedPanel.Create(t, "EstadoPaso", new Vector2(cx + 0.006f, y - 0.0105f),
                     Vector2.one * 0.012f, -0.0005f, 0.006f, 0f, 0.005f);

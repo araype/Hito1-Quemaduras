@@ -12,7 +12,7 @@ namespace SojaExiles
     //     poco (prueba en el Quest, 2026-11-09).
     //   - Hacia el minuto 9 el agua ya le parece muy fria y empieza a sacar
     //     la mano. Se queja este donde este el jugador, pero las opciones
-    //     salen solo con el a su lado; si esta lejos (la manta), aguanta
+    //     salen solo con el a su lado; si esta lejos, aguanta
     //     'awayGraceSeconds' y, si no vuelve, la saca (error). Hay dos respuestas correctas: convencerla de aguantar o
     //     templar un poco el agua (abrir tambien la llave caliente: con las
     //     dos abiertas sale tibia; NHS y Cruz Roja: agua fresca o tibia, no
@@ -44,23 +44,8 @@ namespace SojaExiles
         public float temperSeconds = 12f;
         [Tooltip("Las opciones de la queja del frio salen con el jugador a esta distancia de ella (m).")]
         public float resistNearDistance = 2.5f;
-        [Tooltip("Si el jugador esta lejos al quejarse del frio (por ejemplo, en la sala por la manta), segundos reales que ella aguanta antes de sacar la mano.")]
+        [Tooltip("Si el jugador esta lejos al quejarse del frio segundos reales que ella aguanta antes de sacar la mano.")]
         public float awayGraceSeconds = 30f;
-
-        // Ir por la manta (2026-11-17): la queja del minuto 9 caia mientras el
-        // jugador volvia con la manta y se sentia a contrarreloj. Ahora se
-        // estima cuanto toma la ida y vuelta (por el camino del piso, a paso
-        // tranquilo, mas tomarla y ponersela) y, mientras el jugador esta en
-        // eso, ella espera a que vuelva para quejarse.
-        [Tooltip("Velocidad que se estima para ir y volver con la manta (m/s), contando orientarse y rodear muebles.")]
-        public float fetchSpeed = 0.9f;
-        [Tooltip("Segundos que se estiman para tomar la manta del sofa y echarsela encima.")]
-        public float fetchHandlingSeconds = 15f;
-        [Tooltip("Margen sobre el tiempo estimado (1,5 = 50 % mas).")]
-        public float fetchMargin = 1.5f;
-
-        private float fetchBudget = -1f;
-        private float errandStart = -1f;
 
         public static bool IsOpen
         {
@@ -142,7 +127,6 @@ namespace SojaExiles
             }
 
             float minute = protocol.SimulatedCoolingMinutes;
-            TrackErrand();
             if (!worryDone && minute >= worryMinute)
             {
                 worryDone = true;
@@ -151,7 +135,7 @@ namespace SojaExiles
                     StartCoroutine(Worry());
                 }
             }
-            else if (!resistDone && minute >= resistMinute && !FetchingBlanket())
+            else if (!resistDone && minute >= resistMinute)
             {
                 resistDone = true;
                 StartCoroutine(Resist());
@@ -162,11 +146,7 @@ namespace SojaExiles
         // preguntarle (BurnGuide lo avisa en modo guiado).
         public static bool WaitingForPlayer { get; private set; }
 
-        private BlanketItem blanket;
-
-        // El jugador esta junto a ella y con las manos libres de la manta (si
-        // la trae, primero se la pone). Antes la pregunta salia mientras el
-        // jugador estaba en la sala buscando la manta.
+        // El jugador esta junto a ella.
         private bool PlayerAttending()
         {
             Transform head = VRPanelKit.Head();
@@ -175,125 +155,7 @@ namespace SojaExiles
                 return false;
             }
 
-            if (blanket == null)
-            {
-                blanket = FindObjectOfType<BlanketItem>();
-            }
-
-            Grabbable grab = blanket != null ? blanket.GetComponent<Grabbable>() : null;
-            return grab == null || !grab.IsHeld;
-        }
-
-        // ---------------- ir por la manta ----------------
-
-        // Segundos que se estiman para ir por la manta y volver: el camino
-        // del piso (el mismo de las flechas) ida y vuelta a 'fetchSpeed', mas
-        // tomarla y ponersela, por 'fetchMargin'. Nunca menos que
-        // 'awayGraceSeconds'.
-        public float FetchBudget
-        {
-            get
-            {
-                if (fetchBudget < 0f)
-                {
-                    fetchBudget = EstimateFetch();
-                }
-
-                return fetchBudget;
-            }
-        }
-
-        private float EstimateFetch()
-        {
-            if (blanket == null)
-            {
-                blanket = FindObjectOfType<BlanketItem>();
-            }
-
-            if (blanket == null)
-            {
-                return awayGraceSeconds;
-            }
-
-            Vector3 from = transform.position;
-            Vector3 to = blanket.transform.position;
-            List<Vector3> path = new List<Vector3>();
-            float length = 0f;
-            if (PlayArea.FindPath(from, to, 0.9f, path) && path.Count > 1)
-            {
-                for (int i = 1; i < path.Count; i++)
-                {
-                    length += Vector3.Distance(path[i - 1], path[i]);
-                }
-            }
-            else
-            {
-                // Sin camino calculado: en linea recta, con un rodeo.
-                length = PatientBody.Flat(to - from).magnitude * 1.4f;
-            }
-
-            float seconds = (2f * length / Mathf.Max(0.1f, fetchSpeed) + fetchHandlingSeconds) * fetchMargin;
-            seconds = Mathf.Max(awayGraceSeconds, seconds);
-            Debug.Log($"[PatientDialog] Ir por la manta: {length:F1} m de camino, se estiman {seconds:F0} s");
-            return seconds;
-        }
-
-        // El jugador esta yendo o volviendo con la manta: falta abrigarla y
-        // esta lejos de ella o con la manta en la mano.
-        private bool OnBlanketErrand()
-        {
-            if (protocol == null || protocol.IsDone(BurnProtocol.Step.Abrigar))
-            {
-                return false;
-            }
-
-            if (blanket == null)
-            {
-                blanket = FindObjectOfType<BlanketItem>();
-                if (blanket == null)
-                {
-                    return false;
-                }
-            }
-
-            Grabbable grab = blanket.GetComponent<Grabbable>();
-            if (grab != null && grab.IsHeld)
-            {
-                return true;
-            }
-
-            Transform head = VRPanelKit.Head();
-            return head != null && PatientBody.Flat(head.position - transform.position).magnitude > resistNearDistance;
-        }
-
-        // Desde cuando esta en el mandado (se reinicia al volver sin la manta
-        // o al abrigarla).
-        private void TrackErrand()
-        {
-            if (!OnBlanketErrand())
-            {
-                errandStart = -1f;
-                return;
-            }
-
-            if (errandStart < 0f)
-            {
-                errandStart = Time.time;
-            }
-        }
-
-        // Ella espera para quejarse del frio mientras el jugador va por la
-        // manta, hasta el tiempo estimado. Si se pasa, se queja igual (y
-        // tiene 'awayGraceSeconds' para volver).
-        private bool FetchingBlanket()
-        {
-            return errandStart >= 0f && Time.time - errandStart < FetchBudget;
-        }
-
-        private bool HoldingBlanket()
-        {
-            Grabbable grab = blanket != null ? blanket.GetComponent<Grabbable>() : null;
-            return grab != null && grab.IsHeld;
+            return true;
         }
 
         // ---------------- minuto 3: calmarla ----------------
@@ -350,9 +212,8 @@ namespace SojaExiles
 
             // Ella reacciona al frio este donde este el jugador, pero las
             // opciones solo salen con el jugador a su lado (antes salian
-            // mientras buscaba la manta en la sala). Si no vuelve en
-            // 'awayGraceSeconds', saca la mano: es la consecuencia de dejarla
-            // sola, con margen para ir por la manta y volver. Durante la
+            // mientras estaba lejos). Si no vuelve en 'awayGraceSeconds', saca
+            // la mano: es la consecuencia de dejarla sola. Durante la
             // llamada al 106 el plazo no corre (ella espera).
             answer = -1;
             bool tempered = false;
@@ -370,11 +231,10 @@ namespace SojaExiles
                     break;
                 }
 
-                // Durante la llamada el plazo no corre; mientras vuelve con la
-                // manta en la mano, corre a un tercio (ya viene).
+                // Durante la llamada el plazo no corre.
                 if (!EmergencyCall.InCall)
                 {
-                    waited += HoldingBlanket() ? Time.deltaTime / 3f : Time.deltaTime;
+                    waited += Time.deltaTime;
                 }
 
                 if (!complainedAgain && waited > awayGraceSeconds * 0.5f)

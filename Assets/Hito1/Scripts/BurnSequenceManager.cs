@@ -42,7 +42,7 @@ namespace SojaExiles
             HotWaterOnBurn,     // agua caliente (sola) sobre la quemadura
             RingRemoved,        // se saco el anillo a tiempo
             RingStuck,          // la mano ya se hincho: el anillo no sale
-            SweaterOn,          // se abrigo a la paciente
+            SweaterOn,          // se abrigo a la paciente (ya no se usa: se quito la manta)
             Covered,            // quemadura cubierta (detalle: Film o Bolsa)
             CoveredTooEarly,    // se quiso cubrir antes de enfriar
             ClothOnBurn,        // se cubrio con el pano de cocina (suelta pelusa)

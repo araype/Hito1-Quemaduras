@@ -137,7 +137,6 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnEvent.BurnerOff:
                 case BurnSequenceManager.BurnEvent.ColdWaterOn:
                 case BurnSequenceManager.BurnEvent.RingRemoved:
-                case BurnSequenceManager.BurnEvent.SweaterOn:
                 case BurnSequenceManager.BurnEvent.Covered:
                     Buzz(-1, 0.35f, 0.08f);
                     break;
