@@ -1377,3 +1377,53 @@ la solapa), 3 (con "23 %" al tirar) y 4 (tira cortada en la mano).
 **No se probó:** la flecha del paso 4 del film (la tira cortada se soltaba
 de la mano simulada), el deslizado completo de la bolsa con la tarjeta, la
 llama apagándose vista con la olla encima, ni nada en el Quest.
+
+## 41. Sin manta ni botiquín, tutorial nuevo, botones con solo tocar y respuestas explicadas (`main`, 2026-11-19)
+
+Tras las pruebas con usuarios: abrigar no es tan necesario en la atención
+real de una quemadura en la mano, la manta no se acomodaba bien al cuerpo e
+ir a buscarla cortaba el flujo; muchos creían que el botiquín servía de
+algo; en el tutorial el salto (lo más difícil con las manos) iba primero y
+su voz no coincidía con la tarjeta; con las manos, la voz pedía pinzar los
+botones mientras con el control bastaba acercarse; y los jugadores nuevos
+no sabían por qué una respuesta era la correcta (sobre todo si había
+ampollas).
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Sin abrigar | Se quitó el paso (ya no está en los pasos de la guía, el puntaje ni el resumen), la manta del sofá, las flechas del piso hacia la sala y la espera de la tía mientras se iba por la manta. La práctica termina al cubrir y llamar. Se borraron `BlanketItem` y `BlanketDrape`. | `BurnProtocol.Step` (sin `Abrigar`), `BurnGuide`, `PatientDialog`, `BurnSceneProps`, `BurnSummaryPanel` |
+| Sin botiquín | Se borró `FirstAidKit` (curitas y pomada en el mueble alto). El cajón del film y la bolsa se sigue eligiendo junto a ese mueble, así el film, la bolsa y el celular quedan donde estaban. | `BurnSceneProps.FindWallCabinet` |
+| Tutorial | Orden: 1. agarrar la taza, 2. llevársela, 3. la pausa, 4. el salto. Se decide al empezar si se juega con manos o controles (no cambia dentro del juego). Con manos: 4 pasos y el salto con la L. Con controles: 3 pasos, sin salto; la tarjeta de llevar la taza explica caminar con el joystick izquierdo e ir lejos con el derecho. Cada tarjeta tiene su voz con el mismo texto, solo para lo que se usa (`guia_agarrar_manos/_control`, `guia_caminar_manos/_control`, `guia_pausa_manos/_control`, `guia_teleport_manos`, `guia_bien_manos/_control`). La meta del salto se elige sin alejarse mucho de la tía. | `BurnGuide.Tutorial`, `SayFor`, `MoveTutorial`, `PauseTutorial` |
+| Tutorial solo en modo guiado | En modo evaluación no hay tutorial: suena la presentación (`guia_intro`) y la olla se vuelca a los pocos segundos. En modo guiado sigue el tutorial y las tarjetas de los pasos mantienen cómo usar los controles (salvo "aprieta A/X" en el celular, que confundía); el texto junto a la mano en los 3 primeros saltos sale solo en guiado. | `BurnGuide.Start`, `HandTeleport.DrawHint` |
+| Queja del frío durante la llamada | Antes la queja del minuto 9 esperaba a que se colgara y, como la llamada dura casi lo mismo que el enfriamiento (unos 60 s de 90; más en guiado), podía no salir nunca. Ahora sale en la primera pausa del operador (callado, esperando respuesta o entre frases, y sin la narradora hablando): la llamada queda esperando con su panel oculto, se responde a la tía (o se templa el agua) y, cuando ella termina de hablar, el panel vuelve tal como estaba y el operador sigue. El reloj del enfriamiento no se detiene. | `PatientDialog.Interrupting`, `EmergencyCall.CanInterrupt`, `UpdatePatientPause`, `WaitPatient` |
+| Templar el agua, explicado | Elegir "te templo un poco el agua" no basta: hay que girar la palanca del caño hasta tibia en 12 s, o ella saca la mano (error). En modo guiado ahora la palanca brilla más fuerte, la tarjeta dice "Ahora: gira la palanca del caño un poco más hacia ti, hasta la mitad: así sale tibia…" y la narradora lo repite (`guia_templar`), con 10 s más de plazo. Templar sin pasar por el panel sigue valiendo. | `PatientDialog.ResistSteps`, `FaucetLever.HintWarm`, `BurnGuide.Instruct` |
+| La bolsa y el film no desaparecen | Al caer al piso volvían solos al mesón a los 2 s (parecía que desaparecían) y las tiras de film se borraban a los 20 s. Ahora, si caen dentro del área de juego, se quedan donde cayeron para recogerlos agachándose; solo vuelven (o se borran, las tiras) si caen donde no se llega. Los demás objetos siguen volviendo a su lugar. | `Grabbable.stayOnReachableFloor`, `StaysWhereItFell`; `FloorRecovery`; `FilmStrip`; `BurnSceneProps` |
+| Botones con solo tocar | Con las manos y con control, el botón se aprieta al llevar la punta del dedo hasta su cara (8 mm antes con las manos, 15 mm con control), viniendo desde delante: se ilumina al acercarse (desde 3,5 cm) y se aprieta al tocarlo, sin pinza ni gatillo. Pasar de costado, dejar la mano encima o sostener algo con esa mano no aprieta; para otro toque hay que alejar el dedo. El rayo de lejos con pinza o gatillo sigue. Textos y voz de bienvenida: "toca el botón con la punta del dedo". | `TouchButton.Poked`, `touchDepth`, `controllerTouchDepth`; `guia_bienvenida` |
+| Respuestas en modo guiado | En la queja del frío (dos correctas), la llamada al 106 (agua, ampollas, decidir) y la decisión médica sin celular: la correcta en verde con un visto dibujado, las demás grises, y debajo de la pregunta el porqué en verde claro. La narradora lo explica (después de la tía o cuando calla el operador): `guia_ayuda_frio`, `guia_ayuda_agua`, `guia_ayuda_ampollas_si/_no`, `guia_ayuda_seguir`, `guia_ayuda_calma`. En la pregunta de las ampollas, si hay, se marcan en su mano con un brillo verde. La correcta depende del momento (por ejemplo, "ya la enfrié 20 minutos" solo al terminar). Se puede elegir cualquiera y equivocarse cuenta igual. En guiado hay 10 s más para responder a la tía. Modo evaluación sin cambios. | `VRPanelKit.AnswerButton`, `CorrectMark`, `AnswerWhy`; `BurnGuide.Explain`; `PatientDialog.Ask`; `EmergencyCall.Ask`, `MarkBlisters`; `BurnInjury.VisibleBlisters`; `MedicalDecisionPanel` |
+
+Las 16 voces nuevas son de Windows (Sabina, 44,1 kHz mono); falta pasarlas
+a ElevenLabs con las demás.
+
+**Probado en Play** (editor sin visor, mano simulada de `SimpleGrab` y
+`HandTeleport.SimAim`/`SimPinch`): compila sin errores. Sin manta en la
+escena. Modo guiado con manos: "Tutorial 1 de 4" agarrar la taza (texto de
+manos), al tomarla "2 de 4", al entregarla "3 de 4" la pausa con
+`guia_pausa_manos`; al pausar y continuar, "4 de 4" el salto con
+`guia_teleport_manos` (mismo texto que la tarjeta); al saltar, "¡Así te
+mueves!" y `guia_bien_manos`. Paneles forzados por código: la llamada con
+"Sí, está bajo el chorro" en verde y el porqué, y la queja del frío con dos
+correctas en verde y `guia_ayuda_frio` sonando.
+Después: un objeto con la configuración de la bolsa dejado en el piso de
+la cocina siguió ahí a los 10 s y uno normal volvió al mesón; en modo
+evaluación no apareció la taza, sonó `guia_intro` y la olla se volcó.
+Queja en la llamada (modo guiado, mano de la tía puesta en el chorro y
+llamada iniciada por código): con el operador esperando la primera
+respuesta salió la queja, el panel de la llamada se ocultó, se eligió
+templar y salieron la tarjeta "Ahora: …" y `guia_templar`; al abrir la
+llave caliente ella se calmó y la llamada volvió a su pregunta y siguió
+con `op_agua`.
+**No se probó:** dejar caer la bolsa o el film de verdad (con la mano
+simulada), apretar botones tocándolos (la mano simulada no tiene
+dedos), el tutorial con controles, las marcas de las ampollas, la
+explicación tras la voz del operador en una llamada real, ni nada en el
+Quest.

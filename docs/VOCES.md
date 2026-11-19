@@ -69,7 +69,6 @@ Mujer adulta (50 a 60 años), voz cálida; con dolor real, no actuado.
 | `voz_anillo_sale` | Le sacan el anillo | Ay, mi anillo… gracias, ya se me estaba hinchando. | `[relieved] Ay, mi anillo… gracias, ya se me estaba hinchando.` |
 | `voz_anillo_atorado` | El anillo ya no sale | ¡Ay! No sale, ya se me hinchó el dedo. | `[in pain] ¡Ay! No sale, ya se me hinchó el dedo.` |
 | `voz_abrigo` | Le ponen la manta | Gracias, me estaba dando frío. | `[shivering] Gracias, me estaba dando frío.` |
-| `voz_pide_manta` | Modo evaluación: tiene frío y el jugador no fue a la sala | Uy, con el agua me está dando frío… En el sofá de la sala hay una manta. | `[shivering] Uy, con el agua me está dando frío… En el sofá de la sala hay una manta.` |
 | `voz_enfriada` | Terminó de enfriar | Ya se siente un poco mejor. | `[tired] Ya se siente un poco mejor.` |
 | `voz_pista_pano` | Pista: cubrir la quemadura | ¿Me la cubres con algo limpio? | `[softly] ¿Me la cubres con algo limpio?` |
 | `voz_pregunta_medico` | Antes de la decisión médica | ¿Crees que tengo que ir al médico? | `[worried] ¿Crees que tengo que ir al médico?` |
@@ -84,10 +83,10 @@ en una emergencia).
 
 | Archivo | Cuándo suena | Texto |
 |---|---|---|
-| `guia_bienvenida` | Menú de inicio | Hola. Vas a practicar qué hacer si alguien se quema en la cocina. Elige un modo: guiado, si quieres que te indique cada paso, o evaluación, si prefieres hacerlo solo. Apunta al botón y aprieta el gatillo, o junta el pulgar y el índice. (Cambió el 2026-11-12: los botones ya no se aprietan dejando la mano.) |
+| `guia_bienvenida` | Menú de inicio | Hola. Vas a practicar qué hacer si alguien se quema en la cocina. Elige un modo: guiado, si quieres que te indique cada paso, o evaluación, si prefieres hacerlo solo. Para elegir, toca el botón con la punta del dedo. (Regrabada el 2026-11-19 con Sabina: los botones se aprietan tocándolos.) |
 | `guia_intro` | Inicio del tutorial | Estás de visita en la casa de tu tía Rosa. Ella está preparando el almuerzo. |
 | `guia_agarrar` | Tutorial 2 | Para agarrar algo, acerca la mano y aprieta el botón lateral del control, o junta el pulgar y el índice. Agarra la taza del mesón. |
-| `guia_teleport` | Tutorial 1 (moverse) | Ahora ve hasta el círculo verde. Con controles, empuja el joystick derecho hacia adelante, apunta al círculo y suéltalo. Con las manos, haz una ele con el índice y el pulgar, apunta y junta el pulgar al índice. (Nueva, 2026-11-17, Sabina; falta ElevenLabs.) |
+| `guia_teleport` | Ya no se usa (2026-11-19: la reemplaza `guia_teleport_manos`) | Ahora ve hasta el círculo verde. Con controles, empuja el joystick derecho hacia adelante, apunta al círculo y suéltalo. Con las manos, haz una ele con el índice y el pulgar, apunta y junta el pulgar al índice. (Nueva, 2026-11-17, Sabina; falta ElevenLabs.) |
 | `guia_caminar` | Tutorial 3 | Para caminar, usa el joystick izquierdo. Llévale la taza a tu tía. |
 | `guia_bien` | Fin del tutorial | Muy bien. Ya sabes agarrar y caminar. Quédate cerca de ella. |
 | `guia_accidente` | Accidente (modo guiado) | Se le volcó la olla. Se quemó la mano con agua hirviendo. Mantén la calma: vamos paso a paso. |
@@ -97,7 +96,6 @@ en una emergencia).
 | `guia_agua` | Paso 2 | Ahora abre el agua fría: toma la palanca del caño y gírala un poco hacia ti. |
 | `guia_llevar` | Paso 3 | Tómala del antebrazo, no de la mano quemada, y llévala hasta el chorro. Suelta su mano cerca del agua y ella la pondrá debajo. |
 | `guia_anillo` | Paso 4 | Quítale el anillo antes de que la mano se hinche. Pellizca el punto dorado con tu mano libre, con el botón lateral o juntando el pulgar y el índice, y deslízalo hacia la punta de su dedo. (**Regrabar**, 2026-11-09: el audio actual todavía dice "mantén apretado".) |
-| `guia_abrigo` | Paso 5 | El agua fría también le enfría el cuerpo. Sal de la cocina hacia la sala: la manta está doblada en el sofá, detrás de la mesa de centro. Sigue las flechas del piso y suéltala sobre sus hombros. (Regrabada el 2026-11-12 con Sabina: ahora dice dónde está la sala.) |
 | `guia_preparar` | Paso 7 (durante el enfriamiento) | Mientras se enfría, abre el cajón bajo el mesón junto al lavadero y saca el film o la bolsa plástica. (**Nueva**, 2026-11-12: todavía no existe; mientras tanto solo se muestra el texto.) |
 | `guia_esperar` | Paso 6 | Bien hecho. Ahora espera a que el reloj complete los 20 minutos, sin sacar su mano del agua. |
 | `guia_cubrir` | Paso 9 | Ya está enfriada. Cúbrela sin apretar: desliza la bolsa por su mano hasta la muñeca, o apoya tiras de film a lo largo. (**Regrabar**, 2026-11-12: el audio actual dice "gasa"; mientras tanto solo el texto.) |
@@ -185,7 +183,6 @@ Al regenerar una voz con ElevenLabs, reemplazar el `.wav` y quitar su línea de
 | `guia_cubrir` | Narradora | `[calm] Ya está enfriada. Cúbrela sin apretar: desliza la bolsa por su mano hasta la muñeca, o apoya tiras de film a lo largo.` (Regrabar, 2026-11-12: se quitó la gasa.) |
 | `guia_err_pano` | Narradora | `[calm] El paño de cocina suelta pelusa. Usa film o una bolsa limpia.` (Regrabar, 2026-11-12.) |
 | `guia_err_curita` | Narradora | `[firm] Las curitas se pegan a la piel quemada. Cúbrela con film o una bolsa limpia.` (Nueva, 2026-11-12.) |
-| `guia_abrigo` | Narradora | `[calm] El agua fría también le enfría el cuerpo. Sal de la cocina hacia la sala: la manta está doblada en el sofá, detrás de la mesa de centro. Sigue las flechas del piso y suéltala sobre sus hombros.` (Regrabada el 2026-11-12 con Sabina; falta ElevenLabs.) |
 | `guia_preparar` | Narradora | `[calm] Mientras se enfría, abre el cajón bajo el mesón junto al lavadero y saca el film o la bolsa plástica.` (Nueva, 2026-11-12; cambió el texto: ya no es el botiquín.) |
 | `voz_aprieta` | Tía | `[in pain] ¡Ay, me aprieta! No me envuelvas la mano, por favor.` |
 | `voz_templar_pide` | Tía | `[worried] Ya, pero ábrela solo un poquito, que la caliente quema.` |
@@ -202,3 +199,25 @@ quejidos y nunca repite el mismo dos veces seguidas.
 | `voz_dolor_3` | `[whimpering] Ay… ay… cómo arde.` |
 | `voz_dolor_4` | `[crying] No aguanto, me quema todavía.` |
 | `voz_dolor_5` | `[panting] Ay, Dios mío… mi mano.` |
+
+
+## Voces nuevas del 2026-11-19 (Sabina, Windows; falta ElevenLabs)
+
+| Archivo | Cuándo | Texto |
+|---|---|---|
+| `guia_agarrar_manos` | Tutorial 1, con manos | Para agarrar algo, acerca la mano y junta el pulgar y el índice, o ciérrala. Agarra la taza del mesón. |
+| `guia_agarrar_control` | Tutorial 1, con controles | Para agarrar algo, acerca el control y aprieta el botón lateral, el del dedo medio. Agarra la taza del mesón. |
+| `guia_caminar_manos` | Tutorial 2, con manos | Ahora camina hasta tu tía y acércale la taza a la mano. |
+| `guia_caminar_control` | Tutorial 2, con controles | Camina con el joystick izquierdo. Para ir lejos, empuja el derecho hacia adelante, apunta y suéltalo. Llévale la taza a tu tía. |
+| `guia_pausa_manos` | Tutorial 3, con manos | Ahora, la pausa. Mira la palma de tu mano izquierda: en la muñeca aparece Pausa. Tócalo con un dedo de la otra mano. |
+| `guia_pausa_control` | Tutorial 3, con controles | Ahora, la pausa. Aprieta el botón de menú del control izquierdo, el de tres rayas. |
+| `guia_teleport_manos` | Tutorial 4 (solo manos) | Por último, ve hasta el círculo verde. Haz una ele con la mano: índice y pulgar estirados, los otros dedos doblados. Apunta al círculo verde y junta el pulgar al índice para saltar. |
+| `guia_bien_manos` | Fin del tutorial, manos | Muy bien. Ya sabes agarrar, pausar y moverte lejos. Vuelve junto a tu tía. |
+| `guia_bien_control` | Fin del tutorial, controles | Muy bien. Ya sabes agarrar, caminar y pausar. Quédate cerca de tu tía. |
+| `guia_ayuda_frio` | Modo guiado: quiere sacar la mano | Hay dos respuestas correctas, en verde: pedirle que aguante, o templarle un poco el agua. Sacar la mano corta el enfriamiento, y el hielo daña todavía más la piel. |
+| `guia_ayuda_calma` | Modo guiado: está asustada (pregunta apagada) | La respuesta en verde la calma. El miedo aumenta el dolor, y los remedios caseros dañan la quemadura. |
+| `guia_ayuda_agua` | Modo guiado: el 106 pregunta por el agua | El operador no ve la cocina: cuéntale lo que pasa de verdad. La respuesta correcta está en verde. |
+| `guia_ayuda_ampollas_si` | Modo guiado: tiene ampollas | Mira su mano: tiene ampollas, unas burbujas de piel hinchada con líquido claro. Es una quemadura de segundo grado. |
+| `guia_ayuda_ampollas_no` | Modo guiado: no tiene ampollas | Mira su mano: está roja e irritada, pero no tiene burbujas de piel con líquido. Eso no son ampollas: es una quemadura de primer grado. |
+| `guia_ayuda_seguir` | Modo guiado: decidir con el 106 | Sigue lo que te recomienda el operador. La respuesta correcta está en verde. |
+| `guia_templar` | Modo guiado: eligió templar el agua | Gira la palanca del caño un poco más hacia ti, hasta la mitad: así sale tibia. Su mano sigue bajo el chorro. |

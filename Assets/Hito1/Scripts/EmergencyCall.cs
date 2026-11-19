@@ -9,8 +9,8 @@ namespace SojaExiles
     // pide ayuda como en la vida real, idealmente mientras la mano se enfria
     // (antes ese minuto quedaba sin nada que hacer).
     //   1. Despues del accidente, tomar el celular: en su pantalla aparece el
-    //      boton "Llamar 106", que se toca con la otra mano (dedo y gatillo o
-    //      pinza, o el rayo). Llevarlo a la oreja tambien llama. Suena el
+    //      boton "Llamar 106", que se toca con un dedo de la otra mano (o el
+    //      rayo). Llevarlo a la oreja tambien llama. Suena el
     //      timbre y contesta el operador en altavoz: el celular se puede
     //      dejar en el meson y seguir atendiendola mientras se habla (antes
     //      habia que tenerlo en la oreja y en el simulador no se podia).
@@ -27,6 +27,11 @@ namespace SojaExiles
     // llamada la paciente no se queja ni saca la mano del agua.
     // Las frases del operador son op_*.wav de Resources/Hito1Audio; si falta
     // alguna, igual se lee en el panel (subtitulo).
+    // En modo guiado cada pregunta marca la respuesta correcta segun lo que
+    // pasa en ese momento (en verde, con un visto), dice por que y, cuando
+    // calla el operador, la narradora lo explica (BurnGuide.Explain). En la
+    // de las ampollas, ademas, las ampollas de su mano se marcan con un
+    // brillo: los jugadores nuevos no las distinguian de la piel danada.
     // Va en el objeto de BurnSequenceManager (lo instala Hito1RuntimeBootstrap).
     public class EmergencyCall : MonoBehaviour
     {
@@ -72,8 +77,28 @@ namespace SojaExiles
         private float awayTime;
         private string lastText;
         private string[] lastOptions;
+        private int lastCorrect = -1;
+        private string lastWhy;
+        private readonly List<Renderer> blisterMarks = new List<Renderer>();
         private Renderer holdMarker;
         private float nextHoldBeep;
+
+        // El operador ya contesto y esta callado (esperando una respuesta o
+        // entre dos frases): la tia puede quejarse del frio sin hablarle
+        // encima (PatientDialog). Mientras ella lo resuelve, la llamada
+        // espera con el panel oculto y despues sigue donde quedo.
+        public static bool CanInterrupt
+        {
+            get
+            {
+                return Instance != null && Instance.inCall && Instance.answered && !Instance.onHold
+                    && Instance.speaker != null && !Instance.speaker.isPlaying
+                    && (BurnGuide.Instance == null || !BurnGuide.Instance.Speaking);
+            }
+        }
+
+        private bool answered;
+        private bool pausedForPatient;
 
         // True mientras la llamada esta en espera.
         public static bool OnHold
@@ -122,6 +147,7 @@ namespace SojaExiles
             UpdateCallButton();
             if (inCall)
             {
+                UpdatePatientPause();
                 UpdateHold();
                 if (!onHold)
                 {
@@ -132,7 +158,8 @@ namespace SojaExiles
             // Si la tia esta preguntando algo (PatientDialog), la llamada
             // empieza cuando se le responde: los dos paneles se tapaban.
             if (started || phone == null || burnSequence == null
-                || burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle || PatientDialog.IsOpen)
+                || burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle || PatientDialog.IsOpen
+                || PatientDialog.Interrupting)
             {
                 return;
             }
@@ -163,7 +190,8 @@ namespace SojaExiles
         private void StartCall()
         {
             if (started || phone == null || burnSequence == null
-                || burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle || PatientDialog.IsOpen)
+                || burnSequence.CurrentState == BurnSequenceManager.BurnState.Idle || PatientDialog.IsOpen
+                || PatientDialog.Interrupting)
             {
                 return;
             }
@@ -185,7 +213,7 @@ namespace SojaExiles
 
             bool show = !started && phone != null && burnSequence != null
                 && burnSequence.CurrentState != BurnSequenceManager.BurnState.Idle
-                && SimpleGrab.IsHeldObject(phone) && !PatientDialog.IsOpen;
+                && SimpleGrab.IsHeldObject(phone) && !PatientDialog.IsOpen && !PatientDialog.Interrupting;
             if (callButton.activeSelf != show)
             {
                 callButton.SetActive(show);
@@ -211,6 +239,7 @@ namespace SojaExiles
             speaker.Play();
             yield return WaitCall(ringSeconds);
             speaker.Stop();
+            answered = true;
 
             BurnProtocol protocol = BurnProtocol.Instance;
             yield return Ask("op_saludo", "SAMU, 106. ¿Cuál es su emergencia?",
@@ -220,7 +249,14 @@ namespace SojaExiles
             // que esta bajo el agua cuando no lo esta es un error.
             // Se puede llamar en cualquier momento (tambien al cubrir): hay
             // una respuesta para cada etapa y la correcta es la que pasa.
+            bool cooledBefore = CoolingDone();
+            bool underBefore = UnderWater();
             yield return Ask("op_agua", "Entiendo. ¿Ya tiene la mano bajo agua fría corriente?",
+                cooledBefore ? 1 : underBefore ? 0 : 2,
+                cooledBefore ? "Ya completaste los 20 minutos de agua: cuéntaselo."
+                    : underBefore ? "Su mano está bajo el chorro. Él no ve la cocina: dile lo que pasa de verdad."
+                    : "Todavía no está bajo el agua: díselo y llévala al chorro apenas puedas.",
+                "guia_ayuda_agua",
                 "Sí, está bajo el chorro", "Sí, ya la enfrié 20 minutos", "Todavía no");
             bool cooledDone = CoolingDone();
             if (answer == 0 && !UnderWater())
@@ -270,12 +306,24 @@ namespace SojaExiles
             AudioClip showLine = Hito1FX.Clip("voz_aqui_mirala");
             yield return WaitCall(showLine != null ? showLine.length + 0.2f : 0.6f);
 
-            yield return Ask("op_ampollas", "Mire bien la quemadura. ¿Tiene ampollas?",
-                "Sí, tiene ampollas", "No, solo está roja");
-            bool saysBlisters = answer == 0;
-            // Lo correcto es lo que se ve: antes de que salgan, "no" no es error.
+            // Lo correcto es lo que se ve al preguntar: antes de que salgan,
+            // "no" no es error.
             BurnInjury injury = BurnInjury.Instance;
             bool hasBlisters = injury != null ? injury.BlistersVisible : protocol == null || protocol.NeedsMedicalCare;
+            if (VRPanelKit.ShowAnswers && hasBlisters)
+            {
+                MarkBlisters(injury);
+            }
+
+            yield return Ask("op_ampollas", "Mire bien la quemadura. ¿Tiene ampollas?",
+                hasBlisters ? 0 : 1,
+                hasBlisters
+                    ? "Tiene ampollas (marcadas en su mano): burbujas de piel hinchada con líquido claro. Es de segundo grado."
+                    : "Está roja e irritada, pero sin burbujas de piel con líquido: no son ampollas. Es de primer grado.",
+                hasBlisters ? "guia_ayuda_ampollas_si" : "guia_ayuda_ampollas_no",
+                "Sí, tiene ampollas", "No, solo está roja");
+            ClearBlisterMarks();
+            bool saysBlisters = answer == 0;
             if (saysBlisters != hasBlisters)
             {
                 burnSequence.Report(BurnSequenceManager.BurnEvent.WrongCallInfo,
@@ -299,16 +347,18 @@ namespace SojaExiles
                     yield return Say("op_centro", "Con ampollas en la mano, debe verla un médico. Cuando termine de " +
                         "enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.");
                 }
-                yield return Ask("op_decidir_centro", "¿Puede llevarla al centro de salud?",
-                    "Sí, la llevo", "Prefiero cuidarla en casa");
+                yield return Ask("op_decidir_centro", "¿Puede llevarla al centro de salud?", 0,
+                    "Con ampollas en la mano debe verla un médico: sigue lo que te recomienda el 106.",
+                    "guia_ayuda_seguir", "Sí, la llevo", "Prefiero cuidarla en casa");
                 goToHealthCenter = answer == 0;
             }
             else
             {
                 yield return Say("op_casa", "Si solo está roja y es pequeña, puede cuidarla en casa. Si salen " +
                     "ampollas o empeora, llévela al centro de salud.");
-                yield return Ask("op_decidir_casa", "¿Podrá cuidarla en casa?",
-                    "Sí, la cuido en casa", "Prefiero llevarla al centro de salud");
+                yield return Ask("op_decidir_casa", "¿Podrá cuidarla en casa?", 0,
+                    "Solo roja, sin ampollas: se cuida en casa. Si salen ampollas o empeora, al centro de salud.",
+                    "guia_ayuda_seguir", "Sí, la cuido en casa", "Prefiero llevarla al centro de salud");
                 goToHealthCenter = answer == 1;
             }
 
@@ -329,6 +379,39 @@ namespace SojaExiles
 
             Hito1FX.PlayAt("perilla_clic", phone.position, 0.5f);
             inCall = false;
+            answered = false;
+        }
+
+        // La tia se queja del frio en medio de la llamada: el panel se oculta
+        // (si no, se tapaba con el de ella) y vuelve tal como estaba.
+        private void UpdatePatientPause()
+        {
+            bool patient = PatientDialog.Interrupting;
+            if (patient && !pausedForPatient)
+            {
+                pausedForPatient = true;
+                if (!onHold)
+                {
+                    ClosePanel();
+                }
+            }
+            else if (!patient && pausedForPatient)
+            {
+                pausedForPatient = false;
+                if (!onHold && lastText != null)
+                {
+                    ShowPanel(lastText, lastOptions, lastCorrect, lastWhy);
+                }
+            }
+        }
+
+        // Espera mientras la tia resuelve la queja del frio.
+        private IEnumerator WaitPatient()
+        {
+            while (PatientDialog.Interrupting && inCall)
+            {
+                yield return null;
+            }
         }
 
         // Corta la llamada sin terminarla (la practica termino desde el menu).
@@ -341,6 +424,7 @@ namespace SojaExiles
 
             StopAllCoroutines();
             ClosePanel();
+            ClearBlisterMarks();
             if (speaker != null)
             {
                 speaker.Stop();
@@ -354,6 +438,8 @@ namespace SojaExiles
 
             onHold = false;
             inCall = false;
+            answered = false;
+            pausedForPatient = false;
         }
 
         // ---------------- llamada en espera ----------------
@@ -492,9 +578,9 @@ namespace SojaExiles
 
             // Vuelve el panel de la llamada tal como estaba (mientras timbra
             // todavia no hay panel).
-            if (lastText != null)
+            if (lastText != null && !pausedForPatient)
             {
-                ShowPanel(lastText, lastOptions);
+                ShowPanel(lastText, lastOptions, lastCorrect, lastWhy);
             }
             else
             {
@@ -508,7 +594,7 @@ namespace SojaExiles
             float t = 0f;
             while (t < seconds)
             {
-                if (!onHold)
+                if (!onHold && !PatientDialog.Interrupting)
                 {
                     t += Time.deltaTime;
                 }
@@ -535,7 +621,8 @@ namespace SojaExiles
         // El operador habla y espera a que termine (o un tiempo de lectura).
         private IEnumerator Say(string clipName, string text)
         {
-            ShowPanel(text, null);
+            yield return WaitPatient();
+            ShowPanel(text, null, -1, null);
             float wait = Speak(clipName, text);
             yield return WaitCall(wait);
         }
@@ -543,9 +630,24 @@ namespace SojaExiles
         // Pregunta y espera la respuesta (queda en 'answer').
         private IEnumerator Ask(string clipName, string text, params string[] options)
         {
+            return Ask(clipName, text, -1, null, null, options);
+        }
+
+        // Con la respuesta correcta ('correct', -1 ninguna), por que
+        // ('why') y la frase de la narradora que lo explica ('whyClip'):
+        // solo se muestran en modo guiado.
+        private IEnumerator Ask(string clipName, string text, int correct, string why, string whyClip,
+            params string[] options)
+        {
+            yield return WaitPatient();
             answer = -1;
-            ShowPanel(text, options);
-            Speak(clipName, text);
+            ShowPanel(text, options, correct, why);
+            float speech = Speak(clipName, text);
+            if (VRPanelKit.ShowAnswers && !string.IsNullOrEmpty(whyClip))
+            {
+                StartCoroutine(ExplainAfter(speech, whyClip));
+            }
+
             while (answer < 0)
             {
                 yield return null;
@@ -553,6 +655,52 @@ namespace SojaExiles
 
             speaker.Stop();
             yield return WaitCall(0.4f);
+        }
+
+        // La narradora explica la respuesta cuando calla el operador (si el
+        // jugador no contesto antes).
+        private IEnumerator ExplainAfter(float seconds, string clip)
+        {
+            yield return WaitCall(seconds);
+            if (answer < 0 && inCall && BurnGuide.Instance != null)
+            {
+                BurnGuide.Instance.Explain(clip, 0f);
+            }
+        }
+
+        // Brillo suave sobre cada ampolla que se ve (modo guiado, mientras el
+        // operador pregunta si tiene ampollas).
+        private void MarkBlisters(BurnInjury injury)
+        {
+            ClearBlisterMarks();
+            if (injury == null)
+            {
+                return;
+            }
+
+            WaterTap tap = FindObjectOfType<WaterTap>();
+            foreach (Transform blister in injury.VisibleBlisters())
+            {
+                // Colgado del hueso (la ampolla esta achatada con su escala).
+                Renderer mark = IndicatorUtil.CreateSphere("MarcaAmpolla", blister.parent != null ? blister.parent : blister,
+                    blister.position, Mathf.Max(0.008f, injury.BlisterDiameter(blister) * 1.1f),
+                    tap != null ? tap.indicatorMaterial : null,
+                    new Color(0.4f, 1f, 0.6f, 0.3f));
+                blisterMarks.Add(mark);
+            }
+        }
+
+        private void ClearBlisterMarks()
+        {
+            foreach (Renderer mark in blisterMarks)
+            {
+                if (mark != null)
+                {
+                    Destroy(mark.gameObject);
+                }
+            }
+
+            blisterMarks.Clear();
         }
 
         private float Speak(string clipName, string text)
@@ -573,10 +721,12 @@ namespace SojaExiles
 
         // ---------------- panel ----------------
 
-        private void ShowPanel(string text, string[] options)
+        private void ShowPanel(string text, string[] options, int correct, string why)
         {
             lastText = text;
             lastOptions = options;
+            lastCorrect = correct;
+            lastWhy = why;
             if (onHold)
             {
                 // En espera se queda el aviso; al volver se muestra este panel.
@@ -592,7 +742,10 @@ namespace SojaExiles
             int lines = VRPanelKit.Wrap(text, 38).Split('\n').Length;
             bool stacked = options != null && options.Length > 2;
             float buttonsHeight = options == null ? 0f : stacked ? options.Length * 0.07f + 0.02f : 0.1f;
-            float height = 0.1f + lines * 0.03f + buttonsHeight;
+            bool showWhy = options != null && correct >= 0 && VRPanelKit.ShowAnswers && !string.IsNullOrEmpty(why);
+            const int whyWidth = 50;
+            float whyHeight = showWhy ? VRPanelKit.Lines(why, whyWidth) * 0.021f + 0.012f : 0f;
+            float height = 0.1f + lines * 0.03f + buttonsHeight + whyHeight;
             float top = height * 0.5f;
             const float width = 0.56f;
             const float left = -width * 0.5f + 0.025f;
@@ -600,6 +753,10 @@ namespace SojaExiles
             VRPanelKit.Text(panel, "Llamada al 106  ·  SAMU", new Vector2(left, top - 0.025f), 0.016f,
                 VRPanelKit.CardLabelColor);
             VRPanelKit.BoldText(panel, VRPanelKit.Wrap(text, 38), new Vector2(left, top - 0.05f), 0.024f, Color.white);
+            if (showWhy)
+            {
+                VRPanelKit.AnswerWhy(panel, why, new Vector2(left, top - 0.06f - lines * 0.03f), whyWidth, 0.017f);
+            }
 
             if (options == null)
             {
@@ -621,8 +778,8 @@ namespace SojaExiles
                 {
                     int index = i;
                     float rowY = y + (options.Length - 1 - i) * 0.07f;
-                    VRPanelKit.RoundedButton(panel, options[i], new Vector2(0f, rowY), new Vector2(0.5f, 0.06f),
-                        i == 0 ? Blue : Green, () => answer = index);
+                    VRPanelKit.AnswerButton(panel, options[i], new Vector2(0f, rowY), new Vector2(0.5f, 0.06f),
+                        i == 0 ? Blue : Green, i == correct, () => answer = index);
                 }
 
                 return;
@@ -632,8 +789,8 @@ namespace SojaExiles
             {
                 int index = i;
                 float x = (i == 0 ? -1f : 1f) * 0.13f;
-                VRPanelKit.RoundedButton(panel, options[i], new Vector2(x, y), new Vector2(0.245f, 0.08f),
-                    i == 0 ? Blue : Green, () => answer = index);
+                VRPanelKit.AnswerButton(panel, options[i], new Vector2(x, y), new Vector2(0.245f, 0.08f),
+                    i == 0 ? Blue : Green, i == correct, () => answer = index);
             }
         }
 

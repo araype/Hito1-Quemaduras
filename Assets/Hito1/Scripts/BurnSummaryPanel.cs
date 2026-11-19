@@ -233,7 +233,6 @@ namespace SojaExiles
                 case BurnProtocol.Step.AguaFria: return "Abrir el agua fría";
                 case BurnProtocol.Step.Enfriar: return "Enfriar 20 minutos";
                 case BurnProtocol.Step.Anillo: return "Retirar el anillo";
-                case BurnProtocol.Step.Abrigar: return "Abrigarla";
                 case BurnProtocol.Step.Cubrir: return "Cubrir sin apretar";
                 case BurnProtocol.Step.DecisionMedica: return "Llamar al 106";
                 default: return BurnProtocol.StepNames[(int)step];

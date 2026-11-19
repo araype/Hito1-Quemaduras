@@ -85,7 +85,7 @@ namespace SojaExiles
         [Range(0f, 1f)] public float fingerWeight = 0.35f;
         [Tooltip("Se salta al destino de este tiempo antes (s): al cerrar el pulgar la mano se mueve un poco.")]
         public float targetLag = 0.12f;
-        [Tooltip("Muestra el texto de ayuda junto a la mano durante los primeros saltos.")]
+        [Tooltip("Muestra el texto de ayuda junto a la mano durante los primeros saltos (solo en modo guiado; en evaluacion no hay ayudas).")]
         public int hintTeleports = 3;
         public float cooldownSeconds = 0.6f;
         [Tooltip("Hasta que distancia (m) se busca piso libre al pie de un mueble o junto a un obstaculo.")]
@@ -1287,7 +1287,8 @@ namespace SojaExiles
         private void DrawHint(HandState state, Transform head, bool ok)
         {
             TextMeshPro hint = state.hint;
-            bool show = head != null && (ForceHints || Count < hintTeleports);
+            bool show = head != null && (ForceHints
+                || (Count < hintTeleports && (BurnGuide.Instance == null || BurnGuide.Instance.Guided)));
             if (!show)
             {
                 hint.gameObject.SetActive(false);

@@ -3,15 +3,13 @@ using UnityEngine;
 
 namespace SojaExiles
 {
-    // Boton de un panel, como un boton normal: se toca con el dedo (Poked) o
-    // se apunta y se aprieta.
-    // Apuntar es tocarlo con la punta del indice (o la esfera de la mano) o
-    // apuntarle de lejos con el rayo de la mano (ButtonPointer). Apretar es
-    // el gatillo o el boton lateral del control, o la pinza con la mano. Solo
-    // tocarlo ya no lo aprieta (antes bastaba dejar la mano 0,6 s dentro y se
-    // elegia sin querer). Cuenta el momento de apretar: si ya se tenia
-    // apretado al llegar al boton, hay que soltar y volver a apretar. Con
-    // esa mano sosteniendo algo no cuenta.
+    // Boton de un panel, como un boton normal: se aprieta tocandolo con la
+    // punta del dedo (o del control), ver Poked. Tambien se puede apuntar de
+    // lejos con el rayo de la mano (ButtonPointer) y apretar el gatillo o
+    // hacer la pinza, y con el dedo encima el gatillo o la pinza tambien
+    // valen. Dejar la mano dentro no lo aprieta (antes bastaba dejarla
+    // 0,6 s y se elegia sin querer). Con esa mano sosteniendo algo no
+    // cuenta.
     // Usa el tiempo sin escalar: funciona tambien con el juego en pausa
     // (PauseMenu), y entonces mira la posicion de la mano en vez de su esfera
     // fisica, que no se mueve sin FixedUpdate.
@@ -22,7 +20,7 @@ namespace SojaExiles
         public Renderer background;
         public Color idleColor = new Color(0.16f, 0.42f, 0.78f);
         public Color pressedColor = new Color(0.45f, 0.75f, 1f);
-        [Tooltip("Sin uso: el boton se aprieta con el gatillo o la pinza, no manteniendo la mano.")]
+        [Tooltip("Sin uso: el boton se aprieta tocandolo, no manteniendo la mano.")]
         public float holdSeconds = 0.6f;
         public float cooldown = 0.5f;
         [Tooltip("Segundos desde que aparece hasta que se puede apretar (evita toques sin querer).")]
@@ -181,38 +179,51 @@ namespace SojaExiles
             }
         }
 
-        // Tocarlo con el dedo, como en el menu del Quest: la punta del indice
-        // llega por delante del boton y lo atraviesa. Con las manos del visor
-        // la pinza sobre el boton costaba (al pinzar, el dedo se sale). Para no
-        // apretarlo sin querer, el dedo tiene que haber estado delante del
-        // boton, dentro de su rectangulo, en el ultimo medio segundo.
-        [Tooltip("Cuanto debe pasar el dedo detras del frente del boton para apretarlo (m).")]
-        public float pokeDepth = 0.006f;
+        // Tocarlo con el dedo, como un boton real: la punta del indice (o del
+        // control) llega desde delante hasta la cara del boton y lo aprieta,
+        // sin pinza ni gatillo (2026-11-19: con el control ya se apretaba
+        // casi al acercarlo y se entendia solo; con las manos habia que
+        // atravesarlo o hacer la pinza y el audio confundia). Al acercarse
+        // el boton se ilumina (Hovered), asi se sabe que esta por apretarse.
+        // Para no apretarlo sin querer, el dedo tiene que haber estado
+        // delante del boton, dentro de su rectangulo, en el ultimo medio
+        // segundo: pasar de costado o dejar la mano encima no lo aprieta.
+        // Para apretarlo otra vez hay que alejar el dedo.
+        [Tooltip("A esta distancia delante de la cara del boton la punta del dedo ya cuenta como apretandolo (m). Las manos del visor tiemblan y no hay superficie que frene el dedo.")]
+        public float touchDepth = 0.008f;
+        [Tooltip("Lo mismo con control: la punta del dedo se estima desde el control y es menos precisa (m).")]
+        public float controllerTouchDepth = 0.015f;
         private readonly float[] frontAt = { -10f, -10f };
+        private readonly bool[] waitRelease = new bool[2];
 
         private int Poked(float now)
         {
             int result = -1;
             for (int h = 0; h < 2; h++)
             {
-                // Con control el indice esta en el gatillo: no se "atraviesa"
-                // el boton, se acerca el control y se aprieta.
-                if (SimpleGrab.UsesController(h == 0) || !SimpleGrab.TryGetFingertip(h == 0, out Vector3 tip)
+                bool controller = SimpleGrab.UsesController(h == 0);
+                if (!SimpleGrab.TryGetFingertip(h == 0, out Vector3 tip)
                     || (SimpleGrab.TryGetHand(h == 0, out Vector3 _, out bool holding) && holding)
-                    || !PointInside(tip, 0.008f, false))
+                    || !PointInside(tip, controller ? 0.012f : 0.008f, false))
                 {
                     frontAt[h] = -10f;
+                    waitRelease[h] = false;
                     continue;
                 }
 
                 float depth = Vector3.Dot(tip - transform.position, transform.forward);
-                if (depth < -0.004f && depth > -0.06f)
+                float touch = controller ? controllerTouchDepth : touchDepth;
+                if (depth < -touch - 0.004f && depth > -0.08f)
                 {
+                    // Delante del boton (y fuera de la cara): listo para tocar.
                     frontAt[h] = now;
+                    waitRelease[h] = false;
                 }
-                else if (depth >= pokeDepth && depth < 0.04f && now - frontAt[h] < 0.5f && result < 0)
+                else if (depth >= -touch && depth < 0.04f && !waitRelease[h] && now - frontAt[h] < 0.5f
+                    && result < 0)
                 {
                     frontAt[h] = -10f;
+                    waitRelease[h] = true;
                     result = h;
                 }
             }

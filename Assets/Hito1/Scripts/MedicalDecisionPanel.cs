@@ -40,16 +40,30 @@ namespace SojaExiles
             // Mismo estilo que la tarjeta del narrador (VRPanelKit.CardPanel).
             const float left = -0.255f;
             VRPanelKit.CardPanel(t, Vector2.zero, Size);
-            VRPanelKit.Text(t, "Paso 8 de 8  ·  Último paso", new Vector2(left, 0.138f), 0.016f,
+            VRPanelKit.Text(t, "Último paso", new Vector2(left, 0.138f), 0.016f,
                 VRPanelKit.CardLabelColor);
             VRPanelKit.BoldText(t, "¿Necesita atención médica?", new Vector2(left, 0.113f), 0.034f, Color.white);
             VRPanelKit.Text(t, VRPanelKit.Wrap("Mira la quemadura antes de decidir: su color, si tiene ampollas y dónde está.", 54),
                 new Vector2(left, 0.058f), 0.019f, VRPanelKit.CardHintColor);
 
-            VRPanelKit.RoundedButton(t, "Ir al centro de salud", new Vector2(-0.128f, -0.07f), new Vector2(0.24f, 0.085f),
-                new Color(0.22f, 0.48f, 0.95f), () => Choose(true));
-            VRPanelKit.RoundedButton(t, "Cuidarla en casa", new Vector2(0.128f, -0.07f), new Vector2(0.24f, 0.085f),
-                new Color(0.2f, 0.62f, 0.42f), () => Choose(false));
+            // Modo guiado: la correcta en verde y por que (VRPanelKit.AnswerButton).
+            bool center = protocol == null || protocol.NeedsMedicalCare;
+            if (VRPanelKit.ShowAnswers)
+            {
+                VRPanelKit.AnswerWhy(t, center
+                        ? "Tiene ampollas (burbujas de piel con líquido): con ampollas en la mano debe verla un médico."
+                        : "Está roja pero sin ampollas: se cuida en casa; si salen ampollas o empeora, al centro de salud.",
+                    new Vector2(left, 0.012f), 56, 0.017f);
+                if (BurnGuide.Instance != null)
+                {
+                    BurnGuide.Instance.Explain(center ? "guia_ayuda_ampollas_si" : "guia_ayuda_ampollas_no", 1f);
+                }
+            }
+
+            VRPanelKit.AnswerButton(t, "Ir al centro de salud", new Vector2(-0.128f, -0.07f), new Vector2(0.24f, 0.085f),
+                new Color(0.22f, 0.48f, 0.95f), center, () => Choose(true));
+            VRPanelKit.AnswerButton(t, "Cuidarla en casa", new Vector2(0.128f, -0.07f), new Vector2(0.24f, 0.085f),
+                new Color(0.2f, 0.62f, 0.42f), !center, () => Choose(false));
         }
 
         private void OnDestroy()

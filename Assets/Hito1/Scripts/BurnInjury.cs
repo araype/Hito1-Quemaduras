@@ -83,6 +83,35 @@ namespace SojaExiles
             get { return blisters.Count > 0 && blisterAmount * 1.3f > 0.2f; }
         }
 
+        // Ampollas que se ven ahora (la llamada al 106 las marca en modo
+        // guiado).
+        public List<Transform> VisibleBlisters()
+        {
+            List<Transform> list = new List<Transform>();
+            foreach (Blister b in blisters)
+            {
+                if (b.transform != null && b.transform.gameObject.activeInHierarchy)
+                {
+                    list.Add(b.transform);
+                }
+            }
+
+            return list;
+        }
+
+        public float BlisterDiameter(Transform blister)
+        {
+            foreach (Blister b in blisters)
+            {
+                if (b.transform == blister)
+                {
+                    return b.diameter;
+                }
+            }
+
+            return 0.01f;
+        }
+
         private PatientBody body;
         private Transform hand;
         private Vector3 handBaseScale = Vector3.one;

@@ -329,7 +329,7 @@ namespace SojaExiles
             BurnSequenceManager.BurnState state = burnSequence.CurrentState;
             // Durante la llamada al 106 no se queja ni habla encima del
             // operador: lo que tenia por decir espera a que cuelgue.
-            bool quiet = EmergencyCall.InCall;
+            bool quiet = EmergencyCall.InCall && !PatientDialog.Interrupting;
             if (quiet)
             {
                 nextQueuedTime = Mathf.Max(nextQueuedTime, Time.time + 0.8f);

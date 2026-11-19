@@ -272,5 +272,91 @@ namespace SojaExiles
         {
             return string.Join("\n", lines);
         }
+
+        // ---------------- respuestas en modo guiado ----------------
+        //
+        // En modo guiado las preguntas (la tia, el 106, la decision medica)
+        // muestran la respuesta correcta: en verde, con un visto a la
+        // izquierda, y las demas apagadas; debajo de la pregunta, por que
+        // (2026-11-19: los jugadores nuevos no distinguian si habia ampollas
+        // y seguian equivocandose). Se puede elegir cualquiera: equivocarse
+        // cuenta igual. En modo evaluacion todas se ven iguales.
+
+        public static readonly Color AnswerCorrectColor = new Color(0.15f, 0.56f, 0.33f);
+        public static readonly Color AnswerOtherColor = new Color(0.27f, 0.3f, 0.38f);
+        public static readonly Color AnswerWhyColor = new Color(0.6f, 0.95f, 0.7f);
+
+        public static bool ShowAnswers
+        {
+            get { return BurnGuide.Instance != null && BurnGuide.Instance.Guided; }
+        }
+
+        // Color del boton de una respuesta: el normal en modo evaluacion.
+        public static Color AnswerColor(bool correct, Color normal)
+        {
+            return !ShowAnswers ? normal : correct ? AnswerCorrectColor : AnswerOtherColor;
+        }
+
+        // Boton de una respuesta con su color y, si es la correcta en modo
+        // guiado, el visto.
+        public static TouchButton AnswerButton(Transform parent, string label, Vector2 center, Vector2 size,
+            Color normal, bool correct, System.Action onPressed)
+        {
+            TouchButton button = RoundedButton(parent, label, center, size, AnswerColor(correct, normal), onPressed);
+            if (correct && ShowAnswers)
+            {
+                CorrectMark(button, size);
+            }
+
+            return button;
+        }
+
+        // Circulo verde claro con un visto dibujado (la fuente no tiene el
+        // signo), dentro del extremo izquierdo del boton. La etiqueta se
+        // corre a la derecha para no pisarlo.
+        public static void CorrectMark(TouchButton button, Vector2 size)
+        {
+            float diameter = Mathf.Min(0.034f, size.y * 0.55f);
+            Vector2 center = new Vector2(-size.x * 0.5f + size.y * 0.5f, 0f);
+            RoundedPanel circle = RoundedPanel.Create(button.transform, "Visto", center, Vector2.one * diameter,
+                -0.002f, diameter * 0.5f, 0f, 0f);
+            circle.sheen = 0f;
+            circle.SetSolid(new Color(0.45f, 0.95f, 0.6f), 0f);
+
+            // El visto: un trazo corto y uno largo.
+            Color ink = new Color(0.03f, 0.25f, 0.1f);
+            float stroke = diameter * 0.13f;
+            Renderer shortStroke = Background(button.transform, center + new Vector2(-diameter * 0.18f, -diameter * 0.04f),
+                new Vector2(diameter * 0.3f, stroke), "Panel_Boton", ink, -0.0035f);
+            shortStroke.transform.localRotation = Quaternion.Euler(0f, 0f, -45f);
+            IndicatorUtil.SetColor(shortStroke, ink);
+            Renderer longStroke = Background(button.transform, center + new Vector2(diameter * 0.1f, diameter * 0.065f),
+                new Vector2(diameter * 0.55f, stroke), "Panel_Boton", ink, -0.0035f);
+            longStroke.transform.localRotation = Quaternion.Euler(0f, 0f, 50f);
+            IndicatorUtil.SetColor(longStroke, ink);
+
+            foreach (Transform child in button.transform)
+            {
+                if (child.GetComponent<TextMesh>() != null)
+                {
+                    float room = size.y * 0.5f + diameter * 0.5f;
+                    float scale = Mathf.Clamp01((size.x - 2f * room) / (size.x * 0.88f));
+                    child.localPosition += new Vector3(room * 0.5f, 0f, 0f);
+                    child.localScale *= Mathf.Max(0.75f, scale);
+                }
+            }
+        }
+
+        // Linea de "por que" de la respuesta correcta (modo guiado).
+        public static TextMesh AnswerWhy(Transform parent, string why, Vector2 position, int width, float lineHeight,
+            TextAnchor anchor = TextAnchor.UpperLeft, TextAlignment alignment = TextAlignment.Left)
+        {
+            return Text(parent, Wrap(why, width), position, lineHeight, AnswerWhyColor, anchor, alignment);
+        }
+
+        public static int Lines(string text, int width)
+        {
+            return string.IsNullOrEmpty(text) ? 0 : Wrap(text, width).Split('\n').Length;
+        }
     }
 }

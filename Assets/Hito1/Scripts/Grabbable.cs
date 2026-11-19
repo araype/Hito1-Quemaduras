@@ -27,6 +27,18 @@ namespace SojaExiles
         public bool returnFromFloor = true;
         public float floorReturnSeconds = 2f;
 
+        // Si cae al piso dentro del area de juego (PlayArea), se queda ahi
+        // para recogerlo agachandose; solo vuelve si cae donde no se llega.
+        // Lo usan la bolsa y el film (2026-11-19: al caerse al cubrir,
+        // volvian solos al meson y parecia que desaparecian).
+        public bool stayOnReachableFloor;
+
+        // Queda en el piso porque ahi se puede recoger.
+        public bool StaysWhereItFell(Vector3 position)
+        {
+            return stayOnReachableFloor && PlayArea.Allowed(position);
+        }
+
         // Distancia entre la mano y el objeto a partir de la cual SimpleGrab
         // lo suelta (negativo: usa la de SimpleGrab). La mano de la paciente
         // usa una mayor para que no se escape mientras ella camina.
@@ -111,7 +123,8 @@ namespace SojaExiles
                 floorY = MeasureFloor();
             }
 
-            bool resting = transform.position.y < floorY + 0.25f && body.velocity.sqrMagnitude < 0.04f;
+            bool resting = transform.position.y < floorY + 0.25f && body.velocity.sqrMagnitude < 0.04f
+                && !StaysWhereItFell(transform.position);
             onFloorTime = resting ? onFloorTime + Time.fixedDeltaTime : 0f;
             return onFloorTime > floorReturnSeconds;
         }

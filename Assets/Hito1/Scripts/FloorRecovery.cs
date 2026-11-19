@@ -96,7 +96,8 @@ namespace SojaExiles
             }
 
             bool onFloor = !rb.isKinematic && rb.position.y < t.home.y - dropHeight
-                && rb.velocity.sqrMagnitude < 0.01f && !Held(rb);
+                && rb.velocity.sqrMagnitude < 0.01f && !Held(rb)
+                && (g == null || !g.StaysWhereItFell(rb.position));
             if (!onFloor)
             {
                 t.onFloorSince = -1f;

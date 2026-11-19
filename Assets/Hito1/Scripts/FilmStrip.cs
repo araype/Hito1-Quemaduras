@@ -163,8 +163,11 @@ namespace SojaExiles
                 {
                     looseSince = Time.time;
                 }
-                else if (Time.time - looseSince > looseSeconds)
+                else if (Time.time - looseSince > looseSeconds && !PlayArea.Allowed(transform.position))
                 {
+                    // Solo se borra si cayo donde no se alcanza: en el piso
+                    // de la cocina o en el meson se puede recoger (antes se
+                    // borraba a los 20 s y parecia que desaparecia).
                     Destroy(gameObject);
                 }
             }

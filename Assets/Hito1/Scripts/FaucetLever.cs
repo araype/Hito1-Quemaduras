@@ -48,6 +48,10 @@ namespace SojaExiles
 
         public static FaucetLever Current { get; private set; }
 
+        // Modo guiado: se le ofrecio templar el agua y la palanca brilla hasta
+        // que sale tibia (PatientDialog).
+        public static bool HintWarm;
+
         // 0 cerrada, 1 fria, 2 tibia, 3 caliente.
         public int Zone { get; private set; }
         public float Angle { get { return angle; } }
@@ -447,8 +451,8 @@ namespace SojaExiles
                 return;
             }
 
-            bool hint = IndicatorUtil.HintsVisible && Zone == 0 && burn != null
-                && burn.CurrentState == BurnSequenceManager.BurnState.Burned;
+            bool hint = IndicatorUtil.HintsVisible && ((Zone == 0 && burn != null
+                && burn.CurrentState == BurnSequenceManager.BurnState.Burned) || (HintWarm && Zone != 2));
             float k = 0f;
             if (hint)
             {
@@ -456,6 +460,13 @@ namespace SojaExiles
                 if (nearHand >= 0)
                 {
                     k += 0.2f;
+                }
+
+                // Templar: mas fuerte (la mano de ella esta bajo el chorro y
+                // la palanca se pierde de vista).
+                if (HintWarm)
+                {
+                    k += 0.35f;
                 }
             }
 

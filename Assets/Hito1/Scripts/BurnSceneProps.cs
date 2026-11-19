@@ -6,16 +6,10 @@ namespace SojaExiles
 {
     // Pone en la cocina los objetos del protocolo y los distractores, sin
     // tocar la escena:
-    //   - guardados en los muebles junto al lavadero, como en una casa: el
-    //     botiquin (FirstAidKit) en el mueble alto, solo con distractores
-    //     (curitas y una pomada); el film transparente y la bolsa plastica,
-    //     con lo que se cubre (NHS, Cruz Roja Britanica), en el cajon de
-    //     abajo. Las puertas y el cajon se abren con la
-    //     mano (StorageFront). Si la escena no tiene esos muebles, van sueltos
-    //     en el meson;
-    //   - en el sofa de la sala: una manta doblada (para abrigarla); hay que
-    //     ir a buscarla, y el jugador puede caminar hasta alli (PlayArea);
-    //     si no hay sofa, en la silla mas cercana a la paciente;
+    //   - guardados en el cajon junto al lavadero, como en una casa: el film
+    //     transparente y la bolsa plastica, con lo que se cubre (NHS, Cruz
+    //     Roja Britanica). El cajon se abre con la mano (StorageFront). Si la
+    //     escena no tiene ese cajon, van sueltos en el meson;
     //   - en el meson, cerca de la cocina: mantequilla, pasta dental, aceite
     //     y algodon; el hielo, cerca del refrigerador.
     // Busca lugares libres sobre el meson (a la altura del pano) y evita el
@@ -23,11 +17,12 @@ namespace SojaExiles
     // puso los colliders del meson. Va en el objeto de BurnSequenceManager.
     public class BurnSceneProps : MonoBehaviour
     {
+        // Se quitaron la manta del sofa (abrigar) y el botiquin del mueble
+        // alto (2026-11-19): abrigar no es un paso de las guias para esta
+        // quemadura y en las pruebas con usuarios muchos creian que el
+        // botiquin servia de algo (solo tenia curitas y pomada).
         public bool coverItems = true;
-        public bool blanket = true;
         public bool remedies = true;
-        [Tooltip("Cuanto queda abierta la puerta del mueble del botiquin al empezar (0 cerrada, 0,4 maximo: mas alla ya cuenta como abierta).")]
-        [Range(0f, 0.4f)] public float kitDoorAjar = 0.25f;
 
         private readonly List<Vector3> taken = new List<Vector3>();
         private bool kitStored;
@@ -79,15 +74,16 @@ namespace SojaExiles
                 Vector3 sink = tap != null ? tap.transform.position : stove;
                 Vector3 room = patient != null ? patient.transform.position
                     : (Camera.main != null ? Camera.main.transform.position : sink);
-                // Guardados como en una casa: nadie tiene el botiquin sobre el
-                // meson esperando una quemadura.
-                if (!StoreKitInWallCabinet(sink, counter, avoid, room))
-                {
-                    PlaceKit(sink, counter, avoid, patient);
-                }
+                // El cajon se elige como cuando estaba el botiquin (junto a
+                // su mueble alto), para que el film, la bolsa y el celular
+                // queden en el mismo lugar que en las pruebas anteriores.
+                FindWallCabinet(sink, counter, avoid, room);
 
                 GameObject film = BuildFilm();
                 GameObject bag = BuildBag();
+                // Si se caen al cubrir, se quedan en el piso para recogerlos.
+                film.GetComponent<Grabbable>().stayOnReachableFloor = true;
+                bag.GetComponent<Grabbable>().stayOnReachableFloor = true;
                 if (!StoreInDrawer(sink, counter, avoid, room, film, bag))
                 {
                     Place(film, sink, counter, 0.3f, 0.9f, 0.09f, avoid);
@@ -107,19 +103,6 @@ namespace SojaExiles
                 Place(BuildIce(), iceNear, counter, fridge != null ? 0.2f : 0.35f, 1.2f, 0.09f, avoid, stove);
             }
 
-            if (blanket)
-            {
-                GameObject manta = BuildBlanket();
-                Vector3 near = patient != null ? patient.transform.position : stove;
-                if (PlaceOnSofa(manta, near))
-                {
-                    PlayArea.AllowPlayerPathTo(manta.transform.position);
-                }
-                else if (!PlaceOnChair(manta, near))
-                {
-                    Place(manta, near, counter, 0.4f, 1.4f, 0.15f, avoid);
-                }
-            }
         }
 
         // Altura del meson: la base del pano (que esta apoyado en el), o la
@@ -154,27 +137,6 @@ namespace SojaExiles
             prop.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
             prop.GetComponent<Grabbable>().SetHome();
             Debug.Log("[BurnSceneProps] " + prop.name + " en " + spot.ToString("F2"));
-        }
-
-        // El botiquin, con el frente (rotulo y tirador) hacia el centro de la
-        // cocina, y lo de adentro.
-        private void PlaceKit(Vector3 near, float counter, Vector3 avoid, PatientBody patient)
-        {
-            FirstAidKit kit = FirstAidKit.Build();
-            if (!PropKit.FindSurfaceSpot(near, counter, 0.3f, 1.1f, 0.2f, taken, avoid, avoidRadius, out Vector3 spot))
-            {
-                Debug.LogWarning("[BurnSceneProps] No hay lugar libre para el botiquin; queda junto al lavadero.");
-                spot = new Vector3(near.x, counter, near.z);
-            }
-
-            Vector3 room = patient != null ? patient.transform.position : (Camera.main != null ? Camera.main.transform.position : spot);
-            Vector3 face = room - spot;
-            face.y = 0f;
-            kit.transform.position = spot + Vector3.up * 0.002f;
-            kit.transform.rotation = face.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(face.normalized) : Quaternion.identity;
-            Physics.SyncTransforms();
-            kit.Fill();
-            Debug.Log("[BurnSceneProps] Botiquin en " + spot.ToString("F2"));
         }
 
         // ---------------- muebles de la cocina ----------------
@@ -230,12 +192,11 @@ namespace SojaExiles
             return b;
         }
 
-        // El botiquin, en el mueble alto mas cercano al lavadero (no encima
-        // del lavadero, donde hay repisas abiertas): ahi se guarda en una casa,
-        // seco y fuera del alcance de los ninos. Queda detras de la puerta mas
-        // cercana al lavadero, sobre el fondo del mueble, con el frente hacia
-        // la cocina.
-        private bool StoreKitInWallCabinet(Vector3 sink, float counter, Vector3 avoid, Vector3 room)
+        // El mueble alto mas cercano al lavadero (no encima del lavadero,
+        // donde hay repisas abiertas) con lugar adentro: ahi estaba el
+        // botiquin. Solo se recuerda donde esta (kitCabinet) para elegir el
+        // cajon del film; las puertas quedan como en la escena.
+        private bool FindWallCabinet(Vector3 sink, float counter, Vector3 avoid, Vector3 room)
         {
             // Muebles altos cerca del lavadero, del mas cercano al mas lejano.
             Dictionary<Transform, List<Transform>> all = CabinetDoors();
@@ -283,24 +244,16 @@ namespace SojaExiles
                 if (!InteriorFloor(cabinet, new Vector3(inner.x, cab.max.y - 0.05f, inner.z), cab.size.y,
                     outward, out Vector3 floorPoint))
                 {
-                    Debug.Log("[BurnSceneProps] El mueble " + cabinet.name + " no tiene lugar para el botiquin; se prueba otro.");
+                    Debug.Log("[BurnSceneProps] El mueble " + cabinet.name + " no tiene lugar adentro; se prueba otro.");
                     continue;
                 }
 
-                StorageFront front = null;
-                foreach (Transform d in all[cabinet])
-                {
-                    StorageFront f = StorageFront.Setup(d, StorageFront.Kind.Door, room, -0.75f);
-                    if (d == door)
-                    {
-                        front = f;
-                    }
-                }
-
-                return PutKit(cabinet, cab, front, floorPoint, outward, sink, counter, avoid);
+                kitStored = true;
+                kitCabinet = cab.center;
+                return true;
             }
 
-            Debug.LogWarning("[BurnSceneProps] No hay mueble alto con puertas cerca del lavadero; el botiquin queda en el meson.");
+            Debug.Log("[BurnSceneProps] No hay mueble alto con puertas cerca del lavadero; el cajon se elige junto al lavadero.");
             return false;
         }
 
@@ -324,36 +277,9 @@ namespace SojaExiles
                 return false;
             }
 
-            Vector3 half = new Vector3(FirstAidKit.Width * 0.5f, 0.09f, FirstAidKit.Depth * 0.5f);
+            Vector3 half = new Vector3(0.15f, 0.09f, 0.1f);
             Quaternion rotation = Quaternion.LookRotation(outward, Vector3.up);
             return !Physics.CheckBox(point + Vector3.up * 0.105f, half, rotation, ~0, QueryTriggerInteraction.Ignore);
-        }
-
-        private bool PutKit(Transform cabinet, Bounds cab, StorageFront front, Vector3 floorPoint, Vector3 outward,
-            Vector3 sink, float counter, Vector3 avoid)
-        {
-            FirstAidKit kit = FirstAidKit.Build();
-            kit.transform.SetPositionAndRotation(floorPoint + Vector3.up * 0.003f,
-                Quaternion.LookRotation(outward, Vector3.up));
-            Physics.SyncTransforms();
-            kit.Fill();
-            kit.GetComponent<Grabbable>().SetHome();
-            front.Store(kit.Body);
-            kitStored = true;
-            kitCabinet = cab.center;
-            if (PropKit.FindSurfaceSpot(sink, counter, 0.3f, 1.1f, 0.2f, taken, avoid, avoidRadius, out Vector3 spot))
-            {
-                front.OutsideHome = spot + Vector3.up * 0.01f;
-                front.HasOutsideHome = true;
-            }
-
-            // Puerta entreabierta: se nota que ahi hay algo (cerrada nadie lo
-            // encontraba). Adentro solo hay curitas y pomada, que no sirven.
-            front.SetAjar(kitDoorAjar);
-
-            Debug.Log("[BurnSceneProps] Botiquin guardado en " + cabinet.name + " (detras de " + front.name + ") en "
-                + kit.transform.position.ToString("F2"));
-            return true;
         }
 
         // Film y bolsa, en el cajon de la cocina mas cercano al lavadero (bajo
@@ -375,8 +301,8 @@ namespace SojaExiles
                     continue;
                 }
 
-                // Junto al mueble del botiquin (todo lo de curar en un mismo
-                // rincon) y lejos de la cocina.
+                // Junto al mueble alto donde estaba el botiquin (el mismo
+                // cajon de siempre) y lejos de la cocina.
                 Vector3 near = kitStored ? kitCabinet : sink;
                 float dist = PropKit.Flat(b.center - near).magnitude;
                 if (dist < bestDistance && PropKit.Flat(b.center - avoid).magnitude > avoidRadius + 0.3f)
@@ -449,136 +375,6 @@ namespace SojaExiles
             };
 
             Debug.Log("[BurnSceneProps] Film y bolsa guardados en el cajon " + best.parent.name + "/" + best.name);
-            return true;
-        }
-
-        // Asiento de la silla mas cercana a la paciente.
-        private bool PlaceOnChair(GameObject prop, Vector3 near)
-        {
-            Renderer best = null;
-            float bestDistance = 4f;
-            foreach (Renderer r in FindObjectsOfType<Renderer>())
-            {
-                if (!r.name.StartsWith("Chair"))
-                {
-                    continue;
-                }
-
-                float d = Vector3.Distance(r.bounds.center, near);
-                if (d < bestDistance)
-                {
-                    bestDistance = d;
-                    best = r;
-                }
-            }
-
-            if (best == null)
-            {
-                return false;
-            }
-
-            Bounds b = best.bounds;
-            Vector3 probe = new Vector3(b.center.x, b.max.y + 0.05f, b.center.z);
-            if (!Physics.Raycast(probe, Vector3.down, out RaycastHit hit, b.size.y + 0.1f, ~0,
-                QueryTriggerInteraction.Ignore) || hit.point.y > b.center.y + 0.2f || hit.normal.y < 0.8f)
-            {
-                return false;
-            }
-
-            prop.transform.position = hit.point + Vector3.up * 0.002f;
-            prop.transform.rotation = Quaternion.Euler(0f, best.transform.eulerAngles.y, 0f);
-            prop.GetComponent<Grabbable>().SetHome();
-            Debug.Log("[BurnSceneProps] Manta sobre " + best.name);
-            return true;
-        }
-
-        // Sobre el asiento del sofa (el mas cercano a la paciente), hacia uno
-        // de los extremos, como una manta que se deja doblada ahi.
-        private bool PlaceOnSofa(GameObject prop, Vector3 near)
-        {
-            Renderer best = null;
-            float bestDistance = 15f;
-            foreach (Renderer r in FindObjectsOfType<Renderer>())
-            {
-                if (!r.name.StartsWith("Sofa") || r.bounds.size.x * r.bounds.size.z < 0.6f)
-                {
-                    continue;
-                }
-
-                float d = Vector3.Distance(r.bounds.center, near);
-                if (d < bestDistance)
-                {
-                    bestDistance = d;
-                    best = r;
-                }
-            }
-
-            if (best == null)
-            {
-                return false;
-            }
-
-            // El lado largo del sofa y su frente (hacia afuera de la pared,
-            // donde el asiento queda mas bajo que el respaldo).
-            Bounds b = best.bounds;
-            Vector3 along = b.size.x >= b.size.z ? Vector3.right : Vector3.forward;
-            Vector3 across = Vector3.Cross(Vector3.up, along);
-            float length = Vector3.Dot(b.size, along);
-            float depth = Vector3.Dot(b.size, across);
-            // El frente del sofa mira hacia la paciente (hacia la cocina).
-            Vector3 front = across * Mathf.Sign(Vector3.Dot(near - b.center, across) + 1e-4f);
-            Vector3 seat = Vector3.zero;
-            bool found = false;
-            // Hacia un extremo, pero sin llegar al cojin del brazo del sofa.
-            foreach (float side in new[] { 0.22f, -0.22f })
-            {
-                List<Vector3> hits = new List<Vector3>();
-                float lowest = float.MaxValue;
-                for (int s = -3; s <= 3; s++)
-                {
-                    Vector3 p = b.center + along * (length * side) + across * (depth * 0.12f * s);
-                    p.y = b.max.y + 0.1f;
-                    if (!Physics.Raycast(p, Vector3.down, out RaycastHit hit, b.size.y + 0.3f, ~0,
-                        QueryTriggerInteraction.Ignore) || hit.normal.y < 0.8f || hit.collider.attachedRigidbody != null
-                        || hit.point.y < b.min.y + 0.25f)
-                    {
-                        continue;
-                    }
-
-                    hits.Add(hit.point);
-                    lowest = Mathf.Min(lowest, hit.point.y);
-                }
-
-                // El asiento es lo mas bajo por encima de la base; de el, la
-                // parte de adelante (se alcanza sin agacharse tanto), con 12 cm
-                // de margen al borde.
-                float bestFront = float.MinValue;
-                foreach (Vector3 h in hits)
-                {
-                    float f = Vector3.Dot(h - b.center, front);
-                    if (h.y <= lowest + 0.03f && f > bestFront)
-                    {
-                        bestFront = f;
-                        seat = h - front * 0.12f;
-                        found = true;
-                    }
-                }
-
-                if (found)
-                {
-                    break;
-                }
-            }
-
-            if (!found)
-            {
-                return false;
-            }
-
-            prop.transform.position = seat + Vector3.up * 0.003f;
-            prop.transform.rotation = Quaternion.LookRotation(along, Vector3.up) * Quaternion.Euler(0f, Random.Range(-12f, 12f), 0f);
-            prop.GetComponent<Grabbable>().SetHome();
-            Debug.Log("[BurnSceneProps] Manta sobre " + best.name + " en " + seat.ToString("F2"));
             return true;
         }
 
@@ -692,26 +488,6 @@ namespace SojaExiles
                 new Vector3(0.15f, 0.003f, 0.12f), "Bolsa_Plastico", new Color(0.92f, 0.95f, 1f, 0.6f));
             root.AddComponent<CoverItem>().kind = CoverItem.Kind.Bolsa;
             Amarillo(root, "Bolsa_Plastico", 0.75f);
-            return root;
-        }
-
-        // Manta doblada: tres capas un poco corridas, como tela doblada.
-        private static GameObject BuildBlanket()
-        {
-            Color color = new Color(0.62f, 0.2f, 0.22f);
-            GameObject root = PropKit.Grabbable("Manta", Vector3.zero, Quaternion.identity,
-                new Vector3(0.42f, 0.09f, 0.32f), 0.6f);
-            for (int i = 0; i < 3; i++)
-            {
-                PropKit.Part(root.transform, PrimitiveType.Cube,
-                    new Vector3(0.006f * (i - 1), 0.015f + i * 0.029f, -0.004f * i),
-                    new Vector3(0.42f - i * 0.006f, 0.028f, 0.32f - i * 0.004f), "Manta", color);
-            }
-
-            // Borde doblado al frente, redondeado.
-            PropKit.Part(root.transform, PrimitiveType.Capsule, new Vector3(0f, 0.045f, 0.16f),
-                new Vector3(0.09f, 0.21f, 0.09f), Quaternion.Euler(0f, 0f, 90f), "Manta", color);
-            root.AddComponent<BlanketItem>();
             return root;
         }
 
