@@ -92,8 +92,8 @@ variantes de la llamada.
 | [x] | `guia_ayuda_agua` | Guiado: el 106 pregunta por el agua | `[calm] El operador no ve la cocina: cuéntale lo que pasa de verdad. La respuesta correcta está en verde.` |
 | [x] | `guia_ayuda_ampollas_si` | Guiado: tiene ampollas | `[calm] Mira su mano: tiene ampollas, unas burbujas de piel hinchada con líquido claro. Es una quemadura de segundo grado.` |
 | [x] | `guia_ayuda_ampollas_no` | Guiado: no tiene ampollas | `[calm] Mira su mano: está roja e irritada, pero no tiene burbujas de piel con líquido. Eso no son ampollas: es una quemadura de primer grado.` |
-| [ ] | `guia_ayuda_centro` | Guiado: decidir, con ampollas | `[calm] Tiene ampollas: es una quemadura de segundo grado. En la mano, aunque sea pequeña, debe verla un médico. Por eso lo correcto es llevarla al centro de salud.` |
-| [ ] | `guia_ayuda_casa` | Guiado: decidir, sin ampollas | `[calm] Solo está roja, sin ampollas: es de primer grado, y se cuida en casa aunque sea grande. Si después salen ampollas o empeora, llévala al centro de salud.` |
+| [x] | `guia_ayuda_centro` | Guiado: decidir, con ampollas | `[calm] Tiene ampollas: es una quemadura de segundo grado. En la mano, aunque sea pequeña, debe verla un médico. Por eso lo correcto es llevarla al centro de salud.` |
+| [x] | `guia_ayuda_casa` | Guiado: decidir, sin ampollas | `[calm] Solo está roja, sin ampollas: es de primer grado, y se cuida en casa aunque sea grande. Si después salen ampollas o empeora, llévala al centro de salud.` |
 
 ### Operador del 106 (3)
 
@@ -108,7 +108,7 @@ variantes de la llamada.
 | Hecha | Archivo | Cuándo suena | Para ElevenLabs |
 |---|---|---|---|
 | [ ] | `voz_frio` | Quiere sacar la mano por el frío | Transcribir del audio actual (Sabina); por el momento suena `voz_hielo_duele`. |
-| [ ] | `voz_templar_pide` | Le van a templar el agua | `[worried] Ya, pero ábrela solo un poquito, que la caliente quema.` |
+| [x] | `voz_templar_pide` | Le van a templar el agua | `[worried] Ya, pero ábrela solo un poquito, que la caliente quema.` |
 | [ ] | `voz_templada` | El agua ya está tibia | `[relieved] Ay, así está mejor. Aguanto.` |
 | [ ] | `voz_aprieta` | Le envuelven la mano con film | `[in pain] ¡Ay, me aprieta! No me envuelvas la mano, por favor.` |
 
