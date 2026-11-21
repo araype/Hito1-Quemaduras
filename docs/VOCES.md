@@ -219,7 +219,6 @@ quejidos y nunca repite el mismo dos veces seguidas.
 | `guia_ayuda_agua` | Modo guiado: el 106 pregunta por el agua | El operador no ve la cocina: cuéntale lo que pasa de verdad. La respuesta correcta está en verde. |
 | `guia_ayuda_ampollas_si` | Modo guiado: tiene ampollas | Mira su mano: tiene ampollas, unas burbujas de piel hinchada con líquido claro. Es una quemadura de segundo grado. |
 | `guia_ayuda_ampollas_no` | Modo guiado: no tiene ampollas | Mira su mano: está roja e irritada, pero no tiene burbujas de piel con líquido. Eso no son ampollas: es una quemadura de primer grado. |
-| `guia_ayuda_seguir` | Ya no se usa (2026-11-21: la reemplazan `guia_ayuda_centro` y `guia_ayuda_casa`) | Sigue lo que te recomienda el operador. La respuesta correcta está en verde. |
 | `guia_templar` | Modo guiado: eligió templar el agua | Gira la palanca del caño un poco más hacia ti, hasta la mitad: así sale tibia. Su mano sigue bajo el chorro. |
 
 ## Voces nuevas del 2026-11-21 (Windows; falta ElevenLabs)

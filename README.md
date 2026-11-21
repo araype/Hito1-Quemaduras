@@ -151,7 +151,7 @@ Primero hay un **tutorial** breve: la tía te pide una taza y aprendes a moverte
 | Girar | Joystick derecho (giros de 45°) | Girar el cuerpo |
 | Agarrar y soltar | Botón lateral (*grip*) o gatillo | Pinza de pulgar e índice |
 | Botones, llave del caño y celular | Tocar con la punta del control | Tocar con la punta del dedo |
-| Pausa | Botón de menú izquierdo, o mantener B o Y un segundo | Gesto de menú de la mano |
+| Pausa | Girar la palma izquierda hacia la cara y tocar «Pausa» en la muñeca con la punta del otro control. También: botón de menú izquierdo, o mantener B o Y un segundo | Girar la palma izquierda hacia la cara y tocar «Pausa» en la muñeca con un dedo de la otra mano, o el gesto de menú de la mano |
 
 En el editor, `Esc` o `P` también pausan.
 
@@ -191,9 +191,14 @@ Assets/
     Editor/         Herramientas del editor (menú Hito1)
   Oculus/, XR/            Configuración de Meta XR y OpenXR
 docs/
-  manuales/       Manual de instalación y guía rápida (PDF)
-  evidencias/     Evidencias de las pruebas con usuarios y métricas de fps
+  manuales/       Manual de instalación y guía rápida (PDF, y sus fuentes HTML en fuente/)
+  presentacion/   Pitch final (PPTX), su guion y sus imágenes
+  evidencias/     Evidencias de las pruebas con usuarios, gráfico de fps y datos de
+                  OVR Metrics Tool (rnf01_ovr_metrics.csv)
+  VOCES.md        Textos de todas las voces (los usa Editor/VisemeTracks.cs)
 Informe/          Informe final (LaTeX y PDF)
+README.md         Este documento
+CLAUDE.md         Notas para trabajar el código con Claude Code
 ```
 
 Piezas principales del código (`Assets/Hito1/Scripts`):

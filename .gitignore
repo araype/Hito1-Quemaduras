@@ -19,3 +19,4 @@
 *.aab
 *.exe
 *.app
+*_BurstDebugInformation_DoNotShip/

@@ -8,27 +8,19 @@ historial de git).
 
 ## Antes de empezar
 
-- **Qué falta y en qué orden:** `docs/PENDIENTES.md` (única lista, solo lo
-  que falta). Al terminar un punto, bórralo de ahí y descríbelo en
-  `docs/QUEMADURA_INMERSION.md`. Los bugs vienen de
-  `Bugs_Experiencia_VR_Quemaduras.pdf` (raíz, sin versionar).
-- **Qué hay y cómo probarlo:** `docs/QUEMADURA_INMERSION.md`.
-- Los documentos de etapas anteriores se borraron; siguen en el historial.
-
-## Ramas
-
-`consolidada` une `experiencia-inmersiva` (Araype, con `quemadura-realista`
-y `rediseno-tarjetas`) y `corregir-bugs` (jjosnayo). Las decisiones de la
-unión están en `docs/QUEMADURA_INMERSION.md`, sección 14. Se trabaja desde
-`consolidada` y se une a `main` con un pull request.
+- El proyecto está en su **versión final** en `main`. Qué es, cómo
+  instalarlo, cómo se juega y la estructura del repositorio: `README.md`.
+- Textos de las voces: `docs/VOCES.md` (lo lee `Editor/VisemeTracks.cs`
+  para generar los visemas de la tía; no cambiar el formato de sus tablas).
+- Los documentos de trabajo de cada etapa (pendientes, bugs, historial de
+  cambios por rama) se borraron el 2026-11-21; siguen en el historial de git
+  (por ejemplo, `docs/QUEMADURA_INMERSION.md`).
 
 ## Cómo está armado
 
-- Escena principal (la del build, con luz precalculada):
-  `Assets/Hito1/Escenas/Escenario_Quemadura.unity`. Hasta el 2026-11-12 se
-  llamaba `Prueba_LuzHorneada`; la escena vieja que antes tenía ese nombre
-  quedó como `Escenario_Quemadura_Previa.unity` (desactualizada, fuera del
-  build). La tía de Avaturn ya está guardada en la escena principal.
+- Escena única (la del build, con luz precalculada):
+  `Assets/Hito1/Escenas/Escenario_Quemadura.unity`. La tía de Avaturn ya
+  está guardada en ella.
 - Lo nuevo se instala al dar Play desde `Hito1RuntimeBootstrap` (solo si la
   escena tiene `BurnSequenceManager`) y no se duplica si ya está en la
   escena. La escena principal se puede modificar si el usuario lo pide.
@@ -49,7 +41,8 @@ unión están en `docs/QUEMADURA_INMERSION.md`, sección 14. Se trabaja desde
   botones táctiles con `TouchButton`.
 - Sonidos y materiales se cargan por nombre desde
   `Assets/Hito1/Resources/{Hito1Audio,Hito1FX}` con `Hito1FX.Clip/Mat` o
-  `PropKit.Mat`. Los efectos están sintetizados y las voces son TTS.
+  `PropKit.Mat`. Los efectos están sintetizados y las voces, generadas con
+  ElevenLabs.
 
 ## Convenciones
 
