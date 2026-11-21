@@ -52,13 +52,13 @@ Las oye cualquier jugador en una partida normal, en modo guiado.
 
 | Hecha | Archivo | Cuándo suena | Para ElevenLabs |
 |---|---|---|---|
-| [ ] | `guia_bienvenida` | Menú de inicio | `[calm] Hola. Vas a practicar qué hacer si alguien se quema en la cocina. Elige un modo: guiado, si quieres que te indique cada paso, o evaluación, si prefieres hacerlo solo. Para elegir, toca el botón con la punta del dedo.` |
-| [ ] | `guia_agarrar_manos` | Tutorial 1, con manos | `[calm] Para agarrar algo, acerca la mano y junta el pulgar y el índice, o ciérrala. Agarra la taza del mesón.` |
-| [ ] | `guia_agarrar_control` | Tutorial 1, con controles | `[calm] Para agarrar algo, acerca el control y aprieta el botón lateral, el del dedo medio. Agarra la taza del mesón.` |
-| [ ] | `guia_caminar_manos` | Tutorial 2, con manos | `[calm] Ahora camina hasta tu tía y acércale la taza a la mano.` |
-| [ ] | `guia_caminar_control` | Tutorial 2, con controles | `[calm] Camina con el joystick izquierdo. Para ir lejos, empuja el derecho hacia adelante, apunta y suéltalo. Llévale la taza a tu tía.` |
-| [ ] | `guia_pausa_manos` | Tutorial 3, con manos | `[calm] Ahora, la pausa. Mira la palma de tu mano izquierda: en la muñeca aparece Pausa. Tócalo con un dedo de la otra mano.` |
-| [ ] | `guia_pausa_control` | Tutorial 3, con controles | `[calm] Ahora, la pausa. Mira la palma de tu mano izquierda: en la muñeca aparece Pausa. Tócalo con la punta del otro control.` |
+| [x] | `guia_bienvenida` | Menú de inicio | `[calm] Hola. Vas a practicar qué hacer si alguien se quema en la cocina. Elige un modo: guiado, si quieres que te indique cada paso, o evaluación, si prefieres hacerlo solo. Para elegir, toca el botón con la punta del dedo.` |
+| [x] | `guia_agarrar_manos` | Tutorial 1, con manos | `[calm] Para agarrar algo, acerca la mano y junta el pulgar y el índice, o ciérrala. Agarra la taza del mesón.` |
+| [x] | `guia_agarrar_control` | Tutorial 1, con controles | `[calm] Para agarrar algo, acerca el control y aprieta el botón lateral, el del dedo medio. Agarra la taza del mesón.` |
+| [x] | `guia_caminar_manos` | Tutorial 2, con manos | `[calm] Ahora camina hasta tu tía y acércale la taza a la mano.` |
+| [x] | `guia_caminar_control` | Tutorial 2, con controles | `[calm] Camina con el joystick izquierdo. Para ir lejos, empuja el derecho hacia adelante, apunta y suéltalo. Llévale la taza a tu tía.` |
+| [x] | `guia_pausa_manos` | Tutorial 3, con manos | `[calm] Ahora, la pausa. Mira la palma de tu mano izquierda: en la muñeca aparece Pausa. Tócalo con un dedo de la otra mano.` |
+| [x] | `guia_pausa_control` | Tutorial 3, con controles | `[calm] Ahora, la pausa. Mira la palma de tu mano izquierda: en la muñeca aparece Pausa. Tócalo con la punta del otro control.` |
 | [ ] | `guia_teleport_manos` | Tutorial 4, solo con manos | `[calm] Por último, ve hasta el círculo verde. Haz una ele con la mano: índice y pulgar estirados, los otros dedos doblados. Apunta al círculo verde y junta el pulgar al índice para saltar.` |
 | [ ] | `guia_bien_manos` | Fin del tutorial, con manos | `[calm] Muy bien. Ya sabes agarrar, pausar y moverte lejos. Vuelve junto a tu tía.` |
 | [ ] | `guia_bien_control` | Fin del tutorial, con controles | `[calm] Muy bien. Ya sabes agarrar, caminar y pausar. Quédate cerca de tu tía.` |
