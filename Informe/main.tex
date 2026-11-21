@@ -1,46 +1,105 @@
-\documentclass[10pt,journal,compsoc]{IEEEtran}
+\documentclass[11pt,a4paper]{article}
 
-\usepackage[spanish]{babel}
+\usepackage[spanish,es-tabla]{babel}
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[a4paper,margin=2.5cm,headheight=14pt]{geometry}
 \usepackage{graphicx}
 \usepackage[table]{xcolor}
-\usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{array}
-\usepackage{xurl} % corta las URL largas en cualquier punto
 \usepackage{amsmath}
-\usepackage{amssymb} % necesario para \checkmark, usado en \ok
+\usepackage{amssymb} % \checkmark, usado en \ok
 \usepackage{subcaption}
-\usepackage{placeins} % \FloatBarrier: impide que una figura cruce el punto donde lo colocamos
+\usepackage{placeins}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage[font=small,labelfont=bf,skip=6pt]{caption}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{xurl}
+\usepackage[colorlinks=true,linkcolor=AzulOscuro,citecolor=AzulOscuro,urlcolor=AzulOscuro]{hyperref}
+
+% Colores (paleta de referencia de graficos: azul serie 1, gris neutro, tinta)
+\definecolor{Azul}{HTML}{2A78D6}
+\definecolor{AzulOscuro}{HTML}{1C5CAB}
+\definecolor{AzulClaro}{HTML}{CDE2FB}
+\definecolor{Gris}{HTML}{9E9D97}
+\definecolor{Tinta}{HTML}{0B0B0B}
+\definecolor{TintaSec}{HTML}{52514E}
+\definecolor{Rejilla}{HTML}{E4E3DF}
 
 \newcommand{\bad}{\(\times\)}
 \newcommand{\ok}{\(\checkmark\)}
 \newcommand{\pend}{\(\circ\)}
-% Celda llena del diagrama de Gantt
-\newcommand{\gb}{\cellcolor{orange!55}}
-% Dato que el equipo debe completar antes de entregar
-\newcommand{\completar}[1]{\textcolor{red}{[#1]}}
+\newcommand{\gb}{\cellcolor{Azul!70}}
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 
-\title{Proyecto Final VR: Simulación de Primeros Auxilios ante una Quemadura Doméstica}
+% Texto: parrafos separados, sin sangria
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlist{itemsep=0.25em,topsep=0.35em}
+\renewcommand{\arraystretch}{1.18}
 
-\author{
-\textit{Profesor:} \href{https://utec.instructure.com/courses/24671/users/2196}{Chambilla Aquino, Teófilo}\\[6pt]
-Aracely Ayala \quad 202220416\\
-Sebastián Sánchez \quad 20221320\\
-Jose Osnayo \quad 202010588\\[6pt]
-\textit{Departamento de Ciencias de la Computación - UTEC}\\
-CS2H01 - Interacción Humano-Computador}
+% Titulos de seccion
+\titleformat{\section}{\Large\bfseries\color{Tinta}}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries\color{Tinta}}{\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{TintaSec}}{\thesubsubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{1.6em}{0.6em}
+\titlespacing*{\subsection}{0pt}{1.2em}{0.4em}
+
+% Encabezado y pie
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{TintaSec}CS2H01 Interacción Humano-Computador}
+\fancyhead[R]{\small\color{TintaSec}Proyecto Final VR: quemadura doméstica}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
 
 \begin{document}
 
-\maketitle
+% ---------- portada ----------
+\begin{titlepage}
+\centering
+{\large\bfseries Universidad de Ingeniería y Tecnología (UTEC)\par}
+{\normalsize Departamento de Ciencia de la Computación\par}
+\vspace{0.4em}
+{\normalsize CS2H01 Interacción Humano-Computador\par}
+\vspace{4.5em}
+{\color{Azul}\rule{0.6\linewidth}{1.2pt}\par}
+\vspace{1.2em}
+{\Huge\bfseries Simulación de Primeros Auxilios\\[0.25em] ante una Quemadura Doméstica\par}
+\vspace{0.8em}
+{\Large Proyecto Final de Realidad Virtual\par}
+\vspace{1.2em}
+{\color{Azul}\rule{0.6\linewidth}{1.2pt}\par}
+\vspace{4em}
+\begin{tabular}{l l}
+\toprule
+\textbf{Integrante} & \textbf{Código} \\
+\midrule
+Aracely Ayala & 202220416 \\
+Sebastián Sánchez & 20221320 \\
+Jose Osnayo & 202010588 \\
+\bottomrule
+\end{tabular}
+\par\vspace{3em}
+{\normalsize\textbf{Profesor:} Teófilo Chambilla Aquino\par}
+\vfill
+{\normalsize Lima, noviembre de 2026\par}
+\end{titlepage}
 
 \begin{abstract}
 Presentamos una experiencia de realidad virtual para Meta Quest en la que el usuario atiende a su tía, que acaba de quemarse la mano con una olla de agua hirviendo. Con sus propias manos o con los controles, debe apagar la hornilla, retirar el anillo, enfriar la quemadura 20 minutos bajo el caño, llamar al 106 y cubrirla con film o una bolsa limpia, mientras la piel y la víctima reaccionan a cada acción. En una prueba con 6 usuarios en el visor, en su primera partida completaron el 98\,\% de los pasos del protocolo y su confianza para atender una quemadura subió de 2,6 a 4,0 sobre 5. El rendimiento quedó por debajo de los 72~fps exigidos (51 de promedio).
 \end{abstract}
+
+\tableofcontents
+\newpage
 
 % ==========================================
 % 1. ANTECEDENTES
@@ -85,9 +144,9 @@ Los requisitos se derivaron de cuatro fuentes:
     \item \textbf{RF-01 (Menú de inicio y modos):} iniciar la práctica en \textit{modo guiado} (con indicaciones) o en \textit{modo evaluación} (sin ayudas, para medir la retención). Permite que el mismo escenario sirva para aprender y para comprobar lo aprendido.
     \item \textbf{RF-02 (Tutorial inicial):} antes de la emergencia, enseñar dentro de la historia los gestos básicos (agarrar, caminar o teletransportarse y pausar). La audiencia no tiene experiencia en VR.
     \item \textbf{RF-03 (Affordances resaltadas):} en modo guiado, resaltar el objeto que hay que usar en cada paso (perilla, palanca del caño, anillo, brazo de la víctima, celular, film y bolsa).
-    \item \textbf{RF-04 (Guía por voz y manos fantasma):} en modo guiado, un narrador y una tarjeta indican cada paso y explican las respuestas correctas; las ``manos fantasma'' que muestran la postura quedaron como mejora pendiente y su función la cubren tarjetas con los pasos del movimiento y flechas animadas.
+    \item \textbf{RF-04 (Guía por voz, tarjetas y manos fantasma):} en modo guiado, un narrador y una tarjeta indican cada paso y explican las respuestas correctas. Las manos del jugador se dibujan translúcidas (``manos fantasma''), de modo que se ven a través de los objetos, y en los movimientos más difíciles (cubrir con la bolsa o el film) unas tarjetas mejoradas muestran los pasos del movimiento con flechas animadas.
     \item \textbf{RF-05 (Secuencia completa del protocolo):} apagar la hornilla, retirar el anillo, abrir el agua fría, llevar la mano de la víctima al chorro, mantenerla 20 minutos (comprimidos), llamar al 106, cubrir la quemadura y decidir si necesita atención médica.
-    \item \textbf{RF-06 (Distractores y registro de errores):} la cocina contiene remedios caseros (hielo, mantequilla, pasta dental, aceite, algodón) y un paño de cocina, y el caño puede dar agua caliente. Su uso indebido se registra como error o error crítico (Cuadro~\ref{tab:errores}).
+    \item \textbf{RF-06 (Distractores y registro de errores):} la cocina contiene remedios caseros (hielo, mantequilla, pasta dental, aceite, algodón) y un paño de cocina, y el caño puede dar agua caliente. Su uso indebido se registra como error o error crítico (Tabla~\ref{tab:errores}).
     \item \textbf{RF-07 (Enfriamiento comprimido):} un reloj de pared muestra los 20 minutos de enfriamiento en tiempo acelerado. Si la mano sale del agua, el reloj se pausa y se registra un error.
     \item \textbf{RF-08 (Escena que responde):} el enrojecimiento, la hinchazón, las ampollas, la cara, la voz, la respiración y la postura de la víctima cambian según lo que hace el usuario y el tiempo transcurrido.
     \item \textbf{RF-09 (Retroalimentación multisensorial):} voz del narrador, voz de la víctima, sonidos espaciales, tarjeta de texto y vibración en los controles ante aciertos y errores.
@@ -127,14 +186,14 @@ El protocolo se organiza en cuatro actos; en modo guiado, la tarjeta del narrado
     \item \textbf{Resolución.} El operador recomienda el centro de salud (con ampollas) o el cuidado en casa y el usuario decide. Terminado el enfriamiento, cubre la quemadura con la bolsa o con tiras de film a lo largo. La tía agradece y aparece el resumen con \textit{Repetir este caso} y \textit{Otro caso al azar}.
 \end{enumerate}
 
-El Cuadro~\ref{tab:errores} resume los errores que reconoce el sistema y su retroalimentación. El puntaje es \(100 - 10 \cdot \text{errores} - 25 \cdot \text{errores críticos}\), con mínimo 0. Al terminar también cuentan como error los pasos nunca realizados.
+La Tabla~\ref{tab:errores} resume los errores que reconoce el sistema y su retroalimentación. El puntaje es \(100 - 10 \cdot \text{errores} - 25 \cdot \text{errores críticos}\), con mínimo 0. Al terminar también cuentan como error los pasos nunca realizados.
 
-\begin{table*}[t]
+\begin{table}[htbp]
 \centering
 \caption{Errores reconocidos por el sistema y su retroalimentación}
 \label{tab:errores}
 \small
-\begin{tabularx}{\textwidth}{@{}L{4.2cm} L{2.2cm} Y@{}}
+\begin{tabularx}{\linewidth}{@{}L{4.2cm} L{2.2cm} Y@{}}
 \toprule
 \textbf{Acción del usuario} & \textbf{Registro} & \textbf{Retroalimentación} \\
 \midrule
@@ -153,17 +212,17 @@ Tocar la olla volcada & Error & La mano suelta la olla, sisea y vibra (seguridad
 Responder mal al 106 o decidir en contra de lo que se ve en su mano & Error & El resumen explica qué se veía (ampollas o no) y qué correspondía. \\
 \bottomrule
 \end{tabularx}
-\end{table*}
+\end{table}
 
 \subsection{Métrica HEART}
-El Cuadro~\ref{tab:heart} presenta los objetivos, señales y métricas de cada dimensión del modelo HEART \cite{rodden2010}. Las de \textit{Task Success} se obtienen del registro que la aplicación guarda al terminar cada sesión; las de \textit{Happiness}, de un cuestionario antes y después. Los resultados están en la sección~\ref{sec:evaluacion}.
+La Tabla~\ref{tab:heart} presenta los objetivos, señales y métricas de cada dimensión del modelo HEART \cite{rodden2010}. Las de \textit{Task Success} se obtienen del registro que la aplicación guarda al terminar cada sesión; las de \textit{Happiness}, de un cuestionario antes y después. Los resultados están en la sección~\ref{sec:evaluacion}.
 
-\begin{table*}[t]
+\begin{table}[htbp]
 \centering
 \caption{Matriz HEART: objetivos, señales y métricas}
 \label{tab:heart}
 \small
-\begin{tabularx}{\textwidth}{@{}L{2.1cm} Y Y Y@{}}
+\begin{tabularx}{\linewidth}{@{}L{2.1cm} Y Y Y@{}}
 \toprule
 \textbf{Dimensión} & \textbf{Objetivo} & \textbf{Señal} & \textbf{Métrica} \\
 \midrule
@@ -174,7 +233,7 @@ Retention & Recordar el protocolo sin ayudas. & Desempeño en modo evaluación d
 Task Success & Completar la escena sin errores críticos y con el enfriamiento completo. & Pasos, errores y errores críticos registrados. & Pasos completados, puntaje, tiempo de primera acción, enfriamiento completo y acierto en la decisión médica. \\
 \bottomrule
 \end{tabularx}
-\end{table*}
+\end{table}
 
 % ==========================================
 % 3. FRAMEWORK DE DISEÑO
@@ -191,7 +250,7 @@ El marco de diseño se apoya en los principios de diseño de interacción vistos
     \item \textbf{Presencia y fidelidad:} una escena coherente (agua, vapor, sonido, víctima que reacciona) refuerza la sensación de estar en una emergencia real y favorece la transferencia del aprendizaje \cite{slater1997}.
 \end{itemize}
 
-El Cuadro~\ref{tab:heuristicas} muestra cómo se aplica cada heurística.
+La Tabla~\ref{tab:heuristicas} muestra cómo se aplica cada heurística.
 
 \begin{table}[htbp]
 \centering
@@ -247,36 +306,36 @@ Antes de los wireframes digitales se elaboraron bocetos a mano para definir la d
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\linewidth]{images/draw_escena de inicio mas quemadura.jpg}
+    \includegraphics[width=0.62\linewidth]{images/draw_escena de inicio mas quemadura.jpg}
     \caption{Boceto inicial a mano: escena de inicio y quemadura.}
     \label{fig:boceto}
 \end{figure}
 
-\begin{figure*}[t]
+\begin{figure}[htbp]
     \centering
-    \begin{subfigure}{0.32\textwidth}
+    \begin{subfigure}{0.32\linewidth}
         \includegraphics[width=\linewidth]{images/primera pantalla_mockup.jpg}
         \caption{Menú principal.}
     \end{subfigure}\hfill
-    \begin{subfigure}{0.32\textwidth}
+    \begin{subfigure}{0.32\linewidth}
         \includegraphics[width=\linewidth]{images/planteamiento_mockup.jpg}
         \caption{Planteamiento e instrucciones.}
     \end{subfigure}\hfill
-    \begin{subfigure}{0.32\textwidth}
+    \begin{subfigure}{0.32\linewidth}
         \includegraphics[width=\linewidth]{images/desarrollo_mockup.jpg}
         \caption{Desarrollo: exploración del entorno.}
     \end{subfigure}\\[6pt]
-    \begin{subfigure}{0.32\textwidth}
+    \begin{subfigure}{0.32\linewidth}
         \includegraphics[width=\linewidth]{images/climax_mockup.jpg}
         \caption{Clímax: enfriamiento bajo el agua.}
-    \end{subfigure}\hspace{0.02\textwidth}
-    \begin{subfigure}{0.32\textwidth}
+    \end{subfigure}\hspace{0.02\linewidth}
+    \begin{subfigure}{0.32\linewidth}
         \includegraphics[width=\linewidth]{images/resolucion_mockup.jpg}
         \caption{Resolución y retroalimentación.}
     \end{subfigure}
     \caption{Mockups de baja fidelidad del flujo de la quemadura doméstica.}
     \label{fig:mockups}
-\end{figure*}
+\end{figure}
 
 
 \subsection{Prototipo digital interactivo (WebApp)}
@@ -298,34 +357,34 @@ Cada pantalla materializa un principio del framework, y varias decisiones se tra
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\linewidth]{images/auxiliosim_exploracion_cocina.jpg}
+    \includegraphics[width=0.62\linewidth]{images/auxiliosim_exploracion_cocina.jpg}
     \caption{WebApp: exploración de la cocina con los objetos interactivos marcados con un punto dorado (\textbf{affordances}).}
     \label{fig:auxiliosim_exploracion}
 \end{figure}
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\linewidth]{images/auxiliosim_barra_actos.jpg}
+    \includegraphics[width=0.62\linewidth]{images/auxiliosim_barra_actos.jpg}
     \caption{WebApp: barra superior con los cuatro actos y el contador de aciertos y errores (\textbf{visibilidad}).}
     \label{fig:auxiliosim_barra}
 \end{figure}
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\linewidth]{images/uxiliosim_mantener_grifo.jpg}
+    \includegraphics[width=0.62\linewidth]{images/uxiliosim_mantener_grifo.jpg}
     \caption{WebApp: gesto de mantener bajo el grifo con el indicador circular (\textbf{signifiers} y \textbf{mapping natural}).}
     \label{fig:auxiliosim_mantener}
 \end{figure}
 
 \begin{figure}[htbp]
     \centering
-    \begin{subfigure}[b]{0.48\linewidth}
+    \begin{subfigure}[b]{0.38\linewidth}
         \centering
         \includegraphics[width=\linewidth]{images/auxiliosim_feedback_acierto.jpg}
         \caption{Acierto (verde).}
     \end{subfigure}
     \hfill
-    \begin{subfigure}[b]{0.48\linewidth}
+    \begin{subfigure}[b]{0.38\linewidth}
         \centering
         \includegraphics[width=\linewidth]{images/auxiliosim_feedback_error.jpg}
         \caption{Error (rojo).}
@@ -336,7 +395,7 @@ Cada pantalla materializa un principio del framework, y varias decisiones se tra
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\linewidth]{images/auxiliosim_resumen_practica.jpg}
+    \includegraphics[width=0.62\linewidth]{images/auxiliosim_resumen_practica.jpg}
     \caption{WebApp: resumen de la práctica con aciertos, errores, tiempos y microaprendizaje.}
     \label{fig:auxiliosim_resumen}
 \end{figure}
@@ -347,15 +406,45 @@ La experiencia se desarrolló en Unity 2022.3 con C\# y el Meta XR SDK 201 (Open
 
 \textbf{Arquitectura.} La escena no se edita a mano: al iniciar, un instalador (\texttt{Hito1RuntimeBootstrap}) agrega los componentes de la experiencia y no los duplica si ya están. El núcleo es una máquina de estados de la quemadura (\texttt{BurnSequenceManager}: Idle \(\rightarrow\) Burned \(\rightarrow\) Cooling \(\rightarrow\) Cooled \(\rightarrow\) Covered \(\rightarrow\) Success) con un canal único de eventos, siguiendo el patrón observador (publicar y suscribir): cada componente (perilla, palanca, anillo, remedios, film, bolsa, celular, diálogos) avisa lo que hizo el usuario junto con su gravedad. Sobre ese canal, \texttt{BurnProtocol} marca los pasos, calcula el puntaje y guarda la sesión; \texttt{BurnGuide} conduce el tutorial y la guía; \texttt{BurnHaptics} vibra los controles y \texttt{BurnPatientReactions} hace reaccionar a la víctima. Agregar una interacción nueva solo requiere que emita su evento.
 
-\textbf{Assets.} La víctima es un avatar de Avaturn con 52 expresiones faciales y visemas para hablar: su cara pasa del dolor al alivio, parpadea, mira al jugador y mueve la boca con su voz. La quemadura es una mancha irregular con relieve y ampollas en cúpula, que se intensifica sin tratamiento y se calma bajo el agua; la hinchazón se simula engrosando los huesos de la mano. La olla vuelca agua con vapor y deja charcos; el chorro del caño se corta en la mano y salpica. La caja de film y la bolsa son modelos importados (Cuadro~\ref{tab:assets}); el resto de objetos, materiales, sonidos y la simulación se hicieron por código. Las voces del narrador, la víctima y el operador se generaron con ElevenLabs; algunas frases añadidas al final aún usan una voz sintética de Windows.
+\textbf{Assets.} La Tabla~\ref{tab:assets} lista los assets de la experiencia, de dónde salen y para qué se usan. Los modelos externos se combinaron con elementos hechos por el equipo: la quemadura, el agua y la mayoría de los objetos se crearon por código. La tía se armó en el editor web de Avaturn (Fig.~\ref{fig:avaturn}).
+
+\begin{table}[htbp]
+\centering
+\caption{Assets de la experiencia VR. Cada nombre de origen es un enlace.}
+\label{tab:assets}
+\small
+\begin{tabularx}{\linewidth}{@{}L{2.9cm} L{4.6cm} Y@{}}
+\toprule
+\textbf{Asset} & \textbf{Origen y licencia} & \textbf{Uso en la experiencia} \\
+\midrule
+Cocina & \href{https://assetstore.unity.com/packages/3d/environments/apartment-kit-124055}{Apartment Kit} (Brick Project Studio, Unity Asset Store, licencia estándar) & Escenario único, a escala real y con luz horneada \\
+Tía (modelo) & \href{https://hub.avaturn.me/editor?customization_id=01a1c305-56a7-7cb3-988d-e27896b27936}{Avaturn}, creado con fotos de una persona que dio su permiso; exportado en GLB & Víctima con 52 expresiones faciales y boca sincronizada con su voz \\
+Tía (animación) & \href{https://www.mixamo.com}{Mixamo} (Adobe) & Respirar, caminar y gestos de dolor y alivio \\
+Rig e interacción VR & Meta XR SDK 201 (licencia del SDK de Meta) & Cámara, manos, controles y agarre \\
+Caja de film & \href{https://sketchfab.com/3d-models/aluminum-foil-box-low-poly-697c4ce533834df59b54d3ac861b4380}{``Aluminum Foil Box''}, Ian Valeta (CC BY 4.0); etiqueta del equipo & Cubrir con tiras a lo largo \\
+Bolsa plástica & \href{https://sketchfab.com/3d-models/ziplock-bag-6428bacd2c3c46bb8987db060e4fea45}{``Ziplock bag''}, Phoenix\_Connor (CC BY 4.0); material del equipo & Cubrir deslizándola hasta la muñeca \\
+Quemadura, piel, agua y vapor & Equipo (materiales, texturas y simulación) & Piel que cambia, ampollas, hinchazón, chorro y charcos \\
+Olla, celular, remedios, taza y reloj & Equipo (creados por código) & Accidente, llamada al 106, distractores y reloj de 20 min \\
+Voces & \href{https://elevenlabs.io}{ElevenLabs} (crédito en el resumen de la app) & Víctima, narradora y operador del 106 \\
+Efectos de sonido & Equipo (sintetizados) & Olla, llama, agua, ambiente y respiración \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.55\linewidth]{images/avaturn_editor.png}
+    \caption{La tía en el editor de Avaturn, con la ropa y el peinado que usa en la experiencia.}
+    \label{fig:avaturn}
+\end{figure}
 
 \textbf{Casos (RF-11).} Cada partida trae un caso: primer grado o segundo grado superficial; pequeña, mediana o grande; en el dorso o en los nudillos. La extensión cambia cuántas tiras de film hacen falta y la cantidad de ampollas; la zona, qué tan rápido se hincha la mano (en los nudillos el anillo es más urgente). El caso se elige al azar o desde el menú, para que todos los participantes de una prueba vean la misma quemadura.
 
 \textbf{Decisiones de implementación y su efecto en la usabilidad.} La elección de Unity y C\# con el Meta XR SDK permitió usar el seguimiento de manos del Quest, pero el agarre del SDK hacía que los objetos flotaran lejos de la mano y se pudieran tomar a distancia; se reemplazó por un agarre propio con física que deja el objeto en la pinza de la mano dibujada. Probar en el editor con la mano simulada (sin dedos) ocultó problemas que solo aparecieron en el visor: botones difíciles de apretar, una mano que desaparecía detrás de la tarjeta, gestos de caminar que no se reconocían y una detección de controles que en el visor confundía los controles con las manos. Cada uno se corrigió tras jugar en el visor. El costo gráfico de la escena (agua, vapor, avatar y luz) es la principal deuda: la GPU limita los fps (sección~\ref{sec:eficiencia}).
 
-\begin{figure*}[p]
+\begin{figure}[htbp]
     \centering
-    \newcommand{\vrcap}[2]{\begin{subfigure}[t]{0.31\textwidth}\centering\includegraphics[width=\linewidth]{images/#1}\caption{#2}\end{subfigure}}
+    \newcommand{\vrcap}[2]{\begin{subfigure}[t]{0.31\linewidth}\centering\includegraphics[width=\linewidth]{images/#1}\caption{#2}\end{subfigure}}
     \vrcap{quest_menu.jpg}{Panel de inicio: aviso de contenido, elección del caso y de los dos modos.}\hfill
     \vrcap{quest_tutorial.jpg}{Tutorial: llevarle la taza a la tía, con el joystick o caminando.}\hfill
     \vrcap{quest_pausa.jpg}{Tutorial: la pausa aparece en la muñeca al mirar la palma.}\\[2pt]
@@ -365,10 +454,10 @@ La experiencia se desarrolló en Unity 2022.3 con C\# y el Meta XR SDK 201 (Open
     \vrcap{quest_enfriar.jpg}{Enfriar: su mano bajo el chorro y el reloj de 20 minutos.}\hfill
     \vrcap{quest_bolsa.jpg}{Cubrir con la bolsa: tarjeta con los pasos del movimiento.}\hfill
     \vrcap{quest_film.jpg}{Cubrir con una tira de film a lo largo, sin dar la vuelta.}\\[2pt]
-    \vrcap{quest_resumen.jpg}{Resumen: frase de cómo le fue, el caso y el puntaje (90/100).}
+    \vrcap{quest_resumen.jpg}{Resumen: los pasos hechos, qué mejorar y el puntaje (100/100, protocolo completo).}
     \caption{Recorrido de la versión final en modo guiado, capturado en el Meta Quest durante una partida real (APK de \texttt{main}, 21/11/2026). Cada imagen es el centro de la vista del ojo izquierdo.}
     \label{fig:flujo_vr}
-\end{figure*}
+\end{figure}
 
 \FloatBarrier
 
@@ -376,15 +465,15 @@ La experiencia se desarrolló en Unity 2022.3 con C\# y el Meta XR SDK 201 (Open
 % 7. CRONOGRAMA
 % ==========================================
 \section{Cronograma en formato Gantt}
-El Cuadro~\ref{tab:gantt} muestra el cronograma de los cinco entregables y la presentación, de la semana 10 a la 15.
+La Tabla~\ref{tab:gantt} muestra el cronograma de los cinco entregables y la presentación, de la semana 10 a la 15.
 
-\begin{table*}[t]
+\begin{table}[htbp]
 \centering
 \caption{Cronograma en formato Gantt por semana (S10 a S15)}
 \label{tab:gantt}
 \small
 \setlength{\tabcolsep}{4pt}
-\begin{tabularx}{\textwidth}{@{}Y c c c c c c@{}}
+\begin{tabularx}{\linewidth}{@{}Y c c c c c c}
 \toprule
 \textbf{Entregable y actividades} & \textbf{S10} & \textbf{S11} & \textbf{S12} & \textbf{S13} & \textbf{S14} & \textbf{S15} \\
 \midrule
@@ -396,7 +485,7 @@ El Cuadro~\ref{tab:gantt} muestra el cronograma de los cinco entregables y la pr
 \textbf{E6:} presentación, informe final, manuales y video & & & & & & \gb \\
 \bottomrule
 \end{tabularx}
-\end{table*}
+\end{table}
 
 % ==========================================
 % 8. IMPLEMENTACIÓN Y EVALUACIÓN
@@ -408,7 +497,7 @@ La implementación está en el repositorio del proyecto (sección~\ref{sec:entre
 \textbf{Metodología.} Se realizó una prueba de usabilidad con usuarios en el visor de destino, combinando medidas objetivas registradas por la aplicación y medidas subjetivas de un cuestionario, organizadas según el modelo HEART \cite{rodden2010} y las dimensiones de usabilidad de la norma ISO 9241-11 (eficacia, eficiencia y satisfacción) \cite{iso9241}, más la facilidad de aprendizaje. Se eligió esta combinación porque el objetivo de la experiencia es que una persona sin experiencia complete el protocolo correctamente en su primera partida, y eso se mide mejor con lo que hace dentro de la simulación que solo con su opinión.
 
 \begin{itemize}
-    \item \textbf{Participantes:} 6 personas de 21 a 26 años, una por sesión, en el laboratorio de UTEC (noviembre de 2026), identificadas como P1 a P6 (Cuadro~\ref{tab:participantes}). Cuatro cumplen un rol de apoyo en su casa (hijo único o hermanos mayores) y dos son estudiantes de Ciencias de la Computación que ya habían llevado el curso de VR. Ninguno había atendido una quemadura.
+    \item \textbf{Participantes:} 6 personas de 21 a 26 años, una por sesión, en el laboratorio de UTEC (noviembre de 2026), identificadas como P1 a P6 (Tabla~\ref{tab:participantes}). Cuatro cumplen un rol de apoyo en su casa (hijo único o hermanos mayores) y dos son estudiantes de Ciencias de la Computación que ya habían llevado el curso de VR. Ninguno había atendido una quemadura.
     \item \textbf{Equipo:} Meta Quest 2 con controles, con el APK de la experiencia.
     \item \textbf{Tarea:} una partida completa en modo guiado: tutorial, accidente y atención de la quemadura hasta el resumen.
     \item \textbf{Procedimiento:} (1) cuestionario previo de confianza para atender una quemadura; (2) partida en el visor; (3) cuestionario posterior de confianza, satisfacción y realismo; (4) registro del resumen de la aplicación.
@@ -434,14 +523,14 @@ P6 & 21 & Estudiante de Ciencias de la Computación; juega videojuegos. & Curso 
 \end{tabularx}
 \end{table}
 
-La Fig.~\ref{fig:evidencias} muestra a los participantes durante las pruebas; los videos de las sesiones están en la carpeta enlazada en la sección~\ref{sec:entregables}. El Cuadro~\ref{tab:resultados} resume los resultados y el Cuadro~\ref{tab:porparticipante} los detalla por participante.
+La Fig.~\ref{fig:evidencias} muestra a los participantes durante las pruebas; los videos y demás evidencias de las sesiones están en \href{https://drive.google.com/drive/folders/1MNOp0vc79394Pmh6ESpHtdbq6dn6XHvg?usp=sharing}{esta carpeta de Google Drive} (también enlazada en la sección~\ref{sec:entregables}). La Tabla~\ref{tab:resultados} resume los resultados y la Tabla~\ref{tab:porparticipante} los detalla por participante.
 
-\begin{figure*}[t]
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth]{images/evidencias_usuarios.pdf}
+    \includegraphics[width=0.9\linewidth]{images/evidencias_usuarios.pdf}
     \caption{Evidencia de las pruebas: seis participantes jugando la experiencia en el Meta Quest 2 en el laboratorio, con la vista del visor transmitida a una pantalla.}
     \label{fig:evidencias}
-\end{figure*}
+\end{figure}
 
 \begin{table}[htbp]
 \centering
@@ -468,28 +557,30 @@ Aprendizaje & Terminaron la experiencia & 6 de 6 \\
 \par\smallskip\footnotesize\raggedright En un caso no se pudo confirmar la decisión médica y en otro no se registró el tiempo de primera acción.
 \end{table}
 
-\begin{table*}[t]
+\begin{table}[htbp]
 \centering
 \caption{Resultados por participante (modo guiado). Los errores incluyen los críticos; el puntaje es \(100 - 10 \cdot \text{errores no críticos} - 25 \cdot \text{críticos}\).}
 \label{tab:porparticipante}
 \small
-\begin{tabular}{@{}l c r r c c c c c c c@{}}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l c r r c c c c c c@{}}
 \toprule
- & & \multicolumn{6}{c}{\textbf{Task Success (registro de la app)}} & \multicolumn{3}{c}{\textbf{Happiness (cuestionario, 1--5)}} \\
-\cmidrule(lr){3-8}\cmidrule(l){9-11}
-\textbf{P} & \textbf{Grado} & \textbf{Puntaje} & \textbf{1.ª acción} & \textbf{Errores} & \textbf{Críticos} & \textbf{Pasos} & \textbf{Decisión} & \textbf{Confianza} & \textbf{Realismo} & \textbf{Satisfacción} \\
+ & & \multicolumn{6}{c}{\textbf{Task Success (registro de la app)}} & \multicolumn{2}{c}{\textbf{Happiness (1--5)}} \\
+\cmidrule(lr){3-8}\cmidrule(l){9-10}
+\textbf{P} & \textbf{Grado} & \textbf{Puntaje} & \textbf{1.ª acción} & \textbf{Errores} & \textbf{Críticos} & \textbf{Pasos} & \textbf{Decisión} & \textbf{Realismo} & \textbf{Satisf.} \\
 \midrule
-P1 & 2.\textsuperscript{o} & 60 & 36,9 s & 4 & 0 & 7/7 & \ok & 3,4 \(\rightarrow\) 4,6 & 4,6 & 4,2 \\
-P2 & 2.\textsuperscript{o} & 40 & --- & 6 & 0 & 7/7 & \ok & 3,0 \(\rightarrow\) 4,2 & 5,0 & 5,0 \\
-P3 & 1.\textsuperscript{o} & 70 & 18,3 s & 3 & 0 & 7/7 & \ok & 3,4 \(\rightarrow\) 4,2 & 3,8 & 4,6 \\
-P4 & 2.\textsuperscript{o} & 60 & 24,3 s & 4 & 0 & 6/7 & \ok & 2,2 \(\rightarrow\) 3,4 & 4,6 & 4,6 \\
-P5 & 1.\textsuperscript{o} & 30 & 14,0 s & 4 & 2 & 7/7 & Sin confirmar & 1,0 \(\rightarrow\) 4,2 & 4,6 & 5,0 \\
-P6 & 2.\textsuperscript{o} & 75 & 5,6 s & 1 & 1 & 7/7 & \ok & 2,6 \(\rightarrow\) 3,4 & 4,2 & 4,2 \\
+P1 & 2.\textsuperscript{o} & 60 & 36,9 s & 4 & 0 & 7/7 & \ok & 4,6 & 4,2 \\
+P2 & 2.\textsuperscript{o} & 40 & --- & 6 & 0 & 7/7 & \ok & 5,0 & 5,0 \\
+P3 & 1.\textsuperscript{o} & 70 & 18,3 s & 3 & 0 & 7/7 & \ok & 3,8 & 4,6 \\
+P4 & 2.\textsuperscript{o} & 60 & 24,3 s & 4 & 0 & 6/7 & \ok & 4,6 & 4,6 \\
+P5 & 1.\textsuperscript{o} & 30 & 14,0 s & 4 & 2 & 7/7 & Sin conf. & 4,6 & 5,0 \\
+P6 & 2.\textsuperscript{o} & 75 & 5,6 s & 1 & 1 & 7/7 & \ok & 4,2 & 4,2 \\
 \midrule
-\textbf{Prom.} & & \textbf{55,8} & \textbf{19,8 s} & \textbf{3,7} & \textbf{3 (total)} & \textbf{98\,\%} & \textbf{5 de 6} & \textbf{2,6 \(\rightarrow\) 4,0} & \textbf{4,5} & \textbf{4,6} \\
+\textbf{Prom.} & & \textbf{55,8} & \textbf{19,8 s} & \textbf{3,7} & \textbf{3 (total)} & \textbf{98\,\%} & \textbf{5 de 6} & \textbf{4,5} & \textbf{4,6} \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\par\smallskip\footnotesize La confianza de cada participante antes y después está en la Fig.~\ref{fig:confianza}.
+\end{table}
 
 \subsection{Eficacia}
 En su primera partida, los participantes completaron el 98\,\% de los pasos del protocolo (41 de 42: solo P4 dejó uno sin hacer) y los seis completaron el enfriamiento de 20 minutos. La decisión médica correcta se confirmó en 5 de 6 casos (en el de P5 no se pudo confirmar). El puntaje promedio fue 55,8 sobre 100, con un rango de 30 a 75: completar los pasos no implica hacerlos sin errores, y cada participante cometió en promedio 3,7. El puntaje resta 10 puntos por error y 25 por error crítico, por lo que es una medida exigente: castiga más los errores que se cometerían en una emergencia real que los pasos olvidados.
@@ -499,7 +590,7 @@ Los 3 errores críticos los cometieron P5 (2) y P6 (1), los dos participantes co
 \subsection{Eficiencia}\label{sec:eficiencia}
 \textbf{Tiempo de respuesta.} Tras el accidente, los participantes tardaron en promedio 19,8~s en hacer la primera acción correcta (n = 5), con un rango de 5,6 a 36,9~s. Los más rápidos fueron los dos con experiencia en VR (P6, 5,6~s; P5, 14,0~s) y el más lento, P1, sin experiencia (36,9~s): la familiaridad con el visor reduce el tiempo de orientarse, aunque, como se vio en la eficacia, no la cantidad de errores.
 
-\textbf{Rendimiento (RNF-01).} El rendimiento se midió ejecutando el APK en el Meta Quest (sin Quest Link), con dos herramientas: la OVR Metrics Tool de Meta (1 partida, 265 muestras) y el registro de rendimiento del sistema del visor (VrApi), leído por USB, que escribe los fps una vez por segundo y permite dividir la partida por fases con los eventos del juego (Cuadro~\ref{tab:rnf01}, Fig.~\ref{fig:rnf01}).
+\textbf{Rendimiento (RNF-01).} El rendimiento se midió ejecutando el APK en el Meta Quest (sin Quest Link), con dos herramientas: la OVR Metrics Tool de Meta (1 partida, 265 muestras) y el registro de rendimiento del sistema del visor (VrApi), leído por USB, que escribe los fps una vez por segundo y permite dividir la partida por fases con los eventos del juego (Tabla~\ref{tab:rnf01}, Fig.~\ref{fig:rnf01}).
 
 \begin{table}[htbp]
 \centering
@@ -517,14 +608,10 @@ Tiempo de GPU por cuadro (mediana) & 18,3 ms \\
 Límite de GPU para 72 fps & 13,9 ms \\
 Uso de GPU / CPU (promedio) & 97\,\% / 43\,\% \\
 Memoria usada por la aplicación & 1,4 GB \\
-\multicolumn{2}{@{}l}{\textit{Registro VrApi por fase (252 s)}} \\
-Menú y tutorial (70 s) & 49,0 fps \\
-Accidente (36 s) & 53,0 fps \\
-Mano bajo el chorro (91 s) & 53,9 fps \\
-Cubrir (23 s) & 50,5 fps \\
-Resumen (32 s) & 48,7 fps \\
-Partida completa (mínimo) & 51,4 fps (34) \\
+\multicolumn{2}{@{}l}{\textit{Registro VrApi (252 s; por fase en la Fig.~\ref{fig:fpsfase})}} \\
+fps promedio (mínimo) & 51,4 (34) \\
 Tiempo a 72 fps o más & 0\,\% \\
+Con renderizado foveado (prueba, no entregado) & 59,7 fps \\
 \multicolumn{2}{@{}l}{\textit{Tiempo de carga (4 arranques)}} \\
 Del inicio de la app a la escena lista & 5,75 s \\
 \bottomrule
@@ -533,17 +620,84 @@ Del inicio de la app a la escena lista & 5,75 s \\
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\linewidth]{images/rnf01_fps_quest.png}
+    \includegraphics[width=0.8\linewidth]{images/rnf01_fps_quest.png}
     \caption{fps y tiempo de GPU por cuadro durante la partida medida con OVR Metrics Tool.}
     \label{fig:rnf01}
 \end{figure}
 
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    xbar, bar width=11pt,
+    width=0.68\linewidth, height=6.2cm,
+    xmin=0, xmax=80,
+    symbolic y coords={resumen,cubrir,chorro,accidente,menu},
+    ytick=data,
+    yticklabels={Resumen (32 s),Cubrir (23 s),Mano bajo el chorro (91 s),Accidente (36 s),Menú y tutorial (70 s)},
+    y tick label style={font=\small, color=Tinta},
+    x tick label style={font=\small, color=TintaSec},
+    xlabel={fps promedio}, xlabel style={font=\small, color=TintaSec},
+    axis x line*=bottom, axis y line*=left,
+    y axis line style={draw=none}, x axis line style={color=Gris},
+    major tick length=0pt,
+    xmajorgrids, grid style={color=Rejilla},
+    nodes near coords, nodes near coords align={horizontal},
+    every node near coord/.append style={font=\small, color=Tinta, /pgf/number format/.cd, fixed, fixed zerofill, precision=1, use comma},
+    enlarge y limits=0.15,
+    clip=false,
+]
+\addplot[fill=Azul, draw=none] coordinates {
+    (48.7,resumen) (50.5,cubrir) (53.9,chorro) (53.0,accidente) (49.0,menu)};
+\draw[TintaSec, dashed, thick] (axis cs:72,{[normalized]-0.6}) -- (axis cs:72,{[normalized]4.6})
+    node[above, font=\small, color=TintaSec] {Meta RNF-01: 72 fps};
+\end{axis}
+\end{tikzpicture}
+\caption{fps promedio por fase de la partida (registro VrApi, una partida en modo guiado). Ninguna fase llega a la meta de 72~fps y ninguna es mucho más pesada que las demás.}
+\label{fig:fpsfase}
+\end{figure}
+
 \textbf{Resultado:} el RNF-01 \textbf{no se cumple}. Las dos mediciones coinciden: la experiencia es estable, entre 48 y 54~fps según la fase y sin caídas bruscas, pero nunca llega a 72~fps. El cuello de botella es la GPU: trabaja al 97--99\,\% y tarda 18,3~ms por cuadro, mientras que la CPU queda al 43\,\%. Ninguna fase es mucho más pesada que otra (el menú va a 49~fps), así que el costo es general (escena, luz y avatar) y no de un efecto en particular. Como prueba, se activó el renderizado foveado fijo, que dibuja los bordes de cada ojo a menor resolución: en una segunda partida el promedio subió a 59,7~fps (+16\,\%), todavía por debajo de 72. Ese cambio no está en la versión entregada.
 
-\textbf{Interacción natural (RNF-02).} No se midió formalmente la latencia del agarre; la medición propuesta (grabar en cámara lenta la mano real y la vista del visor) queda como trabajo futuro.
+\textbf{Interacción natural (RNF-02).} El agarre se verificó en las pruebas en el visor, con manos y con controles: no se observaron retrasos al tomar objetos y ningún participante reportó problemas para agarrar. No se registró un valor en milisegundos con una cámara externa.
 
 \subsection{Satisfacción}
 Los participantes calificaron su satisfacción con 4,6 sobre 5 (de 4,2 a 5,0) y el realismo de la escena con 4,5 (de 3,8 a 5,0). Su confianza para atender una quemadura subió de 2,6 a 4,0 sobre 5 (+1,4 puntos): los seis mejoraron, entre +0,8 y +3,2, y quien partía del mínimo (P5, con 1,0) terminó en 4,2. La confianza subió incluso en quienes cometieron errores críticos, lo que es coherente con que el resumen les explicó qué hicieron mal y por qué. Sobre la presencia y la comodidad, el realismo alto indica que la escena se percibió como creíble; en cambio, 2 de 6 participantes pausaron por mareo o por calor con el visor. El mareo es coherente con el rendimiento por debajo de 72~fps, por lo que mejorar el RNF-01 también es una mejora de comodidad. No se aplicó un cuestionario estandarizado de presencia ni de mareo.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.82\linewidth, height=6.4cm,
+    xmin=0.7, xmax=5, ymin=0.4, ymax=6.6,
+    xtick={1,2,3,4,5},
+    ytick={1,2,3,4,5,6}, yticklabels={P6,P5,P4,P3,P2,P1},
+    y tick label style={font=\small, color=Tinta},
+    x tick label style={font=\small, color=TintaSec},
+    xlabel={Confianza para atender una quemadura (1--5)}, xlabel style={font=\small, color=TintaSec},
+    axis x line*=bottom, axis y line*=left,
+    y axis line style={draw=none}, x axis line style={color=Gris},
+    major tick length=0pt,
+    xmajorgrids, grid style={color=Rejilla},
+    legend style={draw=none, font=\small, at={(0.5,1.02)}, anchor=south, legend columns=2, /tikz/every even column/.append style={column sep=1.2em}},
+    clip=false,
+]
+\foreach \y/\a/\d in {6/3.4/4.6, 5/3.0/4.2, 4/3.4/4.2, 3/2.2/3.4, 2/1.0/4.2, 1/2.6/3.4} {
+    \edef\linea{\noexpand\draw[color=Gris, line width=2pt] (axis cs:\a,\y) -- (axis cs:\d,\y);}
+    \linea
+}
+\addplot[only marks, mark=*, mark size=3.5pt, color=Gris, mark options={draw=white, line width=0.8pt}]
+    coordinates {(3.4,6) (3.0,5) (3.4,4) (2.2,3) (1.0,2) (2.6,1)};
+\addlegendentry{Antes}
+\addplot[only marks, mark=*, mark size=3.5pt, color=Azul, mark options={draw=white, line width=0.8pt},
+    nodes near coords, point meta=explicit symbolic, every node near coord/.append style={font=\small, color=Tinta, anchor=west, xshift=3pt}]
+    coordinates {(4.6,6)[+1,2] (4.2,5)[+1,2] (4.2,4)[+0,8] (3.4,3)[+1,2] (4.2,2)[+3,2] (3.4,1)[+0,8]};
+\addlegendentry{Después}
+\end{axis}
+\end{tikzpicture}
+\caption{Confianza de cada participante antes y después de una partida en modo guiado. Los seis mejoraron (etiqueta: diferencia); el promedio pasó de 2,6 a 4,0.}
+\label{fig:confianza}
+\end{figure}
 
 \subsection{Facilidad de aprendizaje}
 Ningún participante tenía que conocer el protocolo ni la interfaz de antemano. Los seis terminaron la experiencia en su primera sesión, guiados solo por el tutorial y el narrador, y 4 de 6 la completaron de corrido (los otros dos pausaron por comodidad, no por no saber qué hacer). Los dos participantes sin ninguna experiencia en VR (P1 y P4) completaron 7 y 6 de los 7 pasos sin errores críticos, por lo que la interfaz se puede aprender en una sola partida sin experiencia previa. Que el 98\,\% de los pasos se completara en la primera partida indica que los gestos se aprenden en el tutorial y que las indicaciones bastan para orientarse. La retención (desempeño en modo evaluación días después) no se midió y queda como siguiente paso.
@@ -552,14 +706,14 @@ Ningún participante tenía que conocer el protocolo ni la interfaz de antemano.
 Las observaciones de las pruebas llevaron a cambios en la versión final:
 \begin{itemize}
     \item \textbf{Se quitó el paso de abrigar y la manta:} ir a la sala a buscarla cortaba el flujo y la manta no se acomodaba bien al cuerpo; además, las guías no la exigen en una quemadura pequeña en la mano.
-    \item \textbf{Se quitó el botiquín:} muchos creían que sus objetos servían para la quemadura y lo abrían sin necesidad.
+    \item \textbf{Se quitó el botiquín:} la experiencia busca que el usuario atienda la quemadura con lo que suele encontrar en una cocina (agua, film o una bolsa limpia), no con insumos que muchas casas no tienen a mano. Que el botiquín estuviera en la escena hacía pensar que había que usarlo.
     \item \textbf{Tutorial reordenado:} el salto (lo más difícil con las manos) pasó al final, y cada tarjeta tiene su voz con el mismo texto, según se juegue con controles o con manos.
     \item \textbf{Botones con solo tocar:} con las manos, la voz pedía hacer la pinza y con el control bastaba acercarse; ahora en los dos casos basta tocar el botón con la punta del dedo o del control.
     \item \textbf{Respuestas explicadas en modo guiado:} la respuesta correcta aparece en verde con el porqué y la narradora lo explica, sobre todo en la pregunta de las ampollas, que confundía a los jugadores nuevos.
 \end{itemize}
-Quedan pendientes: subir a 72~fps (RNF-01), medir la latencia del agarre (RNF-02), medir la retención con el modo evaluación, aplicar cuestionarios estandarizados de presencia y mareo, y las manos fantasma (RF-04).
+Quedan pendientes: subir a 72~fps (RNF-01), medir la retención con el modo evaluación y aplicar cuestionarios estandarizados de presencia y mareo.
 
-El Cuadro~\ref{tab:estado} resume el estado final de los requisitos.
+La Tabla~\ref{tab:estado} resume el estado final de los requisitos.
 
 \begin{table}[htbp]
 \centering
@@ -573,16 +727,16 @@ El Cuadro~\ref{tab:estado} resume el estado final de los requisitos.
 RF-01 & \ok & En modo evaluación no hay tarjetas, brillos ni respuestas en verde. \\
 RF-02 & \ok & Agarrar, llevar la taza, pausar y saltar. \\
 RF-03 & \ok & Brillo por paso (solo guiado). \\
-RF-04 & \pend & Narrador, tarjetas y flechas; faltan las manos fantasma. \\
+RF-04 & \ok & Narrador, tarjetas mejoradas con flechas y manos fantasma. \\
 RF-05 & \ok & Protocolo completo con la llamada al 106. \\
-RF-06 & \ok & Cuadro~\ref{tab:errores}. \\
+RF-06 & \ok & Tabla~\ref{tab:errores}. \\
 RF-07 & \ok & Reloj de pared: 20 min en 90 s, se pausa. \\
 RF-08 & \ok & Piel, hinchazón, ampollas, voz y cara de la víctima. \\
 RF-09 & \ok & Voces, sonido espacial, tarjetas y vibración. \\
 RF-10 & \ok & Resumen y registro de la sesión. \\
 RF-11 & \ok & Grado, extensión y zona, al azar o desde el menú. \\
-RNF-01 & \bad & 48--52 fps de promedio (Cuadro~\ref{tab:rnf01}). \\
-RNF-02 & \pend & Falta medir la latencia del agarre. \\
+RNF-01 & \bad & 48--52 fps de promedio (Tabla~\ref{tab:rnf01}). \\
+RNF-02 & \ok & Sin retrasos al agarrar en las pruebas en el visor. \\
 RNF-03 & \ok & Aviso de contenido, pausa y reinicio. \\
 RNF-04 & \ok & Un solo jugador; los 6 participantes jugaron solos. \\
 \bottomrule
@@ -590,38 +744,26 @@ RNF-04 & \ok & Un solo jugador; los 6 participantes jugaron solos. \\
 \end{table}
 
 \subsection{Recursos entregables}\label{sec:entregables}
-\begin{itemize}
-    \item \textbf{Código fuente:} \url{https://github.com/araype/Hito1-Quemaduras} (rama \texttt{main}).
-    \item \textbf{Documentación técnica:} manual de instalación y despliegue y guía rápida, en \texttt{docs/manuales} del repositorio.
-    \item \textbf{Video de demostración de la versión final:} \url{https://drive.google.com/drive/folders/1LthRBOaIAnPZPQVPgEad9M71Vj7n-8rp?usp=sharing}
-    \item \textbf{Videos de las pruebas con usuarios:} \url{https://drive.google.com/drive/folders/1MNOp0vc79394Pmh6ESpHtdbq6dn6XHvg?usp=drive_link}
-    \item \textbf{Evidencias:} fotos de las pruebas con usuarios y registros de rendimiento, en \texttt{docs/evidencias} del repositorio.
-\end{itemize}
-
-El Cuadro~\ref{tab:assets} lista los recursos externos y propios.
+La Tabla~\ref{tab:entregables} reúne los recursos de la entrega; cada nombre es un enlace.
 
 \begin{table}[htbp]
 \centering
-\caption{Recursos utilizados}
-\label{tab:assets}
+\caption{Recursos entregables}
+\label{tab:entregables}
 \small
-\begin{tabularx}{\linewidth}{@{}L{2.1cm} Y@{}}
+\begin{tabularx}{\linewidth}{@{}L{5.2cm} Y@{}}
 \toprule
-\textbf{Uso} & \textbf{Recurso (fuente y licencia)}\\
+\textbf{Recurso} & \textbf{Ubicación} \\
 \midrule
-Cocina & Apartment Kit, Brick Project Studio (Unity Asset Store, licencia estándar), \url{https://assetstore.unity.com/packages/3d/environments/apartment-kit-124055} \\
-Víctima & Avatar de Avaturn creado con fotos de una persona que dio su permiso; animaciones de Mixamo (Adobe), \url{https://www.mixamo.com} \\
-VR & Meta XR SDK 201 (rig e Interaction SDK), licencia del SDK de Meta \\
-Caja de film & ``Aluminum Foil Box - Low Poly'', Ian Valeta, CC BY 4.0, \url{https://sketchfab.com/3d-models/aluminum-foil-box-low-poly-697c4ce533834df59b54d3ac861b4380} (etiqueta nueva hecha por el equipo) \\
-Bolsa plástica & ``Ziplock bag'', Phoenix\_Connor, CC BY 4.0, \url{https://sketchfab.com/3d-models/ziplock-bag-6428bacd2c3c46bb8987db060e4fea45} (material transparente y sin logo, del equipo) \\
-Olla, celular, remedios, taza, reloj & Creados por código por el equipo \\
-Piel, quemadura, agua y vapor & Materiales, texturas y simulación creados por el equipo \\
-Efectos de sonido & Sintetizados por el equipo \\
-Voces (víctima, narrador y operador del 106) & Generadas con ElevenLabs (crédito en el resumen de la app) \\
-Ilustraciones WebApp & Generadas por código (SVG) \\
+Código fuente & \href{https://github.com/araype/Hito1-Quemaduras}{github.com/araype/Hito1-Quemaduras} (rama \texttt{main}) \\
+Documentación técnica & Manual de instalación y despliegue y guía rápida, en \texttt{docs/manuales} del repositorio \\
+Video de demostración (versión final) & \href{https://drive.google.com/drive/folders/1LthRBOaIAnPZPQVPgEad9M71Vj7n-8rp?usp=sharing}{Carpeta de Google Drive: video demo} \\
+Evidencias de las pruebas con usuarios & \href{https://drive.google.com/drive/folders/1MNOp0vc79394Pmh6ESpHtdbq6dn6XHvg?usp=sharing}{Carpeta de Google Drive: videos y evidencias de los tests} \\
+Copia en el repositorio & Gráfico de fps (RNF-01) y PDF de evidencias de usuarios, en \texttt{docs/evidencias} del repositorio \\
 \bottomrule
 \end{tabularx}
 \end{table}
+
 
 % ==========================================
 % 9. DISCUSIÓN
