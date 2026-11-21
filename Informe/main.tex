@@ -386,6 +386,42 @@ Con esto quedan resueltos los problemas de interacción encontrados en la prueba
 
 Sigue pendiente comprobarlo con las manos en el visor: tirar del film con las dos manos, llevar a la víctima del brazo (solo compilado) y que el objeto quede en la pinza de la mano visible. La chompa ya cae desde los hombros como tela, aunque todavía se ve rígida.
 
+\subsubsection{Medición de rendimiento en el visor (RNF-01)}
+El APK se ejecutó directamente en el Meta Quest, sin Quest Link, con la herramienta OVR Metrics Tool de Meta registrando una muestra por segundo en un archivo CSV. Se jugó una partida de 265~s. El Cuadro~\ref{tab:rnf01} resume los valores y la Fig.~\ref{fig:rnf01} muestra su evolución.
+
+\begin{table}[htbp]
+\centering
+\caption{Rendimiento medido en el Meta Quest (1 partida, 265 muestras)}
+\label{tab:rnf01}
+\small
+\begin{tabularx}{\linewidth}{@{}Y r@{}}
+\toprule
+\textbf{Indicador} & \textbf{Valor}\\
+\midrule
+Frecuencia de la pantalla & 72 Hz \\
+fps promedio (mediana) & 48 (48) \\
+Rango durante el juego\textsuperscript{a} & 34--59 fps \\
+Tiempo a 72 fps o más durante el juego & 0\,\% \\
+Tiempo de GPU por cuadro (mediana) & 18,3 ms \\
+Límite de GPU para 72 fps & 13,9 ms \\
+Uso de GPU / CPU (promedio) & 97\,\% / 43\,\% \\
+Memoria usada por la aplicación & 1,4 GB \\
+\bottomrule
+\end{tabularx}
+\par\smallskip\footnotesize\raggedright \textsuperscript{a} Sin los 4~s de carga inicial ni los 2~s del cierre, donde baja a 20~fps.
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{images/rnf01_fps_quest.png}
+    \caption{fps y tiempo de GPU por cuadro durante la partida medida en el visor.}
+    \label{fig:rnf01}
+\end{figure}
+
+\textbf{Resultado:} el RNF-01 \textbf{no se cumple}. La experiencia se mantiene estable alrededor de 48~fps, sin caídas bruscas durante el juego, pero lejos de los 72~fps exigidos. El cuello de botella es la GPU: trabaja al 97\,\% y tarda 18,3~ms por cuadro, mientras que la CPU queda al 43\,\%; ambas ya están en su frecuencia máxima. El sistema ya había reducido la resolución a 1008\,\(\times\)\,1108 píxeles por ojo, y el renderizado foveado fijo y el \textit{Application SpaceWarp} estaban desactivados, por lo que son las primeras optimizaciones a probar, junto con revisar el costo del agua, el vapor, la tela y el modelo de la víctima.
+
+\textbf{Limitaciones:} se midió una sola partida y no se marcó en el registro el momento de cada evento (accidente, chorro de agua, manta), por lo que no se puede atribuir la carga a uno en particular.
+
 \begin{table}[htbp]
 \centering
 \caption{Estado de los requisitos (\ok\ hecho, \pend\ parcial o pendiente)}
@@ -406,7 +442,7 @@ RF-08 & \ok & Sin expresión facial (sin \textit{blendshapes}). \\
 RF-09 & \ok & Voces de ElevenLabs; quedan 12 frases por regrabar. \\
 RF-10 & \ok & Resumen con barra de actos y registro JSON. \\
 RF-11 & \pend & \textit{Otro caso} alterna el grado; la extensión aún no varía. \\
-RNF-01 & \pend & Escena optimizada para Quest; falta medir en el visor. \\
+RNF-01 & \pend & Medido en el visor: 48 fps de promedio, no cumple (Cuadro~\ref{tab:rnf01}). \\
 RNF-02 & \pend & Falta medir la latencia en el visor. \\
 RNF-03 & \ok & Aviso de contenido, pausa y reinicio. \\
 RNF-04 & \ok & Experiencia de un solo jugador. \\
@@ -422,7 +458,8 @@ RNF-04 & \ok & Experiencia de un solo jugador. \\
 \section{Trabajo Futuro}\label{sec:futuro}
 Para la entrega final quedan:
 \begin{itemize}
-    \item \textbf{Prueba con las manos en el visor:} jugar el flujo completo sin Quest Link, en especial tirar del film con las dos manos, llevar a la víctima del brazo y comprobar que el objeto agarrado quede en la pinza de la mano visible; medir los 72 fps con agua, vapor, tela y ampollas activos (RNF-01) y la latencia del agarre (RNF-02).
+    \item \textbf{Prueba con las manos en el visor:} jugar el flujo completo sin Quest Link, en especial tirar del film con las dos manos, llevar a la víctima del brazo y comprobar que el objeto agarrado quede en la pinza de la mano visible, y medir la latencia del agarre (RNF-02).
+    \item \textbf{Rendimiento (RNF-01):} subir de 48 a 72~fps reduciendo la carga de la GPU (renderizado foveado fijo, \textit{Application SpaceWarp}, costo del agua, el vapor, la tela y el modelo de la víctima) y volver a medir con 2 o 3 partidas.
     \item \textbf{Voces restantes:} regrabar con ElevenLabs las 12 frases que todavía no tienen voz definitiva.
     \item \textbf{Aspecto de la chompa:} que caiga sobre los hombros con menos rigidez.
     \item \textbf{Variación del caso} (RF-11): además del grado, variar la extensión de la quemadura.
