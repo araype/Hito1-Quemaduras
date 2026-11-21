@@ -83,12 +83,12 @@ variantes de la llamada.
 | [ ] | `guia_err_pano` | Error: paño de cocina | `[calm] El paño de cocina suelta pelusa. Usa film o una bolsa limpia.` |
 | [x] | `guia_err_curita` | Error: curita sobre la quemadura | `[firm] Las curitas se pegan a la piel quemada. Cúbrela con film o una bolsa limpia.` |
 | [x] | `guia_err_anillo` | El anillo ya no sale | `[calm] Su mano ya se hinchó: no fuerces el anillo. Sigue con el agua fría; en el centro de salud se lo sacarán.` |
-| [ ] | `guia_err_aguantar` | Saca la mano por el frío | `[calm] Si el agua le parece muy fría, témplala un poco: así completa los veinte minutos sin sacar la mano.` |
-| [ ] | `guia_err_olla` | Toca la olla caliente | `[firm] No toques la olla: sigue caliente y también te quemarías.` |
-| [ ] | `guia_err_charco` | Pisa el agua derramada | `[calm] El piso mojado resbala: rodea el agua derramada.` |
-| [ ] | `guia_frio_lejos` | La tía tiene frío y el jugador está lejos | `[calm] Tu tía se queja de que el agua está muy fría. Vuelve con ella antes de que saque la mano.` |
-| [ ] | `guia_templar` | Eligió templar el agua | `[calm] Gira la palanca del caño un poco más hacia ti, hasta la mitad: así sale tibia. Su mano sigue bajo el chorro.` |
-| [ ] | `guia_ayuda_frio` | Guiado: ella quiere sacar la mano | `[calm] La respuesta correcta está en verde: templarle un poco el agua, girando la palanca hasta tibia. Pedirle que aguante no le quita el frío, y terminará sacando la mano. Y el hielo daña todavía más la piel.` |
+| [x] | `guia_err_aguantar` | Saca la mano por el frío | `[calm] Si el agua le parece muy fría, témplala un poco: así completa los veinte minutos sin sacar la mano.` |
+| [x] | `guia_err_olla` | Toca la olla caliente | `[firm] No toques la olla: sigue caliente y también te quemarías.` |
+| [x] | `guia_err_charco` | Pisa el agua derramada | `[calm] El piso mojado resbala: rodea el agua derramada.` |
+| [x] | `guia_frio_lejos` | La tía tiene frío y el jugador está lejos | `[calm] Tu tía se queja de que el agua está muy fría. Vuelve con ella antes de que saque la mano.` |
+| [x] | `guia_templar` | Eligió templar el agua | `[calm] Gira la palanca del caño un poco más hacia ti, hasta la mitad: así sale tibia. Su mano sigue bajo el chorro.` |
+| [x] | `guia_ayuda_frio` | Guiado: ella quiere sacar la mano | `[calm] La respuesta correcta está en verde: templarle un poco el agua, girando la palanca hasta tibia. Pedirle que aguante no le quita el frío, y terminará sacando la mano. Y el hielo daña todavía más la piel.` |
 | [ ] | `guia_ayuda_agua` | Guiado: el 106 pregunta por el agua | `[calm] El operador no ve la cocina: cuéntale lo que pasa de verdad. La respuesta correcta está en verde.` |
 | [ ] | `guia_ayuda_ampollas_si` | Guiado: tiene ampollas | `[calm] Mira su mano: tiene ampollas, unas burbujas de piel hinchada con líquido claro. Es una quemadura de segundo grado.` |
 | [ ] | `guia_ayuda_ampollas_no` | Guiado: no tiene ampollas | `[calm] Mira su mano: está roja e irritada, pero no tiene burbujas de piel con líquido. Eso no son ampollas: es una quemadura de primer grado.` |
