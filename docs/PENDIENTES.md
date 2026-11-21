@@ -23,6 +23,8 @@ se revisó). **Lo único que falta es que las voces suenen naturales.**
 
 ## Naturalidad de las voces
 
+Lista de trabajo con prioridades y textos listos para pegar: `docs/VOCES_ELEVENLABS.md` (rama `voces-elevenlabs`).
+
 Estas frases dicen lo correcto, pero se generaron con las voces de Windows
 ("Microsoft Sabina" para la narradora, "Microsoft Raul" para el operador) y
 suenan robóticas y distintas de las de ElevenLabs. Regenerarlas con
