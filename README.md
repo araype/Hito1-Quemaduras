@@ -23,7 +23,7 @@ Proyecto final del curso **CS2H01 Interacción Humano-Computador**, UTEC (2026-2
 
 - 🎥 [Video de demostración (versión final)](https://drive.google.com/drive/folders/1LthRBOaIAnPZPQVPgEad9M71Vj7n-8rp?usp=sharing)
 - 🧪 [Videos y evidencias de las pruebas con usuarios](https://drive.google.com/drive/folders/1MNOp0vc79394Pmh6ESpHtdbq6dn6XHvg?usp=sharing)
-- 📄 [Informe final (PDF)](Informe/main.pdf)
+- 📄 [Informe final (PDF)](docs/informe/main.pdf)
 - 📘 [Manual de instalación y despliegue](docs/manuales/Manual_Instalacion_Despliegue.pdf) · [Guía rápida](docs/manuales/Guia_Rapida_Instalacion.pdf)
 
 ---
@@ -190,13 +190,13 @@ Assets/
     Kits/           Cocina (Apartment Kit) y modelos para cubrir (film, bolsa)
     Editor/         Herramientas del editor (menú Hito1)
   Oculus/, XR/            Configuración de Meta XR y OpenXR
-docs/
+docs/             Todos los entregables escritos
+  informe/        Informe final (main.pdf, main.tex e images/)
+  evidencias/     Pruebas con usuarios (PDF), gráfico de fps y datos de OVR Metrics Tool
+                  (rnf01_ovr_metrics.csv). El informe toma de aquí sus dos figuras
   manuales/       Manual de instalación y guía rápida (PDF, y sus fuentes HTML en fuente/)
-  presentacion/   Pitch final (PPTX), su guion y sus imágenes
-  evidencias/     Evidencias de las pruebas con usuarios, gráfico de fps y datos de
-                  OVR Metrics Tool (rnf01_ovr_metrics.csv)
+  presentacion/   Pitch final (PPTX) y su guion
   VOCES.md        Textos de todas las voces (los usa Editor/VisemeTracks.cs)
-Informe/          Informe final (LaTeX y PDF)
 README.md         Este documento
 CLAUDE.md         Notas para trabajar el código con Claude Code
 ```
