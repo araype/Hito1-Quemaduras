@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Guía rápida de instalación y despliegue</title>
+<link rel="stylesheet" href="estilo.css">
+<style>
+  /* Version compacta: menos aire entre bloques. */
+  .doc-head { padding-bottom: 12pt; margin-bottom: 14pt; }
+  h2 { margin: 18pt 0 8pt; padding-top: 10pt; }
+  .step { margin-bottom: 10pt; }
+  table { margin-bottom: 10pt; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <p class="doc-kicker">Guía rápida de instalación y despliegue</p>
+  <h1>Simulador VR de primeros auxilios ante una quemadura doméstica</h1>
+  <div class="doc-meta">
+    <span>CS2H01 Interacción Humano-Computador · UTEC</span>
+    <span>Unity 2022.3.62f3 · Meta Quest</span>
+    <span>Versión completa, con capturas: <code>docs/manuales/Manual_Instalacion_Despliegue.pdf</code></span>
+  </div>
+</header>
+
+<h2>Requisitos</h2>
+<table>
+  <tr><th>Elemento</th><th>Detalle</th></tr>
+  <tr><td>PC</td><td>Windows 10 u 11, 16 GB de RAM, unos 15 GB libres</td></tr>
+  <tr><td>Software</td><td>Unity Hub, Unity 2022.3.62f3 con Android Build Support, Git con Git LFS</td></tr>
+  <tr><td>Visor</td><td>Meta Quest 2, 3 o Pro, con cable USB-C de datos y modo desarrollador</td></tr>
+</table>
+
+<h2>Instalación</h2>
+
+<div class="step">
+  <div class="num">1</div>
+  <div>
+    <h3>Descargar el proyecto</h3>
+    <pre>git lfs install
+git clone https://github.com/araype/Hito1-Quemaduras.git
+cd Hito1-Quemaduras
+git checkout mejoras-demo</pre>
+    <p>Sin Git LFS la escena queda sin personajes ni sonidos; si pasa, ejecuta <code>git lfs pull</code>.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">2</div>
+  <div>
+    <h3>Abrir en Unity</h3>
+    <p>En Unity Hub: <b>Projects → Add → Add project from disk</b> y elige la carpeta. La primera importación tarda de 15 a 30 minutos. Abre la escena <code>Assets/Hito1/Escenas/Escenario_Quemadura.unity</code>.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">3</div>
+  <div>
+    <h3>Probar en la PC (opcional)</h3>
+    <p>Conecta el visor con <b>Meta Horizon Link</b>, activa Link dentro del visor y pulsa <b>Play</b> en Unity. Sin visor: <i>Meta → Meta XR Simulator → Activate</i> y Play.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">4</div>
+  <div>
+    <h3>Preparar el visor (una sola vez)</h3>
+    <p>Crea una organización en <code>developers.meta.com</code>. En la app Meta Horizon del celular activa <b>Modo desarrollador</b> en los ajustes del visor y reinícialo. Al conectarlo por USB, acepta <i>Permitir depuración USB</i> dentro del visor.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">5</div>
+  <div>
+    <h3>Compilar e instalar</h3>
+    <p>En <b>File → Build Settings</b> comprueba que la plataforma sea <b>Android</b> y que solo esté marcada <code>Escenario_Quemadura</code>. En <b>Run Device</b> pulsa Refresh, elige el visor y pulsa <b>Build And Run</b>. La primera vez tarda de 10 a 25 minutos.</p>
+    <p>Si ya tienes el APK, instálalo con Meta Quest Developer Hub o con <code>adb install -r QuemaduraVR.apk</code>.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">6</div>
+  <div>
+    <h3>Abrir la app</h3>
+    <p>En el visor: <b>Biblioteca → Fuentes desconocidas → Pruebalaptop_agarrecubo</b>. Elige <b>Modo guiado</b> o <b>Modo evaluación</b>.</p>
+  </div>
+</div>
+
+<h2>Controles</h2>
+<table class="three">
+  <tr><th>Acción</th><th>Con controles</th><th>Con las manos</th></tr>
+  <tr><td>Agarrar y soltar</td><td>Botón lateral o gatillo</td><td>Pinza pulgar–índice</td></tr>
+  <tr><td>Botones, perilla y llaves</td><td>Acercar la mano y apretar el gatillo</td><td>Tocar y hacer la pinza</td></tr>
+  <tr><td>Caminar y girar</td><td>Joystick izquierdo y derecho</td><td>Pinza del dedo medio izquierdo</td></tr>
+  <tr><td>Pausa</td><td>Botón de menú, o mantener B o Y</td><td>Gesto de menú de la mano</td></tr>
+</table>
+
+<h2>Registros de sesión</h2>
+<p>Cada partida se guarda como JSON en el visor. Para copiarlos a la PC, con el visor conectado:</p>
+<pre>adb pull /sdcard/Android/data/com.DefaultCompany.Pruebalaptop_agarrecubo/files/sesiones_quemadura/ ./sesiones</pre>
+
+<h2>Si algo falla</h2>
+<table class="wide-first">
+  <tr><th>Problema</th><th>Solución</th></tr>
+  <tr><td>Escena vacía o sin personajes</td><td><code>git lfs install</code> y <code>git lfs pull</code></td></tr>
+  <tr><td>El visor no aparece en Run Device</td><td>Modo desarrollador activo, cable de datos, aceptar la depuración USB y pulsar Refresh</td></tr>
+  <tr><td>Error de Android SDK o JDK</td><td>Reinstalar Android Build Support desde Unity Hub</td></tr>
+  <tr><td>La app no aparece en el visor</td><td>Filtro de la biblioteca en Fuentes desconocidas</td></tr>
+</table>
+
+</body>
+</html>

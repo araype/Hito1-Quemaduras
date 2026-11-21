@@ -1,0 +1,285 @@
+/* Estilo de los manuales (impresion A4).
+   Escala de tipo: tercera menor (x1.2) sobre 10.5 pt.
+   Pesos: 400 texto, 500 etiquetas, 600 titulos. Nada bajo 9 pt.
+   Espacios en multiplos de 4 pt. */
+
+@page {
+  size: A4;
+  margin: 20mm 20mm 18mm 20mm;
+}
+
+:root {
+  --ink: #1b1f24;
+  --ink-2: #4a5260;
+  --ink-3: #6b7280;
+  --rule: #e3e6ea;
+  --rule-2: #cfd4da;
+  --tint: #f6f7f9;
+  --accent: #2d5bd7;
+  --warn: #9a5b00;
+  --warn-tint: #fbf5ea;
+
+  --t-meta: 9pt;
+  --t-small: 9.5pt;
+  --t-body: 10.5pt;
+  --t-h3: 12.6pt;
+  --t-h2: 15pt;
+  --t-h1: 22pt;
+
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+body {
+  margin: 0;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--t-body);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+b, strong { font-weight: 600; }
+i, em { font-style: italic; }
+
+/* ---------- encabezado del documento ---------- */
+
+.doc-head {
+  padding-bottom: 16pt;
+  margin-bottom: 20pt;
+  border-bottom: 1px solid var(--rule-2);
+}
+
+.doc-kicker {
+  font-size: var(--t-meta);
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 8pt;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-size: var(--t-h1);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 6pt;
+}
+
+.doc-sub {
+  font-size: var(--t-h3);
+  color: var(--ink-2);
+  line-height: 1.35;
+  margin: 0;
+}
+
+.doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4pt 16pt;
+  margin-top: 12pt;
+  font-size: var(--t-meta);
+  color: var(--ink-3);
+}
+
+/* ---------- secciones ---------- */
+
+h2 {
+  font-family: var(--font-display);
+  font-size: var(--t-h2);
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 28pt 0 10pt;
+  padding-top: 12pt;
+  border-top: 1px solid var(--rule);
+  break-after: avoid;
+}
+
+/* Sin doble linea: la primera seccion ya tiene la del encabezado. */
+.doc-head + h2,
+.doc-head + p + .toc + h2 {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.doc-head + h2 { margin-top: 0; }
+
+h2 .n {
+  color: var(--accent);
+  font-weight: 500;
+  margin-right: 6pt;
+}
+
+h3 {
+  font-size: var(--t-h3);
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 18pt 0 6pt;
+  break-after: avoid;
+}
+
+p { margin: 0 0 8pt; }
+
+.lead { color: var(--ink-2); margin-bottom: 4pt; }
+
+/* ---------- listas ---------- */
+
+ol, ul { margin: 0 0 10pt; padding-left: 18pt; }
+li { margin: 0 0 4pt; padding-left: 2pt; }
+li::marker { color: var(--ink-3); }
+
+.toc {
+  columns: 2;
+  column-gap: 24pt;
+  font-size: var(--t-small);
+  color: var(--ink-2);
+  margin: 12pt 0 0;
+}
+
+/* ---------- codigo ---------- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: var(--tint);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 0 3pt;
+  overflow-wrap: anywhere;
+}
+
+pre {
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  line-height: 1.5;
+  background: var(--tint);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 8pt 12pt;
+  margin: 0 0 12pt;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  break-inside: avoid;
+}
+
+/* ---------- avisos ---------- */
+
+.note, .warn {
+  font-size: var(--t-small);
+  line-height: 1.5;
+  border-radius: 4px;
+  padding: 8pt 12pt;
+  margin: 0 0 12pt;
+  break-inside: avoid;
+}
+
+.note { background: var(--tint); color: var(--ink-2); }
+.note b { color: var(--ink); }
+
+.warn { background: var(--warn-tint); color: #4a3b1f; }
+.warn b { color: var(--warn); }
+
+/* ---------- tablas ---------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-small);
+  line-height: 1.45;
+  margin: 4pt 0 14pt;
+  break-inside: avoid;
+}
+
+th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink-3);
+  font-size: var(--t-meta);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0 10pt 6pt 0;
+  border-bottom: 1px solid var(--rule-2);
+}
+
+td {
+  vertical-align: top;
+  padding: 6pt 10pt 6pt 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+tr:last-child td { border-bottom: 0; }
+
+td:first-child { font-weight: 500; color: var(--ink); width: 30%; }
+table.wide-first td:first-child { width: 38%; }
+table.three td:first-child { width: 26%; }
+
+/* ---------- figuras ---------- */
+
+figure { margin: 4pt 0 16pt; break-inside: avoid; }
+
+figure img {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--rule-2);
+  border-radius: 4px;
+}
+
+figure.narrow img { width: 78%; margin: 0 auto; }
+
+figcaption {
+  font-size: var(--t-meta);
+  color: var(--ink-3);
+  line-height: 1.4;
+  margin-top: 6pt;
+}
+
+figcaption .fig { font-weight: 500; color: var(--ink-2); }
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12pt;
+  margin-bottom: 8pt;
+}
+
+.grid figure { margin: 0; }
+
+/* ---------- pasos (manual resumido) ---------- */
+
+.step {
+  display: grid;
+  grid-template-columns: 22pt 1fr;
+  gap: 0 10pt;
+  margin: 0 0 12pt;
+  break-inside: avoid;
+}
+
+.step .num {
+  font-family: var(--font-display);
+  font-size: var(--t-h3);
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1.25;
+}
+
+.step h3 { margin: 0 0 4pt; }
+.step p, .step ol, .step pre { margin-bottom: 6pt; }
+.step ol { padding-left: 16pt; }
+
+.pb { break-before: page; }
+
+.foot {
+  margin-top: 20pt;
+  padding-top: 8pt;
+  border-top: 1px solid var(--rule);
+  font-size: var(--t-meta);
+  color: var(--ink-3);
+}
