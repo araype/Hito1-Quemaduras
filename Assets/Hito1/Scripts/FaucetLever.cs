@@ -204,6 +204,7 @@ namespace SojaExiles
         private void OnEnable()
         {
             Current = this;
+            LastHandNearTime = float.NegativeInfinity;
             SimpleGrab.AddGrabBlocker(BlocksGrab);
         }
 
@@ -216,6 +217,11 @@ namespace SojaExiles
 
             SimpleGrab.RemoveGrabBlocker(BlocksGrab);
         }
+
+        // Ultima vez (Time.time) que una mano estuvo al alcance de la palanca:
+        // si en ese momento se agarra la mano quemada (bajo el chorro, a
+        // pocos cm), fue sin querer (PatientPhysics no lo cuenta como error).
+        public static float LastHandNearTime { get; private set; } = float.NegativeInfinity;
 
         // Tomar la palanca no agarra otra cosa.
         private bool BlocksGrab(Vector3 point)
@@ -289,6 +295,11 @@ namespace SojaExiles
                 if (inReach && near < 0)
                 {
                     near = h;
+                }
+
+                if (inReach || dragHand == h)
+                {
+                    LastHandNearTime = Time.time;
                 }
 
                 if (pressed && !wasPressed[h])

@@ -71,6 +71,10 @@ namespace SojaExiles
         private readonly System.Collections.Generic.List<float> queuedGaps =
             new System.Collections.Generic.List<float>();
         private float nextQueuedTime;
+        // Lo que suena es un quejido o pista de fondo (se puede cortar).
+        private bool speakingIdle;
+        [Tooltip("Segundos sin quejidos al azar despues de una reaccion.")]
+        public float painAfterReaction = 4f;
         private AudioSource breathing;
         private float breathPhase;
         private float pain;
@@ -172,7 +176,9 @@ namespace SojaExiles
                     break;
 
                 case BurnSequenceManager.BurnEvent.RingRemoved:
-                    SayLater("voz_anillo_sale", 0.6f);
+                    // Enseguida, cortando el quejido que sonara (antes iba a
+                    // la cola y esperaba a que terminara: llegaba tarde).
+                    Say("voz_anillo_sale", true);
                     break;
 
                 case BurnSequenceManager.BurnEvent.RingStuck:
@@ -335,7 +341,8 @@ namespace SojaExiles
                 nextQueuedTime = Mathf.Max(nextQueuedTime, Time.time + 0.8f);
             }
 
-            if (queuedLines.Count > 0 && Time.time >= nextQueuedTime && !IsSpeaking && !quiet)
+            // Una frase en cola no espera a un quejido de fondo: lo corta.
+            if (queuedLines.Count > 0 && Time.time >= nextQueuedTime && (!IsSpeaking || speakingIdle) && !quiet)
             {
                 Say(queuedLines[0], true);
                 queuedLines.RemoveAt(0);
@@ -350,7 +357,7 @@ namespace SojaExiles
             if (state == BurnSequenceManager.BurnState.Burned)
             {
                 burnedWithoutWater += dt;
-                if (Time.time >= nextPainLine && !IsSpeaking && !quiet)
+                if (Time.time >= nextPainLine && !IsSpeaking && !quiet && !RingBusy())
                 {
                     nextPainLine = Time.time + Random.Range(painLineInterval.x, painLineInterval.y);
                     // Nunca el mismo quejido dos veces seguidas.
@@ -361,14 +368,14 @@ namespace SojaExiles
                     }
 
                     lastPainLine = line;
-                    Say(PainLines[line], false);
+                    Say(PainLines[line], false, true);
                 }
 
                 if (voiceHints && !waterHinted && burnedWithoutWater > waterHintDelay && !relieved && !IsSpeaking
                     && !quiet)
                 {
                     waterHinted = true;
-                    Say("voz_pista_agua", false);
+                    Say("voz_pista_agua", false, true);
                 }
 
                 // Le duele: pequenos estremecimientos.
@@ -383,7 +390,7 @@ namespace SojaExiles
                 && stateTime > clothHintDelay && !IsSpeaking && !quiet)
             {
                 clothHinted = true;
-                Say("voz_pista_pano", false);
+                Say("voz_pista_pano", false, true);
             }
 
             UpdateHead(state, dt);
@@ -447,6 +454,12 @@ namespace SojaExiles
             get { return voice != null && voice.isPlaying; }
         }
 
+        // Habla, y no es un quejido de fondo (eso se puede cortar).
+        public bool IsSpeakingReaction
+        {
+            get { return IsSpeaking && !speakingIdle; }
+        }
+
         // Dolor actual de 0 (calmada) a 1 (dolor maximo). Lo lee PatientFace.
         public float Pain
         {
@@ -459,23 +472,38 @@ namespace SojaExiles
             get { return voice; }
         }
 
-        public void Say(string line, bool interrupt)
+        // True si dijo la frase.
+        public bool Say(string line, bool interrupt)
+        {
+            return Say(line, interrupt, false);
+        }
+
+        // 'idle': quejido o pista de fondo, sin que nada lo provoque. Una
+        // reaccion o una frase en cola lo corta, y despues de una reaccion no
+        // sale otro enseguida (2026-11-21: "me duele" pisaba el "gracias" del
+        // anillo y lo dejaba tardio).
+        private bool Say(string line, bool interrupt, bool idle)
         {
             if (voice == null || (IsSpeaking && !interrupt))
             {
-                return;
+                return false;
             }
 
             // Las quejas y pistas no tapan al narrador; los gritos si.
             if (!interrupt && BurnGuide.Instance != null && BurnGuide.Instance.Speaking)
             {
-                return;
+                return false;
+            }
+
+            if (Stale(line))
+            {
+                return false;
             }
 
             AudioClip clip = Hito1FX.Clip(line);
             if (clip == null)
             {
-                return;
+                return false;
             }
 
             voice.Stop();
@@ -483,6 +511,12 @@ namespace SojaExiles
             voice.volume = voiceVolume;
             voice.pitch = Random.Range(0.97f, 1.03f);
             voice.Play();
+            speakingIdle = idle;
+            if (!idle)
+            {
+                // Tras una reaccion, un rato sin quejidos al azar.
+                nextPainLine = Mathf.Max(nextPainLine, Time.time + clip.length + painAfterReaction);
+            }
 
             // El gesto que acompana la frase (asentir, negar, alivio...).
             if (PatientAnimator.Instance != null)
@@ -496,6 +530,40 @@ namespace SojaExiles
             {
                 face.ForVoice(line);
             }
+
+            return true;
+        }
+
+        // La frase ya no corresponde a lo que pasa (llego tarde: se decidio
+        // antes de esperar a que hubiera silencio o estuvo en cola).
+        private bool Stale(string line)
+        {
+            BurnSequenceManager.BurnState s = burnSequence != null ? burnSequence.CurrentState
+                : BurnSequenceManager.BurnState.Burned;
+            switch (line)
+            {
+                case "voz_anillo_pide":
+                    PatientRing ring = GetComponent<PatientRing>();
+                    return ring != null && (ring.Removed || ring.Stuck);
+                case "voz_pista_agua":
+                    return s != BurnSequenceManager.BurnState.Burned;
+                case "voz_alivio_agua":
+                    return s != BurnSequenceManager.BurnState.Cooling && s != BurnSequenceManager.BurnState.Cooled;
+                case "voz_pista_pano":
+                case "voz_enfriada":
+                    return s != BurnSequenceManager.BurnState.Cooled;
+            }
+
+            return false;
+        }
+
+        // Se esta sacando el anillo (o una mano esta junto a el): ella esta
+        // atenta a eso, no suelta un quejido al azar que tape su reaccion.
+        private bool RingBusy()
+        {
+            PatientRing ring = GetComponent<PatientRing>();
+            return ring != null && !ring.Removed
+                && (ring.Progress > 0.02f || Time.time - PatientRing.LastHandNearTime < 1f);
         }
 
         // Dice la frase despues de 'delay' segundos (o despues de las que ya

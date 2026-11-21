@@ -1494,3 +1494,60 @@ por la mano dibujada ni por la pose del control), la detección de controles en 
 en el código del SDK; la mano simulada no pasa por ahí), los casos de
 primer grado (con `op_casa_grande` y `guia_ayuda_casa`), la bolsa en el
 piso, ni nada en el Quest.
+
+## 43. Penalizaciones más justas, film y modo evaluación sin pistas (`main`, 2026-11-21)
+
+Tras la prueba con controles: tomarla de la mano por accidente castigaba
+mucho (sobre todo al sacar el anillo o al templar con la palanca, con su
+mano bajo el chorro), el film no se daba por puesto en modo evaluación
+aunque su mano se veía cubierta y las respuestas tenían colores distintos.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Tomarla de la mano quemada | Antes cada agarre era un error al instante y se sumaba otro cada 8 s. Ahora: un agarre que se suelta antes de 1,2 s es un roce (un quejido corto, sin error); si una mano estaba junto al anillo o la palanca del caño al agarrar, fue sin querer (solo se queja); sostenerla de la mano 1,2 s es el error, **una sola vez**. Las veces siguientes ella dice "de la mano no" y en guiado se corrige, sin restar más puntos (igual que envolver con film). | `PatientPhysics.UpdatePendingGrab`, `burnGrabConfirmSeconds`, `nearToolGraceSeconds`; `PatientRing.LastHandNearTime`, `FaucetLever.LastHandNearTime` |
+| La palanca y el anillo reclaman el agarre con la mano real | El bloqueo de agarre miraba solo la mano visible, que se frena en la mano de ella (bajo el chorro está a pocos cm de la palanca): al templar se la agarraba de la mano y a veces se la sacaba del agua. Ahora mira también la mano real (la del control) y la palma. | `SimpleGrab.BlockedFor`, `RawPoint` |
+| Film en modo evaluación | El paso pedía 80 % de la quemadura cubierta y en evaluación no se ve el porcentaje: con la mano casi tapada no avanzaba. Ahora basta 70 % y cada tira cubre 8 mm más a cada lado (el film se estira; la capa visible es la misma que se mide). Si al final falta cubrir pero hubo film, el resumen dice qué porcentaje tapaba y cómo poner las tiras. | `FilmCoverage.coverageNeeded`, `widthMargin`; `BurnProtocol.Explain` |
+| Respuestas del mismo color en evaluación | En el 106 la primera opción era azul y las demás verdes; en la decisión médica, azul y verde. Ahora en evaluación todas usan el mismo azul (`AnswerNeutralColor`); en guiado sigue la correcta en verde con el visto. | `VRPanelKit.AnswerColor` |
+| Anillo sin pista en evaluación | El cartel "Pellízcalo y deslízalo hacia la punta" y el círculo vacío salían con solo acercar la mano, y delataban un paso calificado. En evaluación salen solo cuando ya se está tirando del anillo. | `PatientRing.LateUpdate` |
+
+**Probado en Play** (editor, modo evaluación, mano derecha simulada de
+`SimpleGrab` con `SimController`, el accidente se disparó por código):
+compila sin errores. Apretar sobre su mano con el anillo puesto sacó el
+anillo y no la agarró. Ya sin anillo: dos agarres de 0,5 s, sin error;
+sostenerla 2,5 s, `BurnedHandGrabbed (Error)` (errores +1); otra vez 3 s
+más tarde del cooldown, `BurnedHandGrabbed` sin gravedad (errores igual).
+**Solo compilado:** el bloqueo con la mano real junto a la palanca (la mano
+simulada no tiene diferencia entre mano visible y real), el nuevo umbral
+del film, el texto del resumen, los colores de las respuestas y el cartel
+del anillo. Nada se probó en el Quest.
+
+## 44. Voces de ElevenLabs y reacciones de la tía a tiempo (`main`, 2026-11-21)
+
+Se unió `voces-elevenlabs` a `main` (avance rápido, sin conflictos): 16
+voces de la narradora pasan de la voz de Windows a ElevenLabs (bienvenida,
+tutorial y pasos: `guia_apagar`, `guia_agua`, `guia_anillo`, `guia_llamar`,
+`guia_preparar`, `guia_cubrir`) y la lista `docs/VOCES_ELEVENLABS.md` con
+las 28 que faltan. Ninguna es de la tía, así que `Hito1FX.TtsStandIns` y
+los visemas siguen igual.
+
+Reacciones que llegaban tarde o ya no correspondían (prueba con
+controles): con el anillo ya fuera ella seguía pidiendo que se lo sacaran,
+o soltaba un "me duele" y el "gracias" del anillo llegaba tarde.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Frases que ya no corresponden | Antes de decir una frase se revisa si todavía aplica: `voz_anillo_pide` no sale si el anillo ya salió o se trabó (antes se decidía antes de esperar hasta 3 s a que hubiera silencio); `voz_pista_agua` solo sin el agua; `voz_alivio_agua`, `voz_enfriada` y `voz_pista_pano` solo en su etapa. Si no se dice, el brazo no espera su duración. | `BurnPatientReactions.Stale`, `PatientBurnArm.SayWhenQuiet` |
+| "Gracias" del anillo al instante | `voz_anillo_sale` iba a la cola y esperaba a que terminara lo que sonaba. Ahora se dice apenas sale el anillo, cortando lo que suene. | `BurnPatientReactions.HandleEvent` |
+| Quejidos de fondo | Los quejidos al azar y las pistas se marcan como "de fondo": una reacción o una frase en cola los corta, y las frases del brazo no los esperan. Después de una reacción no sale otro quejido en 4 s más lo que dura la frase, y mientras una mano está junto al anillo o tirando de él no empieza ninguno. | `BurnPatientReactions.Say` (`idle`), `IsSpeakingReaction`, `RingBusy`, `painAfterReaction` |
+| Narradora y el anillo | `guia_anillo` se salta si el anillo ya salió y se corta si sale mientras suena. | `BurnGuide.UpdateNarration`, `RingDone` |
+
+**Probado en Play** (editor, mano izquierda simulada sobre el anillo,
+registrando cada frase de la tía y de la narradora): compila sin errores.
+Evaluación: tirando del anillo durante `voz_mira_mano`, sale a los 0,7 s y
+`voz_anillo_sale` suena enseguida; `voz_anillo_pide` ya no sale. Guiado
+(sin tutorial): tirando durante el quejido `voz_dolor_3`, lo corta y
+`voz_anillo_sale` suena a los 0,8 s. Las 16 voces nuevas están en su lugar
+(audio real, no punteros de LFS); en Play sonaron las nuevas `guia_bienvenida`
+y `guia_apagar`. **Solo compilado:** cortar `guia_anillo` (en la prueba el
+anillo salió antes de ese paso) y las demás frases vencidas. Nada en el
+Quest.

@@ -364,27 +364,42 @@ namespace SojaExiles
                     continue;
                 }
 
-                position = hand.position;
-#if UNITY_EDITOR
-                if (grab.Simulated(hand))
-                {
-                    return true;
-                }
-#endif
-                if (hand.trackedHand != null && hand.trackedHand.IsTracked && grab.TryGetPinchPoint(hand, out Vector3 pinch))
-                {
-                    position = pinch;
-                }
-                else if (hand.anchor != null && OVRInput.IsControllerConnected(hand.controller))
-                {
-                    position = hand.anchor.TransformPoint(grab.controllerGrabOffset);
-                }
-
+                position = grab.RawPoint(hand);
                 return true;
             }
 
             position = Vector3.zero;
             return false;
+        }
+
+        private Vector3 RawPoint(Hand hand)
+        {
+#if UNITY_EDITOR
+            if (Simulated(hand))
+            {
+                return hand.position;
+            }
+#endif
+            if (hand.trackedHand != null && hand.trackedHand.IsTracked && TryGetPinchPoint(hand, out Vector3 pinch))
+            {
+                return pinch;
+            }
+
+            if (hand.anchor != null && OVRInput.IsControllerConnected(hand.controller))
+            {
+                return hand.anchor.TransformPoint(controllerGrabOffset);
+            }
+
+            return hand.position;
+        }
+
+        // La palanca del cano y el anillo reclaman el agarre tambien con la
+        // mano real: la visible se frena en la mano de la tia (bajo el chorro,
+        // a 3 cm de la palanca) y al templar el agua se la agarraba de la
+        // mano quemada sin querer.
+        private bool BlockedFor(Hand hand)
+        {
+            return Blocked(hand.position) || Blocked(RawPoint(hand)) || (hand.palmValid && Blocked(hand.palmPoint));
         }
 
         // Muneca, normal de la palma (hacia afuera de la palma) y direccion de
@@ -1113,7 +1128,7 @@ namespace SojaExiles
             // Se intenta agarrar al apretar y durante un momento despues (la
             // mano suele cerrarse un poco antes de llegar al objeto).
             bool inWindow = hand.pressed && now - hand.pressStart <= grabWindowSeconds;
-            if (inWindow && hand.held == null && !Blocked(hand.position) && !MetaHolding(hand))
+            if (inWindow && hand.held == null && !BlockedFor(hand) &&!MetaHolding(hand))
             {
                 TryGrab(hand, otherHand);
             }

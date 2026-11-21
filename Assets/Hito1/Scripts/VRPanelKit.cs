@@ -291,10 +291,17 @@ namespace SojaExiles
             get { return BurnGuide.Instance != null && BurnGuide.Instance.Guided; }
         }
 
-        // Color del boton de una respuesta: el normal en modo evaluacion.
+        // Todas las respuestas en modo evaluacion: el mismo color. Antes cada
+        // panel pasaba el suyo (el 106: la primera azul y las demas verdes; la
+        // decision medica: azul y verde) y parecia que una se sugeria
+        // (prueba con controles, 2026-11-21).
+        public static readonly Color AnswerNeutralColor = new Color(0.2f, 0.34f, 0.6f);
+
+        // Color del boton de una respuesta ('normal' ya no se usa: en modo
+        // evaluacion todas van con AnswerNeutralColor).
         public static Color AnswerColor(bool correct, Color normal)
         {
-            return !ShowAnswers ? normal : correct ? AnswerCorrectColor : AnswerOtherColor;
+            return !ShowAnswers ? AnswerNeutralColor : correct ? AnswerCorrectColor : AnswerOtherColor;
         }
 
         // Boton de una respuesta con su color y, si es la correcta en modo

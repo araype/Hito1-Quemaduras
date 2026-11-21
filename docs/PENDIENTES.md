@@ -23,7 +23,7 @@ se revisó). **Lo único que falta es que las voces suenen naturales.**
 
 ## Naturalidad de las voces
 
-Lista de trabajo con prioridades y textos listos para pegar: `docs/VOCES_ELEVENLABS.md` (rama `voces-elevenlabs`).
+Lista de trabajo con prioridades, textos listos para pegar y qué ya está hecho: `docs/VOCES_ELEVENLABS.md`.
 
 Estas frases dicen lo correcto, pero se generaron con las voces de Windows
 ("Microsoft Sabina" para la narradora, "Microsoft Raul" para el operador) y
@@ -31,18 +31,14 @@ suenan robóticas y distintas de las de ElevenLabs. Regenerarlas con
 ElevenLabs (la misma voz que las demás de cada personaje), con el mismo
 nombre de archivo:
 
-- **Narradora:** `guia_bienvenida`, `guia_anillo`, `guia_preparar`,
-  `guia_cubrir`, `guia_apagar`, `guia_agua`, `guia_llamar`,
-  `guia_frio_lejos`, `guia_templar`, los errores `guia_err_pano`,
-  `guia_err_curita`, `guia_err_anillo`, `guia_err_calma`,
-  `guia_err_aguantar`, `guia_err_olla`, `guia_err_charco` y
-  `guia_err_caliente`; el tutorial `guia_agarrar_manos`,
-  `guia_agarrar_control`, `guia_caminar_manos`, `guia_caminar_control`,
-  `guia_pausa_manos`, `guia_pausa_control`, `guia_teleport_manos`,
-  `guia_bien_manos` y `guia_bien_control`; y las explicaciones del modo
-  guiado `guia_ayuda_frio`, `guia_ayuda_calma`, `guia_ayuda_agua`,
-  `guia_ayuda_ampollas_si`, `guia_ayuda_ampollas_no`, `guia_ayuda_centro`
-  y `guia_ayuda_casa`.
+- **Narradora:** ya están en ElevenLabs el tutorial, la bienvenida y los
+  pasos (16, rama `voces-elevenlabs`, unida a `main` el 2026-11-21). Faltan
+  `guia_frio_lejos`, `guia_templar`, los errores `guia_err_caliente`,
+  `guia_err_pano`, `guia_err_curita`, `guia_err_anillo`, `guia_err_calma`,
+  `guia_err_aguantar`, `guia_err_olla` y `guia_err_charco`; y las
+  explicaciones del modo guiado `guia_ayuda_frio`, `guia_ayuda_calma`,
+  `guia_ayuda_agua`, `guia_ayuda_ampollas_si`, `guia_ayuda_ampollas_no`,
+  `guia_ayuda_centro` y `guia_ayuda_casa`.
 - **Operador del 106:** `op_centro`, `op_centro_cubierta`, `op_agua_hecha`
   y `op_casa_grande`.
 - **Tía Rosa** (hoy suena en su lugar una frase de ElevenLabs que encaja o

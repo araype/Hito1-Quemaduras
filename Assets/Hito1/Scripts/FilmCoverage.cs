@@ -15,7 +15,13 @@ namespace SojaExiles
     public class FilmCoverage : MonoBehaviour
     {
         [Tooltip("Parte de la quemadura que debe quedar cubierta para dar el paso por hecho.")]
-        [Range(0.3f, 1f)] public float coverageNeeded = 0.8f;
+        // 0,7 (antes 0,8): en modo evaluacion no se ve el porcentaje y con
+        // la mano tapada casi entera no se daba por cubierta (prueba con
+        // controles, 2026-11-21). El film es transparente: un borde sin tapar
+        // no se distingue en el visor.
+        [Range(0.3f, 1f)] public float coverageNeeded = 0.7f;
+        [Tooltip("Margen a los lados de la tira (m): el film se estira y cubre un poco mas que su ancho.")]
+        public float widthMargin = 0.008f;
         [Tooltip("Coseno minimo entre la tira y el largo de la mano para contar como 'a lo largo'.")]
         [Range(0f, 1f)] public float lengthwiseMin = 0.6f;
         [Tooltip("Si es true, soltar una tira cruzada cuenta como envolver (antes). Ahora solo envolver de verdad (dar la vuelta a la mano) es error.")]
@@ -122,7 +128,7 @@ namespace SojaExiles
             Vector3 c = frame.ToBind(center) - frame.Center;
             float wideAt = Vector3.Dot(c, frame.Wide);
             float longAt = Vector3.Dot(c, frame.Long);
-            float halfWidth = width * 0.5f * units;
+            float halfWidth = (width * 0.5f + widthMargin) * units;
             float halfLength = (length * 0.5f + lengthMargin) * units;
 
             // Lado de la mano donde se apoyo (dorso o palma).

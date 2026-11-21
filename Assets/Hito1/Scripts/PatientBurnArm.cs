@@ -348,14 +348,21 @@ namespace SojaExiles
         // lo sumo 'maxWait' segundos.
         private IEnumerator SayWhenQuiet(BurnPatientReactions reactions, string line, float maxWait)
         {
+            // Un quejido de fondo no se espera: la frase lo corta.
             float limit = Time.time + maxWait;
-            while (Time.time < limit && (reactions.IsSpeaking
+            while (Time.time < limit && (reactions.IsSpeakingReaction
                 || (BurnGuide.Instance != null && BurnGuide.Instance.Speaking)))
             {
                 yield return null;
             }
 
-            reactions.Say(line, true);
+            // Say revisa si la frase todavia corresponde (por ejemplo, si se
+            // saco el anillo mientras se esperaba, ya no lo pide).
+            if (!reactions.Say(line, true))
+            {
+                yield break;
+            }
+
             AudioClip clip = Hito1FX.Clip(line);
             yield return new WaitForSeconds(clip != null ? clip.length : 0.5f);
         }

@@ -1953,10 +1953,32 @@ namespace SojaExiles
             }
         }
 
+        // El anillo ya salio (o se trabo): pedir que lo saquen sobra.
+        private bool RingDone()
+        {
+            PatientRing ring = FindObjectOfType<PatientRing>();
+            return ring != null && (ring.Removed || ring.Stuck);
+        }
+
         private void UpdateNarration()
         {
+            // Si el anillo sale mientras ella lo pide, se calla (antes seguia
+            // con "Quitale el anillo" con el anillo ya en la mano).
+            if (narrator != null && narrator.isPlaying && narrator.clip != null
+                && narrator.clip.name == "guia_anillo" && RingDone())
+            {
+                narrator.Stop();
+                nextNarration = Time.time + 0.3f;
+            }
+
             if (narrator == null || narrator.isPlaying || queue.Count == 0 || Time.time < nextNarration)
             {
+                return;
+            }
+
+            if (queue[0] == "guia_anillo" && RingDone())
+            {
+                queue.RemoveAt(0);
                 return;
             }
 

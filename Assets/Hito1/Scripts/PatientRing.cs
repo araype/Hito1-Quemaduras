@@ -205,6 +205,7 @@ namespace SojaExiles
 
         private void OnEnable()
         {
+            LastHandNearTime = float.NegativeInfinity;
             SimpleGrab.AddGrabBlocker(ClaimsGrab);
         }
 
@@ -242,6 +243,11 @@ namespace SojaExiles
         public float engagedZone = 0.17f;
         // Una mano libre esta junto al anillo (cuadro anterior).
         private bool handAtRing;
+
+        // Ultima vez (Time.time) que una mano libre estuvo junto al anillo:
+        // un agarre de la mano quemada en ese momento fue sin querer
+        // (PatientPhysics no lo cuenta como error).
+        public static float LastHandNearTime { get; private set; } = float.NegativeInfinity;
 
         private void LateUpdate()
         {
@@ -282,6 +288,11 @@ namespace SojaExiles
             }
 
             handAtRing = atRing;
+            if (atRing || pulling >= 0)
+            {
+                LastHandNearTime = Time.time;
+            }
+
             if (pulling >= 0)
             {
                 // Lo que la mano avanzo hacia la punta del dedo desde el
@@ -353,8 +364,13 @@ namespace SojaExiles
                 arm.ShowHand(1.5f);
             }
 
-            UpdateHint(active && near);
-            UpdateProgress(active && (near || pulling >= 0 || progress > 0.02f));
+            // En modo evaluacion la indicacion y el circulo vacio no salen al
+            // acercarse (delataban que hay que sacar el anillo, que es un paso
+            // calificado): solo cuando ya se esta tirando de el.
+            bool engaged = pulling >= 0 || progress > 0.02f;
+            bool hints = IndicatorUtil.HintsVisible;
+            UpdateHint(active && (hints ? near : engaged));
+            UpdateProgress(active && (hints ? near || engaged : engaged));
 
             if (!active || pulling < 0)
             {

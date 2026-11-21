@@ -685,6 +685,15 @@ namespace SojaExiles
                         case "Enfriar":
                             return "La quemadura se enfría 20 minutos seguidos bajo agua fría o tibia.";
                         case "Cubrir":
+                            // Se puso film pero no alcanzo: decirlo (en modo
+                            // evaluacion no se ve el porcentaje mientras tanto).
+                            FilmCoverage film = FindObjectOfType<FilmCoverage>();
+                            if (film != null && film.Strips > 0)
+                            {
+                                return $"El film tapaba solo el {Mathf.RoundToInt(film.Coverage * 100f)} % de la quemadura: "
+                                    + "pon las tiras una al lado de la otra, a lo largo, hasta taparla toda.";
+                            }
+
                             return "Al terminar de enfriar, cúbrela sin apretar con film o una bolsa limpia.";
                     }
 

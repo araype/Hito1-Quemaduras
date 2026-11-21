@@ -12,8 +12,10 @@ namespace SojaExiles
     //   - El brazo quemado se agarra de cualquier parte: brazo, antebrazo,
     //     muneca o mano (todas llevan al objetivo de la mano, GrabRedirect).
     //     Asi es facil encontrarlo y llevarla al agua.
-    //   - Si se la agarra de la mano quemada (y no del antebrazo), le duele:
-    //     se avisa BurnedHandGrabbed (error) y ella reacciona.
+    //   - Si se la sostiene de la mano quemada (y no del antebrazo), le duele:
+    //     se avisa BurnedHandGrabbed y ella reacciona. Es error una sola vez
+    //     y no cuentan los roces ni los agarres junto al anillo o la palanca
+    //     del cano (UpdatePendingGrab).
     //   - Al acercar una mano libre al brazo, un brillo suave marca de donde
     //     se puede tomar (verde: antebrazo; naranja: la mano quemada).
     //   - Tocarla vibra un poco, para que se sienta que hay alguien.
@@ -33,6 +35,10 @@ namespace SojaExiles
         public Color burnHintColor = new Color(1f, 0.55f, 0.2f, 0.45f);
         [Tooltip("Segundos minimos entre dos avisos de mano quemada agarrada.")]
         public float burnGrabCooldown = 8f;
+        [Tooltip("Segundos sosteniendola de la mano quemada para que cuente: un agarre que se suelta antes es un roce sin querer (solo se queja).")]
+        public float burnGrabConfirmSeconds = 1.2f;
+        [Tooltip("Si una mano estuvo junto al anillo o la palanca del cano hace menos de esto (s), el agarre de su mano fue sin querer.")]
+        public float nearToolGraceSeconds = 0.6f;
 
         [Header("Tacto")]
         public bool touchHaptics = true;
@@ -46,6 +52,12 @@ namespace SojaExiles
         private Renderer hint;
         private int layerMask;
         private float lastBurnGrab = float.NegativeInfinity;
+        private float lastFlinch = float.NegativeInfinity;
+        // Agarre de la mano quemada que aun no se confirma (-1: ninguno).
+        private float pendingGrabStart = -1f;
+        private bool pendingGrabLeft;
+        private bool pendingAccidental;
+        private bool burnGrabCounted;
         private readonly bool[] touching = new bool[2];
         private readonly float[] nextTouchBuzz = new float[2];
         private BurnHaptics haptics;
@@ -502,10 +514,68 @@ namespace SojaExiles
             }
         }
 
+        // Tomarla de la mano quemada (2026-11-21, prueba con controles: se
+        // castigaba demasiado). Antes cada agarre era un error al instante,
+        // aunque fuera un roce al sacar el anillo o al mover la palanca del
+        // cano con su mano bajo el chorro, y se sumaba otro cada 8 s.
+        // Ahora:
+        //   - si una mano estaba junto al anillo o la palanca, fue sin querer:
+        //     solo se queja si dura;
+        //   - cuenta si se la sostiene de la mano 'burnGrabConfirmSeconds'
+        //     (un agarre que se suelta enseguida es un roce: un quejido corto);
+        //   - el error se cuenta una vez; las siguientes veces ella se queja y
+        //     en modo guiado se corrige, sin restar mas puntos (como envolver
+        //     con film).
         private void HandleGrab(Collider col, Rigidbody rb, bool leftHand)
         {
             if (col == null || col != burnedHandCollider || !Injured)
             {
+                return;
+            }
+
+            pendingGrabStart = Time.time;
+            pendingGrabLeft = leftHand;
+            // Se mira al agarrar: mientras sostiene, esa mano ya no cuenta
+            // como cerca del anillo ni de la palanca.
+            pendingAccidental = NearTool(PatientRing.LastHandNearTime, nearToolGraceSeconds)
+                || NearTool(FaucetLever.LastHandNearTime, nearToolGraceSeconds);
+        }
+
+        private static bool NearTool(float lastNear, float grace)
+        {
+            return Time.time - lastNear < grace;
+        }
+
+        private void UpdatePendingGrab()
+        {
+            if (pendingGrabStart < 0f)
+            {
+                return;
+            }
+
+            bool held = target != null && SimpleGrab.IsHeldBy(target, pendingGrabLeft);
+            bool accidental = pendingAccidental;
+            if (!held || !Injured)
+            {
+                // Lo solto enseguida: un roce. Un quejido corto, sin error.
+                pendingGrabStart = -1f;
+                if (Injured && !accidental)
+                {
+                    Flinch();
+                }
+
+                return;
+            }
+
+            if (Time.time - pendingGrabStart < burnGrabConfirmSeconds)
+            {
+                return;
+            }
+
+            pendingGrabStart = -1f;
+            if (accidental)
+            {
+                Flinch();
                 return;
             }
 
@@ -516,7 +586,23 @@ namespace SojaExiles
 
             lastBurnGrab = Time.time;
             burnSequence.Report(BurnSequenceManager.BurnEvent.BurnedHandGrabbed, null,
-                BurnSequenceManager.Severity.Error);
+                burnGrabCounted ? BurnSequenceManager.Severity.None : BurnSequenceManager.Severity.Error);
+            burnGrabCounted = true;
+        }
+
+        private void Flinch()
+        {
+            if (Time.time - lastFlinch < 3f)
+            {
+                return;
+            }
+
+            lastFlinch = Time.time;
+            BurnPatientReactions reactions = FindObjectOfType<BurnPatientReactions>();
+            if (reactions != null)
+            {
+                reactions.Say("voz_dolor_1", false);
+            }
         }
 
         private void Update()
@@ -525,6 +611,8 @@ namespace SojaExiles
             {
                 return;
             }
+
+            UpdatePendingGrab();
 
             bool grabbable = target != null && burnSequence != null
                 && burnSequence.CurrentState != BurnSequenceManager.BurnState.Idle;
