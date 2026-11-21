@@ -81,8 +81,8 @@ variantes de la llamada.
 |---|---|---|---|
 | [ ] | `guia_err_caliente` | Error: sale agua caliente | `[firm] Está saliendo caliente. Regresa la palanca hacia arriba, hasta que salga fría.` |
 | [ ] | `guia_err_pano` | Error: paño de cocina | `[calm] El paño de cocina suelta pelusa. Usa film o una bolsa limpia.` |
-| [ ] | `guia_err_curita` | Error: curita sobre la quemadura | `[firm] Las curitas se pegan a la piel quemada. Cúbrela con film o una bolsa limpia.` |
-| [ ] | `guia_err_anillo` | El anillo ya no sale | `[calm] Su mano ya se hinchó: no fuerces el anillo. Sigue con el agua fría; en el centro de salud se lo sacarán.` |
+| [x] | `guia_err_curita` | Error: curita sobre la quemadura | `[firm] Las curitas se pegan a la piel quemada. Cúbrela con film o una bolsa limpia.` |
+| [x] | `guia_err_anillo` | El anillo ya no sale | `[calm] Su mano ya se hinchó: no fuerces el anillo. Sigue con el agua fría; en el centro de salud se lo sacarán.` |
 | [ ] | `guia_err_aguantar` | Saca la mano por el frío | `[calm] Si el agua le parece muy fría, témplala un poco: así completa los veinte minutos sin sacar la mano.` |
 | [ ] | `guia_err_olla` | Toca la olla caliente | `[firm] No toques la olla: sigue caliente y también te quemarías.` |
 | [ ] | `guia_err_charco` | Pisa el agua derramada | `[calm] El piso mojado resbala: rodea el agua derramada.` |
