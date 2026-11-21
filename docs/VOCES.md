@@ -176,7 +176,7 @@ Al regenerar una voz con ElevenLabs, reemplazar el `.wav` y quitar su línea de
 | Archivo | Quién | Texto |
 |---|---|---|
 | `guia_err_calma` | Narradora | `[firm] Háblale con calma: dile que el agua fría alivia.` |
-| `guia_err_aguantar` | Narradora | `[calm] Anímala a aguantar o témplale un poco el agua: hay que completar los veinte minutos.` |
+| `guia_err_aguantar` | Narradora | `[calm] Si el agua le parece muy fría, témplala un poco: así completa los veinte minutos sin sacar la mano.` (Regrabada el 2026-11-21 con Sabina.) |
 | `guia_err_olla` | Narradora | `[firm] No toques la olla: sigue caliente y también te quemarías.` |
 | `guia_err_charco` | Narradora | `[calm] El piso mojado resbala: rodea el agua derramada.` |
 | `guia_err_anillo` | Narradora | `[calm] Su mano ya se hinchó: no fuerces el anillo. Sigue con el agua fría; en el centro de salud se lo sacarán.` (Nueva, 2026-11-09: todavía no existe, mientras tanto solo el texto.) |
@@ -210,14 +210,22 @@ quejidos y nunca repite el mismo dos veces seguidas.
 | `guia_caminar_manos` | Tutorial 2, con manos | Ahora camina hasta tu tía y acércale la taza a la mano. |
 | `guia_caminar_control` | Tutorial 2, con controles | Camina con el joystick izquierdo. Para ir lejos, empuja el derecho hacia adelante, apunta y suéltalo. Llévale la taza a tu tía. |
 | `guia_pausa_manos` | Tutorial 3, con manos | Ahora, la pausa. Mira la palma de tu mano izquierda: en la muñeca aparece Pausa. Tócalo con un dedo de la otra mano. |
-| `guia_pausa_control` | Tutorial 3, con controles | Ahora, la pausa. Aprieta el botón de menú del control izquierdo, el de tres rayas. |
+| `guia_pausa_control` | Tutorial 3, con controles (regrabada el 2026-11-21: mismo gesto que con manos) | Ahora, la pausa. Mira la palma de tu mano izquierda: en la muñeca aparece Pausa. Tócalo con la punta del otro control. |
 | `guia_teleport_manos` | Tutorial 4 (solo manos) | Por último, ve hasta el círculo verde. Haz una ele con la mano: índice y pulgar estirados, los otros dedos doblados. Apunta al círculo verde y junta el pulgar al índice para saltar. |
 | `guia_bien_manos` | Fin del tutorial, manos | Muy bien. Ya sabes agarrar, pausar y moverte lejos. Vuelve junto a tu tía. |
 | `guia_bien_control` | Fin del tutorial, controles | Muy bien. Ya sabes agarrar, caminar y pausar. Quédate cerca de tu tía. |
-| `guia_ayuda_frio` | Modo guiado: quiere sacar la mano | Hay dos respuestas correctas, en verde: pedirle que aguante, o templarle un poco el agua. Sacar la mano corta el enfriamiento, y el hielo daña todavía más la piel. |
+| `guia_ayuda_frio` | Modo guiado: quiere sacar la mano (regrabada el 2026-11-21: solo templar es correcto) | La respuesta correcta está en verde: templarle un poco el agua, girando la palanca hasta tibia. Pedirle que aguante no le quita el frío, y terminará sacando la mano. Y el hielo daña todavía más la piel. |
 | `guia_ayuda_calma` | Modo guiado: está asustada (pregunta apagada) | La respuesta en verde la calma. El miedo aumenta el dolor, y los remedios caseros dañan la quemadura. |
 | `guia_ayuda_agua` | Modo guiado: el 106 pregunta por el agua | El operador no ve la cocina: cuéntale lo que pasa de verdad. La respuesta correcta está en verde. |
 | `guia_ayuda_ampollas_si` | Modo guiado: tiene ampollas | Mira su mano: tiene ampollas, unas burbujas de piel hinchada con líquido claro. Es una quemadura de segundo grado. |
 | `guia_ayuda_ampollas_no` | Modo guiado: no tiene ampollas | Mira su mano: está roja e irritada, pero no tiene burbujas de piel con líquido. Eso no son ampollas: es una quemadura de primer grado. |
-| `guia_ayuda_seguir` | Modo guiado: decidir con el 106 | Sigue lo que te recomienda el operador. La respuesta correcta está en verde. |
+| `guia_ayuda_seguir` | Ya no se usa (2026-11-21: la reemplazan `guia_ayuda_centro` y `guia_ayuda_casa`) | Sigue lo que te recomienda el operador. La respuesta correcta está en verde. |
 | `guia_templar` | Modo guiado: eligió templar el agua | Gira la palanca del caño un poco más hacia ti, hasta la mitad: así sale tibia. Su mano sigue bajo el chorro. |
+
+## Voces nuevas del 2026-11-21 (Windows; falta ElevenLabs)
+
+| Archivo | Voz | Cuándo | Texto |
+|---|---|---|---|
+| `guia_ayuda_centro` | Sabina | Modo guiado: decidir, con ampollas (llamada y panel sin celular) | Tiene ampollas: es una quemadura de segundo grado. En la mano, aunque sea pequeña, debe verla un médico. Por eso lo correcto es llevarla al centro de salud. |
+| `guia_ayuda_casa` | Sabina | Modo guiado: decidir, sin ampollas | Solo está roja, sin ampollas: es de primer grado, y se cuida en casa aunque sea grande. Si después salen ampollas o empeora, llévala al centro de salud. |
+| `op_casa_grande` | Raúl | Operador, sin ampollas y caso grande (en lugar de `op_casa`, que dice "y es pequeña") | `[calm] Si solo está roja, sin ampollas, puede cuidarla en casa, aunque ocupe buena parte de la mano. Si salen ampollas o empeora, llévela al centro de salud.` |

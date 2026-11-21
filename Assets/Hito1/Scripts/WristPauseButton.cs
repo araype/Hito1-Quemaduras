@@ -2,10 +2,11 @@ using UnityEngine;
 
 namespace SojaExiles
 {
-    // Pausa sin controles: al mirar la palma izquierda aparece un boton
-    // "Pausa" sobre la muneca; se aprieta tocandolo con un dedo de la otra
-    // mano, como los demas botones (TouchButton). Con controles no aparece: ahi
-    // esta el boton de menu del control izquierdo (o mantener B/Y).
+    // Pausa: al mirar la palma izquierda aparece un boton "Pausa" sobre la
+    // muneca; se aprieta tocandolo con un dedo de la otra mano o con la punta
+    // del otro control, como los demas botones (TouchButton). Es el mismo
+    // gesto con manos y con controles (2026-11-21); con controles tambien
+    // sirven el boton de menu del control izquierdo y mantener B/Y.
     // El gesto de menu del sistema con la mano izquierda (OVRInput.Button.Start
     // en PauseMenu) no se confirmo en el visor; este boton no depende de el.
     // Para que no se active sin querer: solo con la mano izquierda vacia, la

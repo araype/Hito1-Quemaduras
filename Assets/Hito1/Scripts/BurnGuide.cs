@@ -149,7 +149,7 @@ namespace SojaExiles
             // Sin celular en la escena se decide al final con el panel
             // (ver ShowStep).
             new StepInfo { id = StepId.Llamar, title = "Llama al 106",
-                hint = "Toma el celular del mesón y toca «Llamar 106» en su pantalla con un dedo de la otra mano. Sale en altavoz: puedes dejarlo en el mesón y seguir atendiéndola.",
+                hint = "Toma el celular del mesón y toca «Llamar 106» en su pantalla con la otra mano. Sale en altavoz: puedes dejarlo en el mesón y seguir atendiéndola.",
                 clip = "guia_llamar" },
             // Los 20 minutos de agua dan tiempo de buscar con que cubrir: el
             // film y la bolsa estan guardados en el cajon, como en una casa.
@@ -937,9 +937,9 @@ namespace SojaExiles
             return true;
         }
 
-        // Ensena a abrir y cerrar la pausa, segun como juega: con controles
-        // el boton de menu del control izquierdo (o mantener B/Y); con las
-        // manos, el boton de la muneca izquierda (WristPauseButton). Si no lo
+        // Ensena a abrir y cerrar la pausa con el boton de la muneca izquierda
+        // (WristPauseButton), igual con manos y con controles: solo cambia
+        // con que se toca (un dedo o la punta del otro control). Si no lo
         // hace en 'pauseTutorialTimeout' segundos sigue igual (la tarjeta de
         // la pausa no debe trabar la historia).
         private IEnumerator PauseTutorial(bool controllers)
@@ -990,7 +990,7 @@ namespace SojaExiles
         private static string PauseHint(bool controllers)
         {
             return controllers
-                ? "Aprieta el botón de menú del control izquierdo, el de tres rayas."
+                ? "Mira la palma de tu mano izquierda: en la muñeca aparece «Pausa». Tócalo con la punta del otro control."
                 : "Mira la palma de tu mano izquierda: en la muñeca aparece «Pausa». Tócalo con un dedo de la otra mano.";
         }
 
@@ -1813,7 +1813,7 @@ namespace SojaExiles
                     Correct("guia_err_remedio", "No le pongas nada en la quemadura: solo agua fría corriente.");
                     break;
                 case BurnSequenceManager.BurnEvent.CoolingGaveUp:
-                    Correct("guia_err_aguantar", "Anímala a aguantar o témplale un poco el agua: hay que completar los 20 minutos.");
+                    Correct("guia_err_aguantar", "Si el agua le parece muy fría, témplala un poco: así completa los 20 minutos sin sacar la mano.");
                     break;
                 case BurnSequenceManager.BurnEvent.HotPotTouched:
                     Correct("guia_err_olla", "No toques la olla: sigue caliente y también te quemarías.");

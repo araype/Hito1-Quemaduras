@@ -51,12 +51,12 @@ namespace SojaExiles
             if (VRPanelKit.ShowAnswers)
             {
                 VRPanelKit.AnswerWhy(t, center
-                        ? "Tiene ampollas (burbujas de piel con líquido): con ampollas en la mano debe verla un médico."
-                        : "Está roja pero sin ampollas: se cuida en casa; si salen ampollas o empeora, al centro de salud.",
+                        ? "Tiene ampollas: segundo grado. En la mano debe verla un médico, aunque sea pequeña."
+                        : "Roja, sin ampollas: primer grado. Se cuida en casa aunque sea grande; si salen ampollas, al médico.",
                     new Vector2(left, 0.012f), 56, 0.017f);
                 if (BurnGuide.Instance != null)
                 {
-                    BurnGuide.Instance.Explain(center ? "guia_ayuda_ampollas_si" : "guia_ayuda_ampollas_no", 1f);
+                    BurnGuide.Instance.Explain(center ? "guia_ayuda_centro" : "guia_ayuda_casa", 1f);
                 }
             }
 

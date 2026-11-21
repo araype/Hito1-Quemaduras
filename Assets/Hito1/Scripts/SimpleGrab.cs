@@ -268,6 +268,15 @@ namespace SojaExiles
                     return SimController[leftHand ? 0 : 1];
                 }
 #endif
+                // Primero el control: con las manos conducidas por el control
+                // (HandsControllersUnifier) el SDK marca la mano como seguida
+                // aunque se sostenga el control, y el tutorial explicaba la
+                // pausa de la muneca y el salto con la L.
+                if (ControllerInUse(hand.controller, leftHand))
+                {
+                    return true;
+                }
+
                 if (hand.trackedHand != null && hand.trackedHand.IsTracked)
                 {
                     return false;
@@ -280,6 +289,25 @@ namespace SojaExiles
             }
 
             return false;
+        }
+
+        // El control esta en la mano o es el que se esta usando. Un control
+        // encendido pero dejado en la mesa no cuenta (se juega con las manos).
+        public static bool ControllerInUse(OVRInput.Controller controller, bool leftHand)
+        {
+            if (!OVRInput.IsControllerConnected(controller))
+            {
+                return false;
+            }
+
+            if (OVRInput.GetControllerIsInHandState(leftHand ? OVRInput.Hand.HandLeft : OVRInput.Hand.HandRight)
+                == OVRInput.ControllerInHandState.ControllerInHand)
+            {
+                return true;
+            }
+
+            OVRInput.Controller active = OVRInput.GetActiveController();
+            return (active & OVRInput.Controller.Hands) == 0 && (active & controller) != 0;
         }
 
         public static bool TryGetFingertip(bool leftHand, out Vector3 position)
@@ -360,9 +388,11 @@ namespace SojaExiles
         }
 
         // Muneca, normal de la palma (hacia afuera de la palma) y direccion de
-        // los dedos de una mano seguida con hand tracking. Falso con
-        // controles (tienen el boton de menu) o si la mano no se ve. La usa
-        // WristPauseButton. En el editor, con la mano simulada: muneca en
+        // los dedos. Con las manos y con controles (2026-11-21: la pausa de la
+        // muneca es la misma en los dos): con el control se usa la mano que
+        // dibuja el SDK sobre el control y, si no se ve, la pose del control
+        // (la palma izquierda mira hacia su derecha). Falso si no se ve la
+        // mano ni el control. La usa WristPauseButton. En el editor, con la mano simulada: muneca en
         // SimPosition, palma hacia SimRotation * atras y dedos hacia arriba.
         public static bool TryGetPalm(bool leftHand, out Vector3 wrist, out Vector3 palmNormal, out Vector3 toFingers)
         {
@@ -383,9 +413,24 @@ namespace SojaExiles
                     return true;
                 }
 #endif
-                if (hand.trackedHand == null || !hand.trackedHand.IsTracked)
+                bool controller = ControllerInUse(hand.controller, leftHand);
+                if (!controller && (hand.trackedHand == null || !hand.trackedHand.IsTracked))
                 {
                     continue;
+                }
+
+                if (controller && !TryVisibleJoints(leftHand, out Vector3 _, out Vector3 _, out Vector3 _))
+                {
+                    if (hand.anchor == null)
+                    {
+                        continue;
+                    }
+
+                    Transform a = hand.anchor;
+                    toFingers = a.forward;
+                    palmNormal = leftHand ? a.right : -a.right;
+                    wrist = a.position - a.forward * 0.05f;
+                    return true;
                 }
 
                 if (TryVisibleJoints(leftHand, out Vector3 w, out Vector3 index, out Vector3 pinky))
@@ -481,7 +526,8 @@ namespace SojaExiles
                     continue;
                 }
 
-                if (hand.trackedHand != null && hand.trackedHand.IsTracked)
+                if (hand.trackedHand != null && hand.trackedHand.IsTracked
+                    && !ControllerInUse(hand.controller, leftHand))
                 {
                     if (!hand.trackedHand.IsPointerPoseValid || hand.trackedHand.PointerPose == null)
                     {
@@ -1080,7 +1126,7 @@ namespace SojaExiles
         private bool HandTracked(Hand hand)
         {
             return hand.trackedHand != null && hand.trackedHand.IsTracked
-                && !OVRInput.IsControllerConnected(hand.controller);
+                && !ControllerInUse(hand.controller, hand == left);
         }
 
         // Las camaras dejaron de ver la mano con algo agarrado: el objeto queda

@@ -643,7 +643,7 @@ namespace SojaExiles
                 case BurnSequenceManager.BurnEvent.HotWaterOnBurn:
                     return "El agua caliente vuelve a quemar: usa siempre agua fría o tibia.";
                 case BurnSequenceManager.BurnEvent.CoolingInterrupted:
-                    return "Sacaste la mano del agua antes de tiempo: hay que enfriar 20 minutos seguidos.";
+                    return "La mano salió del agua antes de tiempo: hay que enfriar 20 minutos seguidos. Si el agua le molesta, témplala un poco.";
                 case BurnSequenceManager.BurnEvent.RingStuck:
                     return "La mano se hinchó antes de sacar el anillo: retíralo lo antes posible, apenas empieces a atenderla. Si ya no sale, no lo fuerces.";
                 case BurnSequenceManager.BurnEvent.CoveredTooEarly:

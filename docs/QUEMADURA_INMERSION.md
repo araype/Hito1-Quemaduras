@@ -1427,3 +1427,70 @@ simulada), apretar botones tocándolos (la mano simulada no tiene
 dedos), el tutorial con controles, las marcas de las ampollas, la
 explicación tras la voz del operador en una llamada real, ni nada en el
 Quest.
+
+## 42. Revisión final: controles, llamada según el caso, queja en la llamada y film (`main`, 2026-11-21)
+
+Revisión del flujo final con el APK. El enfoque principal es jugar **con
+controles**; con las manos cambia solo el salto (último paso del tutorial)
+y la pausa (botón de la muñeca). Recorrido esperado:
+
+1. Menú: elegir modo guiado o evaluación (y el caso, si se quiere).
+2. Tutorial (solo guiado): agarrar la taza, llevársela a la tía, abrir la
+   pausa mirando la palma izquierda y tocando «Pausa» en la muñeca (con un
+   dedo o con la punta del otro control: el mismo gesto en los dos). Con
+   controles, 3 pasos; con las manos, 4: al final, el salto con la L.
+3. Accidente: apagar la hornilla, sacar el anillo, abrir el caño sin
+   llegar a la zona caliente y llevarla del antebrazo al lavadero.
+4. Llamada al 106 una vez que ella está en el lavadero (ya no hay manta):
+   el paso aparece en modo guiado al empezar a enfriar. El celular no
+   suena solo: se toma del mesón, al tenerlo en la mano aparece «Llamar
+   106» en su pantalla y se toca con la otra mano (o se lleva a la oreja,
+   o A/X). No es un paso que se haga así en la vida real, pero llena la
+   espera del enfriamiento y enseña qué contar. Hacia el minuto 9 se queja
+   del frío en medio de la llamada; lo único correcto es templar el agua
+   girando la palanca hasta tibia.
+5. Cubrir con la bolsa o con tiras de film y ver el resumen.
+
+| Qué | Cómo funciona | Dónde |
+|---|---|---|
+| Con controles ya no se explican los gestos de las manos | En el visor, el SDK de Meta entrega una mano "conducida por el control" (activada en `HandsControllersUnifier`) con el estado de mano seguida aunque se sostenga el control. `UsesController` miraba primero ese estado y respondía "manos": el tutorial explicaba la pausa de la muñeca, sumaba el paso del salto con la L y los botones usaban la profundidad de las manos. En el simulador no pasaba (no hay mano conducida por el control). Ahora se mira primero si el control está en la mano (`GetControllerIsInHandState`) o es el activo (`GetActiveController`), y recién después la mano. Con un control encendido dejado en la mesa se sigue jugando con las manos. Lo mismo para el rayo de la mano, la palma de la pausa y `HandTracked`. | `SimpleGrab.UsesController`, `ControllerInUse`, `TryGetPalm`, `TryGetPointer`, `HandTracked` |
+| Pausa de la muñeca también con controles | Antes, con controles el botón «Pausa» de la muñeca no aparecía y el tutorial enseñaba el botón de menú. Ahora es el mismo gesto con los dos: al girar la palma izquierda hacia la cara aparece «Pausa» y se toca con la punta del otro control (como cualquier botón: `controllerTouchDepth`). La palma sale de la mano que el SDK dibuja sobre el control o, si no se ve, de la pose del control (su palma mira hacia la derecha del control). El botón de menú y mantener B/Y siguen sirviendo, sin enseñarse. La tarjeta y `guia_pausa_control` (regrabada) dicen "Mira la palma de tu mano izquierda… Tócalo con la punta del otro control". | `SimpleGrab.TryGetPalm`, `WristPauseButton`, `BurnGuide.PauseHint` |
+| Llamar con un toque | La forma que se enseña es tocar «Llamar 106» en la pantalla del celular con la otra mano o con la punta del otro control (aparece al tenerlo en la mano). Llevárselo a la oreja y A/X siguen como atajos, sin enseñarse. La tarjeta ya no dice "con un dedo". | `EmergencyCall`, `BurnGuide` (paso Llamar) |
+| Ampollas según el caso | La correcta sale de lo que se ve en su mano: con ampollas (segundo grado) "Sí, tiene ampollas"; sin ellas (primer grado) "No, solo está roja". El porqué del panel nombra el tamaño solo cuando podría confundir ("segundo grado, aunque sea pequeña"; "primer grado, aunque sea grande"). | `EmergencyCall.Call` |
+| Decidir con el 106 según el caso | La correcta (y el puntaje) depende de su mano, no de lo que se le dijo al operador: con ampollas, llevarla al centro de salud, aunque se haya respondido mal antes. Así el modo guiado nunca marca en verde quedarse en casa con ampollas. La narradora explica por qué con dos voces nuevas: `guia_ayuda_centro` (segundo grado: en la mano, aunque sea pequeña, la ve un médico) y `guia_ayuda_casa` (primer grado: en casa, aunque sea grande; si salen ampollas, al médico). También en el panel sin celular. | `EmergencyCall.Call`, `MedicalDecisionPanel` |
+| Operador en el caso grande | `op_casa` dice "si solo está roja y es pequeña": en un caso de primer grado grande se usa `op_casa_grande` ("…aunque ocupe buena parte de la mano"). | `EmergencyCall.Call` |
+| Queja del frío durante la llamada | Su panel dice arriba "El 106 espera en la línea: primero atiende a tu tía", para que quede claro por qué desapareció el de la llamada. Si el operador calla justo cuando ella empieza a quejarse, la explicación de la narradora para la pregunta del 106 espera a que se resuelva la queja (antes se podían pisar las voces). | `PatientDialog.Ask`, `EmergencyCall.ExplainAfter` |
+| De dónde sale el film | La tira salía del punto de la caja más cercano a la otra mano (un costado o abajo), así que no se sabía de dónde sacarla. Ahora sale siempre por el borde delantero de la tapa (la ranura de una caja real, del lado de "25 cm × 30 m") y se tira hacia afuera y un poco arriba; la flecha amarilla y la solapa salen de ahí. La tarjeta dice "la solapa del borde de la tapa" y "aleja esa mano de la caja". | `FilmRoll.useExitEdge`, `exitEdge`, `exitOutward`; `BurnSceneProps.BuildFilm`; `CoverHowTo.FilmBase` |
+| Hacia dónde acercar la tira | La flecha iba de su muñeca a sus dedos y parecía pedir lo contrario. Ahora va de la tira que se tiene en la mano hacia el dorso de su mano, y se ve desde 0,8 m (antes 0,5 m). | `CoverHowTo.StripSteps`, `stripArrowDistance` |
+| Solo templar calma el frío | Pedirle que aguante ya no es correcto: no le quita el frío, así que es como no hacer nada. Si se elige, ella vuelve a quejarse y saca la mano (`CoolingGaveUp`, detalle `Aguantar`, y el error del enfriamiento interrumpido). En guiado solo "te templo un poco el agua" sale en verde; el porqué, `guia_ayuda_frio` y `guia_err_aguantar` se regrabaron (Sabina) y el resumen sugiere templar si el agua le molesta. | `PatientDialog.ResistSteps`, `BurnGuide`, `BurnProtocol` |
+
+Tres voces nuevas y dos regrabadas con Windows (Sabina y Raúl, 44,1 kHz
+mono): falta pasarlas a ElevenLabs con las demás (`docs/PENDIENTES.md`).
+
+**Probado en Play** (editor sin visor, manos simuladas de `SimpleGrab` con
+`SimController`; el enfriamiento y la llamada se iniciaron por código):
+compila sin errores. Modo guiado con controles: "Tutorial 1 de 3" (agarrar
+con el botón lateral), "2 de 3" (llevar la taza), "3 de 3" (la pausa con el
+botón de menú) y, al cerrar la pausa, sin paso de salto. Caso de segundo
+grado mediano: la tía llevada del antebrazo al chorro con la mano
+simulada; en el minuto 9 de la llamada salió la queja con "El 106 espera
+en la línea" (en esa prueba aún con las dos correctas en verde; luego se
+dejó solo templar, que solo se compiló); al elegir templar, la tarjeta y
+`guia_templar`; al girar la palanca a tibia la llamada volvió a su
+pregunta. En la de ampollas, 5 marcas en su mano y "Sí, tiene ampollas" en
+verde; en la decisión, "Sí, la llevo" en verde y sonó `guia_ayuda_centro`
+después del operador. Film: con la caja en la mano, el borde sale en la
+tapa delantera; se tiró y cortó una tira; con la tira cerca de su mano,
+las flechas apuntan hacia su mano; la caja y la tira dejadas caer siguieron
+en el piso a los 8 s y la caja se volvió a agarrar desde el piso.
+Después, con el control simulado: girar la palma izquierda hacia la cara
+mostró «Pausa» en la muñeca y tocarlo con la punta del otro control abrió
+la pausa; con el celular en una mano, tocar «Llamar 106» con la punta del
+otro control empezó la llamada (en los dos el acercamiento desde delante
+se marcó por código: con Unity en segundo plano pasan segundos entre
+llamadas). Solo templar como respuesta correcta: solo compilado.
+**No se probó:** la palma con el control real (la mano simulada no pasa
+por la mano dibujada ni por la pose del control), la detección de controles en el visor (el arreglo se basa
+en el código del SDK; la mano simulada no pasa por ahí), los casos de
+primer grado (con `op_casa_grande` y `guia_ayuda_casa`), la bolsa en el
+piso, ni nada en el Quest.

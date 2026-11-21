@@ -13,14 +13,15 @@ namespace SojaExiles
     //   - Hacia el minuto 9 el agua ya le parece muy fria y empieza a sacar
     //     la mano. Se queja este donde este el jugador, pero las opciones
     //     salen solo con el a su lado; si esta lejos, aguanta
-    //     'awayGraceSeconds' y, si no vuelve, la saca (error). Hay dos
-    //     respuestas correctas: convencerla de aguantar o
-    //     templar un poco el agua (abrir tambien la llave caliente: con las
-    //     dos abiertas sale tibia; NHS y Cruz Roja: agua fresca o tibia, no
-    //     helada). Templarla se puede elegir en el panel (y luego hay que
-    //     abrir la llave) o hacer directamente con el panel abierto. Si se
-    //     le dice que la saque, se le recomienda hielo, no se responde o no
-    //     se templa a tiempo, la saca (y el reloj se pausa:
+    //     'awayGraceSeconds' y, si no vuelve, la saca (error). La unica
+    //     respuesta correcta es templar un poco el agua (palanca del cano
+    //     hasta tibia; NHS y Cruz Roja: agua fresca o tibia, no helada).
+    //     Pedirle que aguante no le quita el frio: es como no hacer nada y
+    //     termina sacando la mano (decision del 2026-11-21). Templarla se
+    //     puede elegir en el panel (y luego hay que girar la palanca) o
+    //     hacer directamente con el panel abierto. Si se le pide aguantar,
+    //     se le dice que la saque, se le recomienda hielo, no se responde o
+    //     no se templa a tiempo, la saca (y el reloj se pausa:
     //     CoolingInterrupted). Despues hay que volver a llevarla. Si el agua
     //     ya sale tibia al llegar el minuto 9, no se queja.
     //     Si esta en curso la llamada al 106, la queja no espera a que se
@@ -309,9 +310,9 @@ namespace SojaExiles
                 yield return new WaitForSeconds(waited > 0.5f ? 0.4f : 1.2f);
                 int left = Mathf.Max(1, Mathf.CeilToInt(protocol.simulatedMinutes - protocol.SimulatedCoolingMinutes));
                 Ask("Quiere sacar la mano del agua. ¿Qué le dices?",
-                    "Hay dos correctas: que aguante o templarle un poco el agua (fresca o tibia, nunca helada). "
-                        + "Sacarla corta el enfriamiento y el hielo daña la piel.", "guia_ayuda_frio",
-                    new Option { id = 0, text = $"Aguanta un poco más: faltan {left} minutos y así no se hace más profunda.", correct = true },
+                    "Templa un poco el agua (fresca o tibia, nunca helada): pedirle que aguante no le quita el frío "
+                        + "y terminará sacándola.", "guia_ayuda_frio",
+                    new Option { id = 0, text = $"Aguanta un poco más: faltan {left} minutos y así no se hace más profunda." },
                     new Option { id = 3, text = FaucetLever.Current != null ? "Espera, te templo un poco el agua." : "Espera, te templo un poco el agua con la llave caliente.", correct = true },
                     new Option { id = 1, text = "Sácala un rato y luego la volvemos a poner." },
                     new Option { id = 2, text = "Mejor te pongo hielo, enfría más rápido." });
@@ -380,9 +381,16 @@ namespace SojaExiles
             switch (answer)
             {
                 case 0:
-                    Say("voz_aguanto");
-                    burnSequence.Report(BurnSequenceManager.BurnEvent.CoolingConvinced);
-                    yield break;
+                    // Lo intenta, pero el frio sigue: la saca igual.
+                    Say("voz_frio");
+                    if (arm != null)
+                    {
+                        arm.Hesitate(hesitateLift);
+                    }
+
+                    yield return new WaitForSeconds(2.5f);
+                    burnSequence.Report(BurnSequenceManager.BurnEvent.CoolingGaveUp, "Aguantar");
+                    break;
                 case 3:
                     if (tempered)
                     {
@@ -434,7 +442,11 @@ namespace SojaExiles
             bool showWhy = VRPanelKit.ShowAnswers && !string.IsNullOrEmpty(why);
             const int whyWidth = 52;
             float whyHeight = showWhy ? VRPanelKit.Lines(why, whyWidth) * 0.022f + 0.012f : 0f;
-            Vector2 size = new Vector2(0.56f, 0.08f + 0.1f * shuffled.Count + whyHeight);
+            // En medio de la llamada al 106: se avisa que el operador espera
+            // (su panel se oculta mientras se le responde a ella).
+            bool callWaiting = EmergencyCall.InCall;
+            float waitingHeight = callWaiting ? 0.03f : 0f;
+            Vector2 size = new Vector2(0.56f, 0.08f + 0.1f * shuffled.Count + whyHeight + waitingHeight);
             Transform root = VRPanelKit.CreateRoot("PanelPaciente", 0.6f, 0.2f);
             RoundedPanel bg = RoundedPanel.Create(root, "FondoPaciente", Vector2.zero, size, 0.002f, 0.035f,
                 0.0025f, 0.02f);
@@ -442,6 +454,13 @@ namespace SojaExiles
             bg.bottom = new Color(0.05f, 0.07f, 0.14f, 0.96f);
             bg.Push();
             float top = size.y * 0.5f;
+            if (callWaiting)
+            {
+                VRPanelKit.Text(root, "El 106 espera en la línea: primero atiende a tu tía.", new Vector2(0f, top - 0.022f),
+                    0.017f, VRPanelKit.CardLabelColor, TextAnchor.UpperCenter, TextAlignment.Center);
+                top -= waitingHeight;
+            }
+
             VRPanelKit.Text(root, question, new Vector2(0f, top - 0.03f), 0.026f, Color.white, TextAnchor.UpperCenter,
                 TextAlignment.Center);
 

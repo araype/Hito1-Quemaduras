@@ -315,11 +315,19 @@ namespace SojaExiles
                 MarkBlisters(injury);
             }
 
+            // El porque menciona el tamano del caso: es lo que cambia entre
+            // partidas y no decide nada (en la mano, con ampollas siempre va
+            // al medico; sin ampollas se cuida en casa aunque sea grande).
+            BurnCase burnCase = injury != null ? injury.Case : BurnCase.Current;
+            bool small = burnCase != null && burnCase.size == BurnCase.Size.Pequena;
+            bool large = burnCase != null && burnCase.size == BurnCase.Size.Grande;
             yield return Ask("op_ampollas", "Mire bien la quemadura. ¿Tiene ampollas?",
                 hasBlisters ? 0 : 1,
                 hasBlisters
-                    ? "Tiene ampollas (marcadas en su mano): burbujas de piel hinchada con líquido claro. Es de segundo grado."
-                    : "Está roja e irritada, pero sin burbujas de piel con líquido: no son ampollas. Es de primer grado.",
+                    ? "Tiene ampollas (marcadas en su mano): burbujas de piel con líquido. Es de segundo grado"
+                        + (small ? ", aunque sea pequeña." : ".")
+                    : "Roja, sin burbujas de líquido: no son ampollas. Es de primer grado"
+                        + (large ? ", aunque sea grande." : "."),
                 hasBlisters ? "guia_ayuda_ampollas_si" : "guia_ayuda_ampollas_no",
                 "Sí, tiene ampollas", "No, solo está roja");
             ClearBlisterMarks();
@@ -334,6 +342,9 @@ namespace SojaExiles
             // pueden seguir esa recomendacion (decir que no es la decision).
             bool advisedCenter = saysBlisters;
             bool goToHealthCenter;
+            // La respuesta correcta es la que pide su mano (con ampollas, al
+            // medico), aunque se le haya dicho mal al operador: el modo
+            // guiado no debe marcar en verde quedarse en casa con ampollas.
             if (advisedCenter)
             {
                 if (burnSequence.CurrentState == BurnSequenceManager.BurnState.Covered)
@@ -347,24 +358,39 @@ namespace SojaExiles
                     yield return Say("op_centro", "Con ampollas en la mano, debe verla un médico. Cuando termine de " +
                         "enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.");
                 }
-                yield return Ask("op_decidir_centro", "¿Puede llevarla al centro de salud?", 0,
-                    "Con ampollas en la mano debe verla un médico: sigue lo que te recomienda el 106.",
-                    "guia_ayuda_seguir", "Sí, la llevo", "Prefiero cuidarla en casa");
+                yield return Ask("op_decidir_centro", "¿Puede llevarla al centro de salud?", hasBlisters ? 0 : 1,
+                    hasBlisters
+                        ? "Con ampollas en la mano debe verla un médico" + (small ? ", aunque sea pequeña." : ".")
+                        : "No tiene ampollas: se puede cuidar en casa. Si salen o empeora, al centro de salud.",
+                    hasBlisters ? "guia_ayuda_centro" : "guia_ayuda_casa", "Sí, la llevo", "Prefiero cuidarla en casa");
                 goToHealthCenter = answer == 0;
             }
             else
             {
-                yield return Say("op_casa", "Si solo está roja y es pequeña, puede cuidarla en casa. Si salen " +
-                    "ampollas o empeora, llévela al centro de salud.");
-                yield return Ask("op_decidir_casa", "¿Podrá cuidarla en casa?", 0,
-                    "Solo roja, sin ampollas: se cuida en casa. Si salen ampollas o empeora, al centro de salud.",
-                    "guia_ayuda_seguir", "Sí, la cuido en casa", "Prefiero llevarla al centro de salud");
+                // En el caso grande, sin "y es pequeña" (op_casa_grande).
+                if (large && Hito1FX.Clip("op_casa_grande") != null)
+                {
+                    yield return Say("op_casa_grande", "Si solo está roja, sin ampollas, puede cuidarla en casa, aunque " +
+                        "ocupe buena parte de la mano. Si salen ampollas o empeora, llévela al centro de salud.");
+                }
+                else
+                {
+                    yield return Say("op_casa", "Si solo está roja y es pequeña, puede cuidarla en casa. Si salen " +
+                        "ampollas o empeora, llévela al centro de salud.");
+                }
+
+                yield return Ask("op_decidir_casa", "¿Podrá cuidarla en casa?", hasBlisters ? 1 : 0,
+                    hasBlisters
+                        ? "Tiene ampollas: debe verla un médico. Llévala al centro de salud."
+                        : "Solo roja, sin ampollas: se cuida en casa" + (large ? " aunque sea grande" : "")
+                            + ". Si salen ampollas o empeora, al centro de salud.",
+                    hasBlisters ? "guia_ayuda_centro" : "guia_ayuda_casa", "Sí, la cuido en casa", "Prefiero llevarla al centro de salud");
                 goToHealthCenter = answer == 1;
             }
 
             if (protocol != null)
             {
-                protocol.Decide(goToHealthCenter, advisedCenter);
+                protocol.Decide(goToHealthCenter, hasBlisters);
             }
 
             Decided = true;
@@ -662,6 +688,9 @@ namespace SojaExiles
         private IEnumerator ExplainAfter(float seconds, string clip)
         {
             yield return WaitCall(seconds);
+            // Si la tia empezo a quejarse justo cuando callo el operador, la
+            // explicacion espera a que ella termine (no se pisan las voces).
+            yield return WaitPatient();
             if (answer < 0 && inCall && BurnGuide.Instance != null)
             {
                 BurnGuide.Instance.Explain(clip, 0f);

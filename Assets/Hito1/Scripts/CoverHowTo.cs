@@ -25,7 +25,7 @@ namespace SojaExiles
         [Tooltip("Altura de la tarjeta sobre su mano o el objeto (m).")]
         public float cardHeight = 0.22f;
         [Tooltip("Con la tira a menos de esto de su mano (m) se muestra la flecha de apoyarla.")]
-        public float stripArrowDistance = 0.5f;
+        public float stripArrowDistance = 0.8f;
 
         private const float CardWidth = 0.36f;
         private const int MaxRows = 4;
@@ -247,10 +247,15 @@ namespace SojaExiles
                     s.anchor = wrist;
                 }
 
-                float distance = Vector3.Distance(strip.transform.position, (wrist + fingers) * 0.5f);
-                s.arrowOn = Cooled && distance < stripArrowDistance;
-                s.arrowFrom = wrist;
-                s.arrowTo = fingers;
+                // Del film que tiene en la mano hacia el dorso de su mano:
+                // hacia donde acercarlo (antes iba de su muneca a sus dedos y
+                // parecia pedir lo contrario). Se acorta al llegar.
+                Vector3 target = (wrist + fingers) * 0.5f + Vector3.up * 0.02f;
+                Vector3 from = strip.transform.position;
+                float distance = Vector3.Distance(from, target);
+                s.arrowOn = Cooled && distance < stripArrowDistance && distance > 0.04f;
+                s.arrowFrom = from;
+                s.arrowTo = Vector3.MoveTowards(target, from, 0.02f);
             }
 
             return s;
@@ -270,9 +275,9 @@ namespace SojaExiles
                         ? "Sostén el rollo con un control (botón lateral)"
                         : "Sostén el rollo con una mano",
                     freeControl
-                        ? "Acerca el otro control a la solapa del rollo y aprieta el botón lateral"
-                        : "Con la otra mano, pellizca la solapa del rollo",
-                    "Aleja esa mano del rollo hasta que la tira se corte",
+                        ? "Acerca el otro control a la solapa del borde de la tapa y aprieta el botón lateral"
+                        : "Con la otra mano, pellizca la solapa del borde de la tapa",
+                    "Aleja esa mano de la caja hasta que la tira se corte",
                     freeControl
                         ? "Apoya la tira a lo largo de su mano y suelta el botón" + noWrap
                         : "Apoya la tira a lo largo de su mano y abre los dedos" + noWrap

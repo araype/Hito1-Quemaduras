@@ -62,7 +62,7 @@ namespace SojaExiles
             PatientAlarmed,     // se la asusto mas en vez de calmarla
             BadAdvice,          // se le recomendo un remedio casero (detalle: cual)
             CoolingConvinced,   // siguio con la mano en el agua (detalle: null, o Templada si se templo el agua)
-            CoolingGaveUp,      // saco la mano por el frio (detalle: Consejo, SinRespuesta o SinTemplar)
+            CoolingGaveUp,      // saco la mano por el frio (detalle: Consejo, SinRespuesta, SinTemplar o Aguantar)
             GauzePressed,       // sin uso desde 2026-11-12 (se quito la gasa)
             GauzeTouchedCenter, // sin uso desde 2026-11-12
             GauzeOffCenter,     // sin uso desde 2026-11-12

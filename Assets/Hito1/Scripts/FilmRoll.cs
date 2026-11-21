@@ -25,6 +25,16 @@ namespace SojaExiles
         public float halfLength = 0.15f;
         public Vector3 axisCenter = new Vector3(0f, 0.026f, 0f);
 
+        // Caja dispensadora: la tira sale siempre por la ranura del borde
+        // delantero de la tapa (en el espacio local: Y y Z de 'exitEdge'; X
+        // sigue a la mano a lo largo de la caja) y se tira hacia
+        // 'exitOutward'. Antes salia del punto de la caja mas cercano a la
+        // mano libre (un costado o abajo) y no se entendia de donde sacarla.
+        [Tooltip("La tira sale por un borde fijo de la caja (exitEdge) y no del punto mas cercano a la mano.")]
+        public bool useExitEdge;
+        public Vector3 exitEdge;
+        public Vector3 exitOutward = new Vector3(0f, 0.35f, 1f);
+
         private Rigidbody body;
         private Grabbable grabbable;
         private GrabRedirect redirect;
@@ -84,6 +94,7 @@ namespace SojaExiles
             Vector3 radial = Vector3.ProjectOnPlane(edge - center, Axis);
             outward = strip.IsHeld && (end - edge).sqrMagnitude > 1e-4f
                 ? (end - edge).normalized
+                : useExitEdge ? ExitOutward
                 : radial.sqrMagnitude > 1e-6f ? radial.normalized : Vector3.up;
             fraction = strip.IsHeld ? Mathf.Clamp01(Vector3.Distance(edge, end) / cutLength) : 0f;
             return true;
@@ -139,9 +150,22 @@ namespace SojaExiles
             }
         }
 
+        private Vector3 ExitOutward
+        {
+            get { return transform.TransformDirection(exitOutward.normalized); }
+        }
+
         // Punto del borde del rollo mas cercano a 'point' (de donde sale la tira).
         public Vector3 EdgePoint(Vector3 point)
         {
+            if (useExitEdge)
+            {
+                Vector3 local = transform.InverseTransformPoint(point);
+                float margin = halfLength - stripWidth * 0.5f;
+                float x = Mathf.Clamp(local.x, axisCenter.x - margin, axisCenter.x + margin);
+                return transform.TransformPoint(new Vector3(x, exitEdge.y, exitEdge.z));
+            }
+
             Vector3 center = transform.TransformPoint(axisCenter);
             Vector3 axis = Axis;
             float along = Mathf.Clamp(Vector3.Dot(point - center, axis), -halfLength + stripWidth * 0.5f,
@@ -290,7 +314,7 @@ namespace SojaExiles
             Vector3 edge = strip.transform.position;
             Vector3 center = transform.TransformPoint(axisCenter);
             Vector3 outward = Vector3.ProjectOnPlane(edge - center, Axis);
-            outward = outward.sqrMagnitude > 1e-6f ? outward.normalized : Vector3.up;
+            outward = useExitEdge ? ExitOutward : outward.sqrMagnitude > 1e-6f ? outward.normalized : Vector3.up;
             FilmStrip cut = strip;
             strip = null;
             pulling = false;

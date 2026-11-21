@@ -451,6 +451,10 @@ namespace SojaExiles
                 roll.axisCenter = b.center;
                 roll.halfLength = b.extents.x;
                 roll.radius = Mathf.Max(b.extents.y, b.extents.z) + 0.002f;
+                // Ranura en el borde delantero de la tapa (+Z local: mira al
+                // jugador al abrir el cajon), como en una caja real.
+                roll.useExitEdge = true;
+                roll.exitEdge = new Vector3(0f, b.max.y + 0.002f, b.max.z + 0.002f);
                 return box;
             }
 
