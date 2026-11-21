@@ -42,8 +42,10 @@ voces") y de buscar en `Assets/Hito1/Scripts` qué archivo llama a cada audio.
 - **Boca de la tía:** volver a generar los visemas con
   `Editor/VisemeTracks.cs` (escribe `Resources/Hito1Anim/VisemasVoces.json`)
   para que la boca siga el audio nuevo.
-- Las voces del operador pasan por el filtro de teléfono del juego
-  (`EmergencyCall`): se entregan sin filtro.
+- Las voces del operador (`op_*`) llevan el filtro de teléfono **en el
+  archivo** (el juego no lo aplica): banda de 300 a 3400 Hz y unos -21 dBFS,
+  como las del 2026-11-06. Se generan sin filtro en ElevenLabs y el filtro se
+  pone al convertirlas.
 - Probar en Play al menos el tutorial, la llamada al 106 y dos errores.
 
 ## Prioridad 1: el flujo principal (17)
@@ -68,7 +70,7 @@ Las oye cualquier jugador en una partida normal, en modo guiado.
 | [x] | `guia_llamar` | Paso: llamar al 106 | `[calm] Mientras se enfría, pide ayuda. Toma el celular del mesón y toca Llamar ciento seis en su pantalla. La llamada sale en altavoz: puedes dejarlo en el mesón y seguir atendiéndola.` |
 | [x] | `guia_preparar` | Paso: buscar con qué cubrirla | `[calm] Mientras se enfría, abre el cajón bajo el mesón junto al lavadero y saca el film o la bolsa plástica.` |
 | [x] | `guia_cubrir` | Paso: cubrir la quemadura | `[calm] Ya está enfriada. Cúbrela sin apretar: desliza la bolsa por su mano hasta la muñeca, o apoya tiras de film a lo largo.` |
-| [ ] | `op_centro` | Operador: tiene ampollas | `[calm] Con ampollas en la mano, debe verla un médico. Cuando termine de enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.` |
+| [x] | `op_centro` | Operador: tiene ampollas | `[calm] Con ampollas en la mano, debe verla un médico. Cuando termine de enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.` |
 
 ## Prioridad 2: errores, ayudas y respuestas (22)
 
@@ -79,8 +81,8 @@ variantes de la llamada.
 
 | Hecha | Archivo | Cuándo suena | Para ElevenLabs |
 |---|---|---|---|
-| [ ] | `guia_err_caliente` | Error: sale agua caliente | `[firm] Está saliendo caliente. Regresa la palanca hacia arriba, hasta que salga fría.` |
-| [ ] | `guia_err_pano` | Error: paño de cocina | `[calm] El paño de cocina suelta pelusa. Usa film o una bolsa limpia.` |
+| [x] | `guia_err_caliente` | Error: sale agua caliente | `[firm] Está saliendo caliente. Regresa la palanca hacia arriba, hasta que salga fría.` |
+| [x] | `guia_err_pano` | Error: paño de cocina | `[calm] El paño de cocina suelta pelusa. Usa film o una bolsa limpia.` |
 | [x] | `guia_err_curita` | Error: curita sobre la quemadura | `[firm] Las curitas se pegan a la piel quemada. Cúbrela con film o una bolsa limpia.` |
 | [x] | `guia_err_anillo` | El anillo ya no sale | `[calm] Su mano ya se hinchó: no fuerces el anillo. Sigue con el agua fría; en el centro de salud se lo sacarán.` |
 | [x] | `guia_err_aguantar` | Saca la mano por el frío | `[calm] Si el agua le parece muy fría, témplala un poco: así completa los veinte minutos sin sacar la mano.` |
@@ -99,9 +101,9 @@ variantes de la llamada.
 
 | Hecha | Archivo | Cuándo suena | Para ElevenLabs |
 |---|---|---|---|
-| [ ] | `op_agua_hecha` | Ya la enfrió | `[warmly] Muy bien, eso es lo más importante.` |
-| [ ] | `op_centro_cubierta` | Con ampollas y ya cubierta | `[calm] Con ampollas en la mano, debe verla un médico. Si ya la cubrió sin apretar con film o una bolsa limpia, déjela así.` |
-| [ ] | `op_casa_grande` | Sin ampollas y quemadura grande | `[calm] Si solo está roja, sin ampollas, puede cuidarla en casa, aunque ocupe buena parte de la mano. Si salen ampollas o empeora, llévela al centro de salud.` |
+| [x] | `op_agua_hecha` | Ya la enfrió | `[warmly] Muy bien, eso es lo más importante.` |
+| [x] | `op_centro_cubierta` | Con ampollas y ya cubierta | `[calm] Con ampollas en la mano, debe verla un médico. Si ya la cubrió sin apretar con film o una bolsa limpia, déjela así.` |
+| [x] | `op_casa_grande` | Sin ampollas y quemadura grande | `[calm] Si solo está roja, sin ampollas, puede cuidarla en casa, aunque ocupe buena parte de la mano. Si salen ampollas o empeora, llévela al centro de salud.` |
 
 ### Tía Rosa (4) — hoy no suenan (`TtsStandIns`)
 
