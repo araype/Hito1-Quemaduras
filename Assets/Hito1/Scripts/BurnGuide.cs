@@ -1935,6 +1935,14 @@ namespace SojaExiles
             }
         }
 
+        // Corta lo que suena y vacia la cola. Tambien reinicia la espera: antes
+        // quedaba la del clip cortado, y la frase siguiente esperaba todo lo
+        // que le faltaba a ese clip. Asi, al empezar el paso "Apaga la
+        // hornilla" se cortaba guia_accidente y guia_apagar esperaba unos 7 s
+        // en silencio; si en ese tiempo se apagaba la hornilla, el paso
+        // cambiaba y guia_apagar no sonaba nunca (prueba en el visor,
+        // 2026-11-21). Quien quiera otra espera la pone despues de llamar
+        // a esta funcion (Instruct, Explain).
         private void StopNarration()
         {
             queue.Clear();
@@ -1942,6 +1950,8 @@ namespace SojaExiles
             {
                 narrator.Stop();
             }
+
+            nextNarration = Mathf.Min(nextNarration, Time.time + 0.2f);
         }
 
         private IEnumerator WaitNarration()
@@ -2310,7 +2320,9 @@ namespace SojaExiles
             // arriba, sobre los gabinetes).
             float lookDown = Mathf.Clamp(-head.forward.y, 0f, 0.6f);
             float drop = cardDrop + lookDown * cardDistance * 0.5f;
-            Vector3 wanted = PanelPlacement.Choose(head.position, cardAnchor, cardDistance, drop, half, ref cardChoice);
+            // Tampoco tapa las manos del jugador ni la palanca del caño.
+            Vector3 wanted = PanelPlacement.Choose(head.position, cardAnchor, cardDistance, drop, half, ref cardChoice,
+                true);
             if (snap)
             {
                 card.position = wanted;

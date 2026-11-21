@@ -83,21 +83,29 @@ namespace SojaExiles
         private Renderer holdMarker;
         private float nextHoldBeep;
 
-        // El operador ya contesto y esta callado (esperando una respuesta o
-        // entre dos frases): la tia puede quejarse del frio sin hablarle
-        // encima (PatientDialog). Mientras ella lo resuelve, la llamada
-        // espera con el panel oculto y despues sigue donde quedo.
+        // El operador ya contesto y esta callado entre dos frases: la tia
+        // puede quejarse del frio sin hablarle encima (PatientDialog).
+        // Mientras ella lo resuelve, la llamada espera con el panel oculto y
+        // despues sigue donde quedo.
+        // Con una pregunta abierta (las ampollas, el agua, la decision) no:
+        // antes la queja entraba mientras el operador esperaba la respuesta
+        // y la pregunta desaparecia a medio contestar (prueba en el visor,
+        // 2026-11-21). Ahora la queja espera a que se responda y sale justo
+        // despues, antes de la frase siguiente del operador.
         public static bool CanInterrupt
         {
             get
             {
                 return Instance != null && Instance.inCall && Instance.answered && !Instance.onHold
+                    && !Instance.asking
                     && Instance.speaker != null && !Instance.speaker.isPlaying
                     && (BurnGuide.Instance == null || !BurnGuide.Instance.Speaking);
             }
         }
 
         private bool answered;
+        // Hay una pregunta del operador esperando respuesta.
+        private bool asking;
         private bool pausedForPatient;
 
         // True mientras la llamada esta en espera.
@@ -225,6 +233,7 @@ namespace SojaExiles
         private IEnumerator Call()
         {
             inCall = true;
+            asking = false;
             if (head == null)
             {
                 head = VRPanelKit.Head();
@@ -406,6 +415,7 @@ namespace SojaExiles
             Hito1FX.PlayAt("perilla_clic", phone.position, 0.5f);
             inCall = false;
             answered = false;
+            asking = false;
         }
 
         // La tia se queja del frio en medio de la llamada: el panel se oculta
@@ -465,6 +475,7 @@ namespace SojaExiles
             onHold = false;
             inCall = false;
             answered = false;
+            asking = false;
             pausedForPatient = false;
         }
 
@@ -667,6 +678,7 @@ namespace SojaExiles
         {
             yield return WaitPatient();
             answer = -1;
+            asking = true;
             ShowPanel(text, options, correct, why);
             float speech = Speak(clipName, text);
             if (VRPanelKit.ShowAnswers && !string.IsNullOrEmpty(whyClip))
@@ -679,6 +691,7 @@ namespace SojaExiles
                 yield return null;
             }
 
+            asking = false;
             speaker.Stop();
             yield return WaitCall(0.4f);
         }

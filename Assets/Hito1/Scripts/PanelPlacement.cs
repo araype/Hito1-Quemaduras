@@ -33,6 +33,28 @@ namespace SojaExiles
         public static readonly List<System.Action<List<Vector3>>> ExtraFocus = new List<System.Action<List<Vector3>>>();
 
         private static readonly List<Vector3> Focus = new List<Vector3>();
+        private static readonly List<Vector3> WorkFocus = new List<Vector3>();
+
+        // Las manos del jugador y la palanca del caño (con su chorro, un poco
+        // mas abajo).
+        private static void AddWorkFocus(List<Vector3> list)
+        {
+            for (int h = 0; h < 2; h++)
+            {
+                if (SimpleGrab.TryGetHand(h == 0, out Vector3 p, out bool _))
+                {
+                    list.Add(p);
+                }
+            }
+
+            FaucetLever lever = FaucetLever.Current;
+            if (lever != null)
+            {
+                Vector3 l = lever.transform.position;
+                list.Add(l);
+                list.Add(l + Vector3.down * 0.15f);
+            }
+        }
         private static int focusFrame = -1;
         private static PatientBody[] patients = new PatientBody[0];
         private static CoolingClock[] clocks = new CoolingClock[0];
@@ -42,8 +64,14 @@ namespace SojaExiles
         // 'drop' cuanto baja respecto de los ojos, 'halfSize' la mitad del
         // tamano del panel en metros. 'choice' guarda la opcion elegida entre
         // llamadas (empezar en -1) para no saltar de un lado a otro.
+        // 'avoidWork': ademas, no tapar las manos del jugador ni la palanca
+        // del caño. Lo usa la tarjeta del narrador (BurnGuide), que no se
+        // toca: al mirar hacia abajo para abrir el agua bajaba con la vista y
+        // quedaba encima de la palanca y de la mano (prueba en el visor,
+        // 2026-11-21). Los paneles con botones no lo usan: se acercan las
+        // manos para tocarlos.
         public static Vector3 Choose(Vector3 eye, Vector3 forward, float distance, float drop, Vector2 halfSize,
-            ref int choice)
+            ref int choice, bool avoidWork = false)
         {
             forward = Vector3.ProjectOnPlane(forward, Vector3.up);
             if (forward.sqrMagnitude < 1e-6f)
@@ -53,6 +81,14 @@ namespace SojaExiles
 
             forward.Normalize();
             CollectFocus();
+            List<Vector3> points = Focus;
+            if (avoidWork)
+            {
+                WorkFocus.Clear();
+                WorkFocus.AddRange(Focus);
+                AddWorkFocus(WorkFocus);
+                points = WorkFocus;
+            }
 
             float basePitch = -Mathf.Atan2(drop, distance) * Mathf.Rad2Deg;
             float halfYaw = Mathf.Atan2(halfSize.x, distance) * Mathf.Rad2Deg + Margin;
@@ -66,7 +102,7 @@ namespace SojaExiles
                 float yaw = Candidates[i].x;
                 float pitch = basePitch + Candidates[i].y;
                 int covered = 0;
-                foreach (Vector3 p in Focus)
+                foreach (Vector3 p in points)
                 {
                     Vector3 v = p - eye;
                     Vector3 flat = Vector3.ProjectOnPlane(v, Vector3.up);

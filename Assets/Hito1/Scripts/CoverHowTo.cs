@@ -15,15 +15,19 @@ namespace SojaExiles
     // Explica solo como mover las manos (la interfaz), no que hacer ante la
     // quemadura, por eso se ve en los dos modos. Lo de "primero enfria" y "no
     // le des la vuelta" (errores que se califican) solo sale en modo guiado.
-    // La tarjeta queda sobre la mano quemada si el jugador esta cerca de
-    // ella; si no, sobre el objeto agarrado. Va en el objeto de
+    // La tarjeta queda al costado de la mano quemada si el jugador esta cerca
+    // de ella; si no, al costado del objeto agarrado (Place). Va en el objeto de
     // BurnSequenceManager (Hito1RuntimeBootstrap).
     public class CoverHowTo : MonoBehaviour
     {
         [Tooltip("Con la cabeza a menos de esto de la mano quemada (m), la tarjeta va sobre su mano.")]
         public float nearPatient = 1.3f;
-        [Tooltip("Altura de la tarjeta sobre su mano o el objeto (m).")]
-        public float cardHeight = 0.22f;
+        [Tooltip("Altura del centro de la tarjeta sobre su mano o el objeto (m).")]
+        public float sideHeight = 0.12f;
+        [Tooltip("Espacio libre entre el borde de la tarjeta y su mano o el objeto, de costado (m).")]
+        public float sideGap = 0.12f;
+        // 1: a la derecha del ancla vista desde el jugador; -1: a la izquierda.
+        private float sideSign = 1f;
         [Tooltip("Con la tira a menos de esto de su mano (m) se muestra la flecha de apoyarla.")]
         public float stripArrowDistance = 0.8f;
 
@@ -484,8 +488,11 @@ namespace SojaExiles
             return "<color=#" + ColorUtility.ToHtmlStringRGB(c) + ">" + text + "</color>";
         }
 
-        // Sobre el ancla, un poco hacia el jugador, mirandolo. Sigue suave para
-        // no temblar con la mano.
+        // Al costado del ancla (no encima), del lado contrario a la mano del
+        // jugador que trabaja ahi, mirandolo. Antes iba 22 cm sobre su mano y
+        // 8 cm hacia el jugador: al mirar hacia abajo para cubrir quedaba
+        // justo entre los ojos y su mano y tapaba la bolsa o la tira (prueba
+        // en el visor, 2026-11-21). Sigue suave para no temblar con la mano.
         private void Place(Vector3 anchor)
         {
             if (head == null)
@@ -495,12 +502,50 @@ namespace SojaExiles
 
             Vector3 toHead = head != null ? Vector3.ProjectOnPlane(head.position - anchor, Vector3.up) : Vector3.back;
             toHead = toHead.sqrMagnitude > 1e-4f ? toHead.normalized : Vector3.back;
-            Vector3 target = anchor + Vector3.up * cardHeight + toHead * 0.08f;
+            // Derecha vista desde el jugador.
+            Vector3 side = Vector3.Cross(Vector3.up, toHead).normalized * -1f;
+            ChooseSide(anchor, side);
+            Vector3 target = anchor + Vector3.up * sideHeight + side * (sideSign * (CardWidth * 0.5f + sideGap))
+                + toHead * 0.04f;
             card.position = placed ? Vector3.Lerp(card.position, target, 1f - Mathf.Exp(-6f * Time.deltaTime)) : target;
             placed = true;
             if (head != null)
             {
                 card.rotation = Quaternion.LookRotation(card.position - head.position, Vector3.up);
+            }
+        }
+
+        // Lado de la tarjeta: el contrario a la mano del jugador mas cercana
+        // al ancla (la que sostiene la bolsa o la tira). Solo cambia si la
+        // otra mano queda claramente mas cerca, para que no salte de lado.
+        private void ChooseSide(Vector3 anchor, Vector3 side)
+        {
+            float best = float.MaxValue;
+            float handSide = 0f;
+            for (int h = 0; h < 2; h++)
+            {
+                if (!SimpleGrab.TryGetHand(h == 0, out Vector3 p, out bool _))
+                {
+                    continue;
+                }
+
+                float d = Vector3.Distance(p, anchor);
+                if (d < best)
+                {
+                    best = d;
+                    handSide = Vector3.Dot(p - anchor, side);
+                }
+            }
+
+            if (best == float.MaxValue)
+            {
+                return;
+            }
+
+            float wanted = handSide > 0f ? -1f : 1f;
+            if (wanted != sideSign && Mathf.Abs(handSide) > 0.06f)
+            {
+                sideSign = wanted;
             }
         }
     }
