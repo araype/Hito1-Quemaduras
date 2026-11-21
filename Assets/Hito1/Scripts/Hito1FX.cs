@@ -28,11 +28,7 @@ namespace SojaExiles
             { "voz_ansiosa", "voz_dolor_1" },         // "Me arde... me arde mucho."
             { "voz_calmada", "voz_alivio_agua" },     // "Ay... el agua fria me alivia."
             { "voz_asustada", "voz_dolor_2" },        // "Ayudame, por favor!"
-            { "voz_frio", "voz_hielo_duele" },        // "Ay! Esta helado, me duele mas."
-            { "voz_aguanto", "voz_enfriada" },        // "Ya se siente un poco mejor."
-            { "voz_templada", "voz_alivio_agua" },
-            { "voz_aprieta", "voz_remedio_no" },      // "No, eso no me pongas, por favor."
-            { "voz_templar_pide", "" }
+            { "voz_aguanto", "voz_enfriada" }         // "Ya se siente un poco mejor."
         };
 
         public static AudioClip Clip(string name)

@@ -107,10 +107,10 @@ variantes de la llamada.
 
 | Hecha | Archivo | Cuándo suena | Para ElevenLabs |
 |---|---|---|---|
-| [ ] | `voz_frio` | Quiere sacar la mano por el frío | Transcribir del audio actual (Sabina); por el momento suena `voz_hielo_duele`. |
+| [x] | `voz_frio` | Quiere sacar la mano por el frío | Transcribir del audio actual (Sabina); por el momento suena `voz_hielo_duele`. |
 | [x] | `voz_templar_pide` | Le van a templar el agua | `[worried] Ya, pero ábrela solo un poquito, que la caliente quema.` |
-| [ ] | `voz_templada` | El agua ya está tibia | `[relieved] Ay, así está mejor. Aguanto.` |
-| [ ] | `voz_aprieta` | Le envuelven la mano con film | `[in pain] ¡Ay, me aprieta! No me envuelvas la mano, por favor.` |
+| [x] | `voz_templada` | El agua ya está tibia | `[relieved] Ay, así está mejor. Aguanto.` |
+| [x] | `voz_aprieta` | Le envuelven la mano con film | `[in pain] ¡Ay, me aprieta! No me envuelvas la mano, por favor.` |
 
 ## Prioridad 3: solo con la pregunta de los nervios (5)
 
