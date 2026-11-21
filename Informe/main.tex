@@ -1,10 +1,28 @@
-\documentclass[10pt,journal,compsoc]{IEEEtran}
+\documentclass[11pt,a4paper]{article}
 
+% ------------------------------------------------------------------
+% Formato editorial a una columna: titulos en negro, texto gris oscuro,
+% tablas con encabezado gris suave y bordes finos. Sin azul.
+% ------------------------------------------------------------------
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{charter}           % serif parecida a Georgia (pdfLaTeX)
+\else
+  \usepackage{fontspec}          % XeLaTeX / LuaLaTeX: Georgia si esta instalada
+  \IfFontExistsTF{Georgia}{\setmainfont{Georgia}}{\usepackage{charter}}
+\fi
 \usepackage[spanish]{babel}
-\usepackage[utf8]{inputenc}
+\usepackage[a4paper,margin=2.54cm]{geometry}
+\usepackage{microtype}
+\usepackage[table]{xcolor}
+\definecolor{tinta}{HTML}{111111}
+\definecolor{texto}{HTML}{2B2B2B}
+\definecolor{tenue}{HTML}{6B6B6B}
+\definecolor{encabezado}{HTML}{F2F2F2}
+\definecolor{regla}{HTML}{D9D9D9}
 \usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{array}
 \usepackage{url}
@@ -12,26 +30,79 @@
 \usepackage{amssymb} % necesario para \checkmark, usado en \ok
 \usepackage{subcaption}
 \usepackage{placeins} % \FloatBarrier: impide que una figura cruce el punto donde lo colocamos
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}  % enlaces sin color ni recuadro
+\urlstyle{same}
+
+% Texto y titulos
+\AtBeginDocument{\color{texto}}
+\setlength{\parskip}{0.55em}
+\setlength{\parindent}{0pt}
+\linespread{1.12}
+\titleformat{\section}{\color{tinta}\Large\bfseries}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\color{tinta}\large\bfseries}{\thesubsection}{0.8em}{}
+\titleformat{\subsubsection}{\color{tinta}\normalsize\bfseries}{\thesubsubsection}{0.8em}{}
+\titlespacing*{\section}{0pt}{2.2em}{0.8em}
+\titlespacing*{\subsection}{0pt}{1.5em}{0.5em}
+\titlespacing*{\subsubsection}{0pt}{1.2em}{0.4em}
+\setlist{itemsep=0.25em,topsep=0.3em}
+\setlist[itemize]{label=\textcolor{tenue}{--}}
+\setlist[enumerate]{label=\textcolor{tinta}{\bfseries\arabic*.}}
+
+% Leyendas: etiqueta en negrita negra, texto en gris
+\usepackage{caption}
+\captionsetup{font={small,color=tenue},labelfont={bf,color=tinta},labelsep=period,justification=centering}
+\captionsetup[table]{justification=raggedright,singlelinecheck=false,position=top}
+\captionsetup[sub]{font={footnotesize,color=tenue},labelfont={bf,color=tinta}}
+
+% Tablas: bordes finos gris claro y encabezado gris suave
+\arrayrulecolor{regla}
+\setlength{\arrayrulewidth}{0.4pt}
+\renewcommand{\arraystretch}{1.35}
+\newcommand{\cab}{\rowcolor{encabezado}}
+
+% Pie de pagina con el numero, en gris
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\small\textcolor{tenue}{\thepage}}
 
 \newcommand{\bad}{\(\times\)}
 \newcommand{\ok}{\(\checkmark\)}
 \newcommand{\pend}{\(\circ\)}
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
-
-\title{Proyecto Final VR: Simulación de Primeros Auxilios ante una Quemadura Doméstica}
-
-\author{
-\textit{Profesor:} \href{https://utec.instructure.com/courses/24671/users/2196}{Chambilla Aquino, Teófilo}\\[6pt]
-Aracely Ayala \quad 202220416\\
-Sebastián Sánchez \quad 20221320\\
-Jose Osnayo \quad 202010588\\[6pt]
-\textit{Departamento de Ciencias de la Computación - UTEC}\\
-CS2H01 - Interacción Humano-Computador}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
 
 \begin{document}
 
-\maketitle
+\begin{titlepage}
+\vspace*{5cm}
+{\small\color{tenue}\MakeUppercase{CS2H01 · Interacción Humano-Computador}\par}
+\vspace{1.2cm}
+{\color{tinta}\fontsize{28}{34}\selectfont\bfseries Proyecto Final VR\par}
+\vspace{0.4cm}
+{\Large Simulación de primeros auxilios ante una quemadura doméstica\par}
+\vspace{0.6cm}
+{\color{tinta}\rule{\textwidth}{0.6pt}}
+\vspace{1cm}
+
+{\small\bfseries\color{tinta} Integrantes\par}
+\vspace{0.2cm}
+Aracely Ayala \quad\textcolor{tenue}{202220416}\\
+Sebastián Sánchez \quad\textcolor{tenue}{20221320}\\
+Jose Osnayo \quad\textcolor{tenue}{202010588}
+
+\vspace{0.6cm}
+{\small\bfseries\color{tinta} Profesor\par}
+\vspace{0.2cm}
+\href{https://utec.instructure.com/courses/24671/users/2196}{Teófilo Chambilla Aquino}
+
+\vspace{0.8cm}
+\textcolor{tenue}{Departamento de Ciencias de la Computación · UTEC}
+\end{titlepage}
 
 % ==========================================
 % 1. ANTECEDENTES
@@ -125,53 +196,49 @@ El protocolo se organiza en cuatro actos. El sistema calcula en todo momento en 
 
 El Cuadro~\ref{tab:errores} resume los errores que reconoce el sistema y su retroalimentación. El puntaje es \(100 - 10 \cdot \text{errores} - 25 \cdot \text{errores críticos}\), con mínimo 0. Al terminar también cuentan como error los pasos nunca realizados (apagar el fuego, retirar el anillo, abrigar y llamar al 106).
 
-\begin{table*}[t]
+\begin{table}[htbp]
 \centering
 \caption{Errores reconocidos por el sistema y su retroalimentación}
 \label{tab:errores}
 \small
-\begin{tabularx}{\textwidth}{@{}L{4.2cm} L{2.2cm} Y@{}}
-\toprule
-\textbf{Acción del usuario} & \textbf{Registro} & \textbf{Retroalimentación} \\
-\midrule
-Acercar hielo, mantequilla, pasta dental o aceite a la quemadura & Error & La víctima aparta la mano y protesta; el narrador corrige; golpe de vibración. \\
-Aplicar uno de esos remedios sobre la piel & Error crítico & Queda una capa sobre la piel y la víctima grita; doble golpe de vibración. El agua quita la grasa y la pasta. \\
-Aplicar algodón & Error & Explicación: suelta fibras que se pegan a la herida. \\
-Poner la mano bajo agua caliente (solo la llave roja) & Error & Vapor en el chorro, la piel vuelve a enrojecer y la víctima grita. \\
-Sacar la mano del agua antes de completar el enfriamiento & Error & El reloj se pausa, la víctima se queja y el narrador pide volver al chorro. \\
-Tomarla de la mano quemada en vez del antebrazo & Error & Queja de dolor y corrección del narrador; brillo naranja al acercar la mano. \\
-No retirar el anillo a tiempo & Error & Con la mano hinchada el anillo se traba y ya no sale. \\
-Cubrir antes de terminar de enfriar & Error & ``Todavía no: primero termina de enfriar la quemadura''. \\
-Cubrir con el paño de cocina & Error & ``El paño de cocina suelta pelusa''; el narrador pide usar la gasa. \\
-Envolver la mano con el film o soltar la tira atravesada & Error & Queda una banda de film alrededor de la mano, la víctima dice ``me aprieta'' y el narrador pide poner las tiras a lo largo. \\
-Asustarla, recomendarle pasta dental o hielo, o decirle que saque la mano & Error & Ella se angustia o saca la mano del agua y el reloj se pausa; la explicación aparece en el resumen. \\
-Tocar la olla volcada & Error & La mano suelta la olla, sisea y vibra (seguridad propia). \\
-Describir mal la quemadura al 106 & Error & El operador recomienda según lo que se le dijo; el resumen explica lo que se veía. \\
-Decidir en contra de lo recomendado por el 106 & Error & Explicación en el resumen según el grado de la quemadura. \\
-\bottomrule
+\begin{tabularx}{\textwidth}{|L{4.2cm}|L{2.2cm}|Y|}
+\hline
+\cab \textbf{Acción del usuario} & \textbf{Registro} & \textbf{Retroalimentación} \\ \hline
+Acercar hielo, mantequilla, pasta dental o aceite a la quemadura & Error & La víctima aparta la mano y protesta; el narrador corrige; golpe de vibración. \\ \hline
+Aplicar uno de esos remedios sobre la piel & Error crítico & Queda una capa sobre la piel y la víctima grita; doble golpe de vibración. El agua quita la grasa y la pasta. \\ \hline
+Aplicar algodón & Error & Explicación: suelta fibras que se pegan a la herida. \\ \hline
+Poner la mano bajo agua caliente (solo la llave roja) & Error & Vapor en el chorro, la piel vuelve a enrojecer y la víctima grita. \\ \hline
+Sacar la mano del agua antes de completar el enfriamiento & Error & El reloj se pausa, la víctima se queja y el narrador pide volver al chorro. \\ \hline
+Tomarla de la mano quemada en vez del antebrazo & Error & Queja de dolor y corrección del narrador; brillo naranja al acercar la mano. \\ \hline
+No retirar el anillo a tiempo & Error & Con la mano hinchada el anillo se traba y ya no sale. \\ \hline
+Cubrir antes de terminar de enfriar & Error & ``Todavía no: primero termina de enfriar la quemadura''. \\ \hline
+Cubrir con el paño de cocina & Error & ``El paño de cocina suelta pelusa''; el narrador pide usar la gasa. \\ \hline
+Envolver la mano con el film o soltar la tira atravesada & Error & Queda una banda de film alrededor de la mano, la víctima dice ``me aprieta'' y el narrador pide poner las tiras a lo largo. \\ \hline
+Asustarla, recomendarle pasta dental o hielo, o decirle que saque la mano & Error & Ella se angustia o saca la mano del agua y el reloj se pausa; la explicación aparece en el resumen. \\ \hline
+Tocar la olla volcada & Error & La mano suelta la olla, sisea y vibra (seguridad propia). \\ \hline
+Describir mal la quemadura al 106 & Error & El operador recomienda según lo que se le dijo; el resumen explica lo que se veía. \\ \hline
+Decidir en contra de lo recomendado por el 106 & Error & Explicación en el resumen según el grado de la quemadura. \\ \hline
 \end{tabularx}
-\end{table*}
+\end{table}
 
 \subsection{Métrica HEART}
 El Cuadro~\ref{tab:heart} presenta los objetivos, señales y métricas de cada dimensión del modelo HEART \cite{rodden2010}. Las métricas de \textit{Task Success} y \textit{Retention} se obtienen del registro que la aplicación guarda al terminar cada sesión.
 
-\begin{table*}[t]
+\begin{table}[htbp]
 \centering
 \caption{Matriz HEART: objetivos, señales y métricas}
 \label{tab:heart}
 \small
-\begin{tabularx}{\textwidth}{@{}L{2.1cm} Y Y Y@{}}
-\toprule
-\textbf{Dimensión} & \textbf{Objetivo} & \textbf{Señal} & \textbf{Métrica} \\
-\midrule
-Happiness & Terminar satisfecho, con más confianza y percibiendo la escena como realista. & Cuestionario al finalizar. & Satisfacción y realismo percibidos (Likert 1--5); confianza antes y después. \\
-Engagement & Involucrarse en la emergencia y repetir la práctica. & Interacciones con objetos y con la víctima; uso de \textit{Repetir práctica}. & Tiempo activo y número de repeticiones voluntarias. \\
-Adoption & Adaptarse a la interacción en la primera sesión. & Avance en el tutorial y en modo guiado sin ayuda del facilitador. & Porcentaje que completa la primera sesión sin asistencia; tiempo hasta completar el tutorial. \\
-Retention & Recordar el protocolo sin ayudas. & Desempeño en modo evaluación días después. & Porcentaje de pasos completados en modo evaluación. \\
-Task Success & Completar la escena sin errores críticos y con el enfriamiento completo. & Pasos, errores y errores críticos registrados. & Puntaje, errores por partida, tiempo de primera acción, minutos de enfriamiento y acierto en la decisión médica. \\
-\bottomrule
+\begin{tabularx}{\textwidth}{|L{2.1cm}|Y|Y|Y|}
+\hline
+\cab \textbf{Dimensión} & \textbf{Objetivo} & \textbf{Señal} & \textbf{Métrica} \\ \hline
+Happiness & Terminar satisfecho, con más confianza y percibiendo la escena como realista. & Cuestionario al finalizar. & Satisfacción y realismo percibidos (Likert 1--5); confianza antes y después. \\ \hline
+Engagement & Involucrarse en la emergencia y repetir la práctica. & Interacciones con objetos y con la víctima; uso de \textit{Repetir práctica}. & Tiempo activo y número de repeticiones voluntarias. \\ \hline
+Adoption & Adaptarse a la interacción en la primera sesión. & Avance en el tutorial y en modo guiado sin ayuda del facilitador. & Porcentaje que completa la primera sesión sin asistencia; tiempo hasta completar el tutorial. \\ \hline
+Retention & Recordar el protocolo sin ayudas. & Desempeño en modo evaluación días después. & Porcentaje de pasos completados en modo evaluación. \\ \hline
+Task Success & Completar la escena sin errores críticos y con el enfriamiento completo. & Pasos, errores y errores críticos registrados. & Puntaje, errores por partida, tiempo de primera acción, minutos de enfriamiento y acierto en la decisión médica. \\ \hline
 \end{tabularx}
-\end{table*}
+\end{table}
 
 % ==========================================
 % 3. FRAMEWORK DE DISEÑO
@@ -215,7 +282,7 @@ Antes de los wireframes digitales se elaboraron bocetos a mano para definir la d
     \label{fig:boceto}
 \end{figure}
 
-\begin{figure*}[t]
+\begin{figure}[htbp]
     \centering
     \begin{subfigure}{0.32\textwidth}
         \includegraphics[width=\linewidth]{images/primera pantalla_mockup.jpg}
@@ -239,7 +306,7 @@ Antes de los wireframes digitales se elaboraron bocetos a mano para definir la d
     \end{subfigure}
     \caption{Mockups de baja fidelidad del flujo de la quemadura doméstica.}
     \label{fig:mockups}
-\end{figure*}
+\end{figure}
 
 \FloatBarrier
 
@@ -344,9 +411,9 @@ Las interacciones se rediseñaron tras la prueba en el visor para que se parezca
 \subsubsection{Cierre y registro}
 La práctica termina con la quemadura cubierta y la llamada hecha; si se cubre sin llamar, la tía lo sugiere y, pasado un tiempo, termina con ese paso faltante. El resumen (Fig.~\ref{fig:flujo_vr}o) muestra el puntaje sobre 100, la barra de los cuatro actos con los pasos y errores de cada uno, los 7 pasos del protocolo, errores, errores críticos, tiempo de primera acción, minutos de enfriamiento, la decisión tomada en la llamada y hasta ocho consejos de mejora. Ofrece \textit{Repetir práctica} y \textit{Otro caso} (el otro grado de quemadura). La sesión se guarda como JSON en el visor para las pruebas con usuarios.
 
-\begin{figure*}[p]
+\begin{figure}[p]
     \centering
-    \newcommand{\vrcap}[2]{\begin{subfigure}[t]{0.22\textwidth}\centering\includegraphics[width=\linewidth]{images/#1}\caption{#2}\end{subfigure}}
+    \newcommand{\vrcap}[2]{\begin{subfigure}[t]{0.23\textwidth}\centering\includegraphics[width=\linewidth]{images/#1}\caption{#2}\end{subfigure}}
     \vrcap{vr_menu.jpg}{Panel de inicio con aviso de contenido y los dos modos.}\hfill
     \vrcap{vr_dedo_boton.jpg}{La mano se ve delante de la tarjeta y el círculo marca dónde apunta el dedo.}\hfill
     \vrcap{vr_tutorial.jpg}{Tutorial: la tía deja de cocinar y se voltea a recibir la taza.}\hfill
@@ -365,7 +432,7 @@ La práctica termina con la quemadura cubierta y la llamada hecha; si se cubre s
     \vrcap{vr_resumen.jpg}{Resumen: 100 puntos, barra de actos, 7 de 7 pasos y la decisión.}
     \caption{Recorrido de la versión VR, capturado en el editor de Unity en modo Play con Quest Link (escena \texttt{Prueba\_LuzHorneada}). (f) y (j) desde la cámara del jugador; el resto, desde una cámara libre. Las manos del jugador se ocultaron salvo en (b).}
     \label{fig:flujo_vr}
-\end{figure*}
+\end{figure}
 
 \subsection{Avance de la versión al 75\,\%}
 El recorrido de la Fig.~\ref{fig:flujo_vr} se ejecutó en el editor de Unity en modo Play, con el visor conectado por Quest Link y los mandos quietos sobre la mesa. Las acciones del jugador se completaron por código usando los mismos métodos del juego (agarrar, girar la perilla, abrir las llaves, soltar la chompa, apoyar la gasa) y presionando los botones de los paneles. Para los botones y el anillo se movió el espacio de seguimiento del jugador, de modo que la mano real quedara junto al botón o al anillo: así se comprobó la interacción con el dedo y no solo la lógica.
@@ -391,26 +458,24 @@ Sigue pendiente comprobarlo con las manos en el visor: tirar del film con las do
 \caption{Estado de los requisitos (\ok\ hecho, \pend\ parcial o pendiente)}
 \label{tab:estado}
 \small
-\begin{tabularx}{\linewidth}{@{}l c Y@{}}
-\toprule
-\textbf{Req.} & & \textbf{Observación} \\
-\midrule
-RF-01 & \ok & En modo evaluación no hay tarjetas ni puntos de color. \\
-RF-02 & \ok & Agarrar y caminar; la tía recibe la taza. \\
-RF-03 & \ok & Brillo por paso y puntos de color (solo guiado). \\
-RF-04 & \pend & Narrador y tarjeta listos; faltan las manos fantasma. \\
-RF-05 & \ok & 7 pasos más llevar la mano al chorro; decisión con la llamada al 106. \\
-RF-06 & \ok & Cuadro~\ref{tab:errores}. \\
-RF-07 & \ok & Reloj de pared: 20 min en 90 s, se pausa. \\
-RF-08 & \ok & Sin expresión facial (sin \textit{blendshapes}). \\
-RF-09 & \ok & Voces de ElevenLabs; quedan 12 frases por regrabar. \\
-RF-10 & \ok & Resumen con barra de actos y registro JSON. \\
-RF-11 & \pend & \textit{Otro caso} alterna el grado; la extensión aún no varía. \\
-RNF-01 & \pend & Escena optimizada para Quest; falta medir en el visor. \\
-RNF-02 & \pend & Falta medir la latencia en el visor. \\
-RNF-03 & \ok & Aviso de contenido, pausa y reinicio. \\
-RNF-04 & \ok & Experiencia de un solo jugador. \\
-\bottomrule
+\begin{tabularx}{\linewidth}{|l|C{1.4cm}|Y|}
+\hline
+\cab \textbf{Req.} & \textbf{Estado} & \textbf{Observación} \\ \hline
+RF-01 & \ok & En modo evaluación no hay tarjetas ni puntos de color. \\ \hline
+RF-02 & \ok & Agarrar y caminar; la tía recibe la taza. \\ \hline
+RF-03 & \ok & Brillo por paso y puntos de color (solo guiado). \\ \hline
+RF-04 & \pend & Narrador y tarjeta listos; faltan las manos fantasma. \\ \hline
+RF-05 & \ok & 7 pasos más llevar la mano al chorro; decisión con la llamada al 106. \\ \hline
+RF-06 & \ok & Cuadro~\ref{tab:errores}. \\ \hline
+RF-07 & \ok & Reloj de pared: 20 min en 90 s, se pausa. \\ \hline
+RF-08 & \ok & Sin expresión facial (sin \textit{blendshapes}). \\ \hline
+RF-09 & \ok & Voces de ElevenLabs; quedan 12 frases por regrabar. \\ \hline
+RF-10 & \ok & Resumen con barra de actos y registro JSON. \\ \hline
+RF-11 & \pend & \textit{Otro caso} alterna el grado; la extensión aún no varía. \\ \hline
+RNF-01 & \pend & Escena optimizada para Quest; falta medir en el visor. \\ \hline
+RNF-02 & \pend & Falta medir la latencia en el visor. \\ \hline
+RNF-03 & \ok & Aviso de contenido, pausa y reinicio. \\ \hline
+RNF-04 & \ok & Experiencia de un solo jugador. \\ \hline
 \end{tabularx}
 \end{table}
 
@@ -439,21 +504,20 @@ El Cuadro~\ref{tab:assets} lista los recursos externos y propios, y el Cuadro~\r
 \caption{Recursos utilizados}
 \label{tab:assets}
 \small
-\begin{tabularx}{\linewidth}{@{}L{2.1cm} Y@{}}
-\toprule
-\textbf{Uso} & \textbf{Recurso (fuente y licencia)}\\
-\midrule
-Cocina & Apartment Kit, Brick Project Studio (Unity Asset Store, licencia estándar), \url{https://assetstore.unity.com/packages/3d/environments/apartment-kit-124055} \\
-Víctima & Personaje de Mixamo (Adobe), uso gratuito en proyectos propios, \url{https://www.mixamo.com} \\
-VR & Meta XR SDK 201 (rig e Interaction SDK), licencia del SDK de Meta \\
-Olla, objetos del protocolo (gasa, tiras de film, celular), remedios, taza, reloj & Creados por código por el equipo \\
-Caja de film & ``Aluminum Foil Box - Low Poly'', Ian Valeta, CC BY 4.0, \url{https://sketchfab.com/3d-models/aluminum-foil-box-low-poly-697c4ce533834df59b54d3ac861b4380} (etiqueta nueva hecha por el equipo) \\
-Bolsa plástica & ``Ziplock bag'', Phoenix\_Connor, CC BY 4.0, \url{https://sketchfab.com/3d-models/ziplock-bag-6428bacd2c3c46bb8987db060e4fea45} (material transparente y sin logo, del equipo) \\
-Piel, quemadura, agua, vapor y tela & Materiales, texturas y simulación creados por el equipo \\
-Efectos de sonido (23) & Sintetizados por el equipo \\
-Voces (víctima, narrador y operador del 106) & Generadas con ElevenLabs (crédito en el resumen) \\
-Ilustraciones WebApp & Generadas por código (SVG) \\
-\bottomrule
+\begin{tabularx}{\linewidth}{|L{4cm}|Y|}
+\hline
+\cab \textbf{Uso} & \textbf{Recurso (fuente y licencia)}\\ \hline
+Cocina & Apartment Kit, Brick Project Studio (Unity Asset Store, licencia estándar), \url{https://assetstore.unity.com/packages/3d/environments/apartment-kit-124055} \\ \hline
+Víctima & Personaje de Mixamo (Adobe), uso gratuito en proyectos propios, \url{https://www.mixamo.com} \\ \hline
+Víctima (tía Rosa) & Avatar personalizado por el equipo en el editor de Avaturn (cuerpo, piel, ropa y rostro) y exportado a Unity como personaje Humanoid, \url{https://hub.avaturn.me/editor?customization_id=01a1c305-56a7-7cb3-988d-e27896b27936} \\ \hline
+VR & Meta XR SDK 201 (rig e Interaction SDK), licencia del SDK de Meta \\ \hline
+Olla, objetos del protocolo (gasa, tiras de film, celular), remedios, taza, reloj & Creados por código por el equipo \\ \hline
+Caja de film & ``Aluminum Foil Box - Low Poly'', Ian Valeta, CC BY 4.0, \url{https://sketchfab.com/3d-models/aluminum-foil-box-low-poly-697c4ce533834df59b54d3ac861b4380} (etiqueta nueva hecha por el equipo) \\ \hline
+Bolsa plástica & ``Ziplock bag'', Phoenix\_Connor, CC BY 4.0, \url{https://sketchfab.com/3d-models/ziplock-bag-6428bacd2c3c46bb8987db060e4fea45} (material transparente y sin logo, del equipo) \\ \hline
+Piel, quemadura, agua, vapor y tela & Materiales, texturas y simulación creados por el equipo \\ \hline
+Efectos de sonido (23) & Sintetizados por el equipo \\ \hline
+Voces (víctima, narrador y operador del 106) & Generadas con ElevenLabs (crédito en el resumen) \\ \hline
+Ilustraciones WebApp & Generadas por código (SVG) \\ \hline
 \end{tabularx}
 \end{table}
 
@@ -463,17 +527,15 @@ Ilustraciones WebApp & Generadas por código (SVG) \\
 \label{tab:gantt}
 \footnotesize
 \setlength{\tabcolsep}{2.5pt}
-\begin{tabularx}{\linewidth}{@{}Y c c c c c@{}}
-\toprule
-\textbf{Actividad} & \textbf{H1} & \textbf{H2} & \textbf{H3} & \textbf{H4} & \textbf{H5}\\
-\midrule
-Cocina (Apartment Kit) y agarre de objetos funcional con el visor & \ok & & & & \\
-Locomoción y manos/mandos unificados, colliders, agarre propio con física y poses de mano; enfriar y cubrir & & \ok & & & \\
-Realismo: víctima con texturas y reacciones, quemadura con hinchazón y ampollas, olla, chorro, tela, sonido y vibración; accidente, llaves, anillo, chompa, film, gasa y remedios & & & \ok & & \\
-Secuencia del protocolo, reloj de 20 minutos, decisión médica, resumen, puntaje y registro; menú de modos, tutorial, narrador y víctima con cuerpo físico & & & & \ok & \\
-Barra de actos, pausa, diálogos con la víctima, llamada al 106, gasa, film en tiras y bolsa, botones con el dedo, agarre en la mano visible, voces de ElevenLabs & & & & & \ok \\
-Prueba con las manos en el visor, voces restantes, variación de la extensión y pruebas con usuarios & & & & & \pend \\
-\bottomrule
+\begin{tabularx}{\linewidth}{|Y|C{0.8cm}|C{0.8cm}|C{0.8cm}|C{0.8cm}|C{0.8cm}|}
+\hline
+\cab \textbf{Actividad} & \textbf{H1} & \textbf{H2} & \textbf{H3} & \textbf{H4} & \textbf{H5}\\ \hline
+Cocina (Apartment Kit) y agarre de objetos funcional con el visor & \ok & & & & \\ \hline
+Locomoción y manos/mandos unificados, colliders, agarre propio con física y poses de mano; enfriar y cubrir & & \ok & & & \\ \hline
+Realismo: víctima con texturas y reacciones, quemadura con hinchazón y ampollas, olla, chorro, tela, sonido y vibración; accidente, llaves, anillo, chompa, film, gasa y remedios & & & \ok & & \\ \hline
+Secuencia del protocolo, reloj de 20 minutos, decisión médica, resumen, puntaje y registro; menú de modos, tutorial, narrador y víctima con cuerpo físico & & & & \ok & \\ \hline
+Barra de actos, pausa, diálogos con la víctima, llamada al 106, gasa, film en tiras y bolsa, botones con el dedo, agarre en la mano visible, voces de ElevenLabs & & & & & \ok \\ \hline
+Prueba con las manos en el visor, voces restantes, variación de la extensión y pruebas con usuarios & & & & & \pend \\ \hline
 \end{tabularx}
 \end{table}
 
