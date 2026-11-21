@@ -59,15 +59,15 @@ Las oye cualquier jugador en una partida normal, en modo guiado.
 | [x] | `guia_caminar_control` | Tutorial 2, con controles | `[calm] Camina con el joystick izquierdo. Para ir lejos, empuja el derecho hacia adelante, apunta y suéltalo. Llévale la taza a tu tía.` |
 | [x] | `guia_pausa_manos` | Tutorial 3, con manos | `[calm] Ahora, la pausa. Mira la palma de tu mano izquierda: en la muñeca aparece Pausa. Tócalo con un dedo de la otra mano.` |
 | [x] | `guia_pausa_control` | Tutorial 3, con controles | `[calm] Ahora, la pausa. Mira la palma de tu mano izquierda: en la muñeca aparece Pausa. Tócalo con la punta del otro control.` |
-| [ ] | `guia_teleport_manos` | Tutorial 4, solo con manos | `[calm] Por último, ve hasta el círculo verde. Haz una ele con la mano: índice y pulgar estirados, los otros dedos doblados. Apunta al círculo verde y junta el pulgar al índice para saltar.` |
-| [ ] | `guia_bien_manos` | Fin del tutorial, con manos | `[calm] Muy bien. Ya sabes agarrar, pausar y moverte lejos. Vuelve junto a tu tía.` |
-| [ ] | `guia_bien_control` | Fin del tutorial, con controles | `[calm] Muy bien. Ya sabes agarrar, caminar y pausar. Quédate cerca de tu tía.` |
-| [ ] | `guia_apagar` | Paso: apagar la hornilla | `[calm] Primero, apaga la hornilla para que nadie más se queme. Acerca la mano a la perilla que brilla y apriétala.` |
-| [ ] | `guia_agua` | Paso: abrir el agua fría | `[calm] Ahora abre el agua fría: toma la palanca del caño y gírala un poco hacia ti.` |
-| [ ] | `guia_anillo` | Paso: sacar el anillo | `[calm] Quítale el anillo antes de que la mano se hinche. Pellizca el punto dorado con tu mano libre, con el botón lateral o juntando el pulgar y el índice, y deslízalo hacia la punta de su dedo.` |
-| [ ] | `guia_llamar` | Paso: llamar al 106 | `[calm] Mientras se enfría, pide ayuda. Toma el celular del mesón y toca Llamar ciento seis en su pantalla. La llamada sale en altavoz: puedes dejarlo en el mesón y seguir atendiéndola.` |
-| [ ] | `guia_preparar` | Paso: buscar con qué cubrirla | `[calm] Mientras se enfría, abre el cajón bajo el mesón junto al lavadero y saca el film o la bolsa plástica.` |
-| [ ] | `guia_cubrir` | Paso: cubrir la quemadura | `[calm] Ya está enfriada. Cúbrela sin apretar: desliza la bolsa por su mano hasta la muñeca, o apoya tiras de film a lo largo.` |
+| [x] | `guia_teleport_manos` | Tutorial 4, solo con manos | `[calm] Por último, ve hasta el círculo verde. Haz una ele con la mano: índice y pulgar estirados, los otros dedos doblados. Apunta al círculo verde y junta el pulgar al índice para saltar.` |
+| [x] | `guia_bien_manos` | Fin del tutorial, con manos | `[calm] Muy bien. Ya sabes agarrar, pausar y moverte lejos. Vuelve junto a tu tía.` |
+| [x] | `guia_bien_control` | Fin del tutorial, con controles | `[calm] Muy bien. Ya sabes agarrar, caminar y pausar. Quédate cerca de tu tía.` |
+| [x] | `guia_apagar` | Paso: apagar la hornilla | `[calm] Primero, apaga la hornilla para que nadie más se queme. Acerca la mano a la perilla que brilla y apriétala.` |
+| [x] | `guia_agua` | Paso: abrir el agua fría | `[calm] Ahora abre el agua fría: toma la palanca del caño y gírala un poco hacia ti.` |
+| [x] | `guia_anillo` | Paso: sacar el anillo | `[calm] Quítale el anillo antes de que la mano se hinche. Pellizca el punto dorado con tu mano libre, con el botón lateral o juntando el pulgar y el índice, y deslízalo hacia la punta de su dedo.` |
+| [x] | `guia_llamar` | Paso: llamar al 106 | `[calm] Mientras se enfría, pide ayuda. Toma el celular del mesón y toca Llamar ciento seis en su pantalla. La llamada sale en altavoz: puedes dejarlo en el mesón y seguir atendiéndola.` |
+| [x] | `guia_preparar` | Paso: buscar con qué cubrirla | `[calm] Mientras se enfría, abre el cajón bajo el mesón junto al lavadero y saca el film o la bolsa plástica.` |
+| [x] | `guia_cubrir` | Paso: cubrir la quemadura | `[calm] Ya está enfriada. Cúbrela sin apretar: desliza la bolsa por su mano hasta la muñeca, o apoya tiras de film a lo largo.` |
 | [ ] | `op_centro` | Operador: tiene ampollas | `[calm] Con ampollas en la mano, debe verla un médico. Cuando termine de enfriarla, cúbrala sin apretar con film de cocina o una bolsa plástica limpia.` |
 
 ## Prioridad 2: errores, ayudas y respuestas (22)
