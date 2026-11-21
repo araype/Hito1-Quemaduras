@@ -89,9 +89,9 @@ variantes de la llamada.
 | [x] | `guia_frio_lejos` | La tía tiene frío y el jugador está lejos | `[calm] Tu tía se queja de que el agua está muy fría. Vuelve con ella antes de que saque la mano.` |
 | [x] | `guia_templar` | Eligió templar el agua | `[calm] Gira la palanca del caño un poco más hacia ti, hasta la mitad: así sale tibia. Su mano sigue bajo el chorro.` |
 | [x] | `guia_ayuda_frio` | Guiado: ella quiere sacar la mano | `[calm] La respuesta correcta está en verde: templarle un poco el agua, girando la palanca hasta tibia. Pedirle que aguante no le quita el frío, y terminará sacando la mano. Y el hielo daña todavía más la piel.` |
-| [ ] | `guia_ayuda_agua` | Guiado: el 106 pregunta por el agua | `[calm] El operador no ve la cocina: cuéntale lo que pasa de verdad. La respuesta correcta está en verde.` |
-| [ ] | `guia_ayuda_ampollas_si` | Guiado: tiene ampollas | `[calm] Mira su mano: tiene ampollas, unas burbujas de piel hinchada con líquido claro. Es una quemadura de segundo grado.` |
-| [ ] | `guia_ayuda_ampollas_no` | Guiado: no tiene ampollas | `[calm] Mira su mano: está roja e irritada, pero no tiene burbujas de piel con líquido. Eso no son ampollas: es una quemadura de primer grado.` |
+| [x] | `guia_ayuda_agua` | Guiado: el 106 pregunta por el agua | `[calm] El operador no ve la cocina: cuéntale lo que pasa de verdad. La respuesta correcta está en verde.` |
+| [x] | `guia_ayuda_ampollas_si` | Guiado: tiene ampollas | `[calm] Mira su mano: tiene ampollas, unas burbujas de piel hinchada con líquido claro. Es una quemadura de segundo grado.` |
+| [x] | `guia_ayuda_ampollas_no` | Guiado: no tiene ampollas | `[calm] Mira su mano: está roja e irritada, pero no tiene burbujas de piel con líquido. Eso no son ampollas: es una quemadura de primer grado.` |
 | [ ] | `guia_ayuda_centro` | Guiado: decidir, con ampollas | `[calm] Tiene ampollas: es una quemadura de segundo grado. En la mano, aunque sea pequeña, debe verla un médico. Por eso lo correcto es llevarla al centro de salud.` |
 | [ ] | `guia_ayuda_casa` | Guiado: decidir, sin ampollas | `[calm] Solo está roja, sin ampollas: es de primer grado, y se cuida en casa aunque sea grande. Si después salen ampollas o empeora, llévala al centro de salud.` |
 
