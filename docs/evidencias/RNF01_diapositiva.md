@@ -2,7 +2,7 @@
 
 Fuente: `com.DefaultCompany.Pruebalaptop_agarrecubo#UnityPlayerActivity-20261121_095012.csv`
 (OVR Metrics Tool, APK en el Quest sin Quest Link, 1 partida de 265 s, 1 muestra por segundo).
-Gráfico: `docs/evidencia/rnf01_fps_quest.png` (el mismo está en `Informe/images/`).
+Gráfico: `docs/evidencias/rnf01_fps_quest.png` (el mismo está en `Informe/images/`).
 
 ## Título
 
